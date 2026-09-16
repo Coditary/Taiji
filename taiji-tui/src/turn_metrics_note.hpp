@@ -1,0 +1,50 @@
+#pragma once
+
+#include <tuinator/tuinator.hpp>
+
+#include <cstddef>
+#include <functional>
+#include <string>
+
+class TurnMetricsNote : public tuinator::Widget {
+  public:
+    enum class Action { Redo, Copy, PrevVersion, NextVersion };
+
+    TurnMetricsNote(tuinator::Theme theme, std::function<void(Action)> on_action);
+
+    void set_content(std::string metrics_text, bool actions_visible, std::size_t version_index,
+                     std::size_t version_count);
+    void clear();
+    void set_wrap_width(int width);
+    void set_right_inset(int columns);
+
+    std::string_view widget_type_name() const override { return "TurnMetricsNote"; }
+
+    tuinator::Size preferred_size() const override;
+    void layout(tuinator::Rect bounds) override;
+    void paint(tuinator::PaintContext& ctx) const override;
+    bool handle_event(const tuinator::Event& event) override;
+    bool wants_hover() const override { return visible_; }
+
+  private:
+    int actions_cluster_width() const;
+    int actions_cluster_start_x() const;
+    int redo_x() const;
+    int copy_x() const;
+    int prev_x() const;
+    int version_label_x() const;
+    int next_x() const;
+    std::string version_label() const;
+    int metrics_x() const;
+    int metrics_max_width() const;
+
+    tuinator::Theme theme_;
+    tuinator::Style style_;
+    std::function<void(Action)> on_action_;
+    std::string metrics_text_;
+    bool visible_ = false;
+    std::size_t version_index_ = 0;
+    std::size_t version_count_ = 0;
+    int wrap_width_hint_ = 0;
+    int right_inset_ = 1;
+};

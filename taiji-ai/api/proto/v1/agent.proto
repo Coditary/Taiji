@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package taiji.v1;
+
+option go_package = "github.com/coditary/taiji/api/proto/v1;taijiv1";
+
+service TaijiAgent {
+  rpc Ping(PingRequest) returns (PingResponse);
+  rpc Run(RunRequest) returns (stream AgentEvent);
+}
+
+message PingRequest {}
+
+message PingResponse {
+  bool ok = 1;
+  string version = 2;
+}
+
+message RunRequest {
+  string goal = 1;
+  string provider = 2;
+  repeated string skills = 3;
+  string session_id = 4;
+}
+
+message AgentEvent {
+  string type = 1;
+  int32 step = 2;
+  string text = 3;
+  string tool_name = 4;
+  string tool_id = 5;
+  string args = 6;
+  string session_id = 7;
+  int64 timestamp_unix_ms = 8;
+}

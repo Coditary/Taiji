@@ -1,0 +1,9 @@
+default_provider: ""
+wuji:
+  auto_sync: false
+  endpoint: auto
+  wuji_root: ../wuji-ai/wuji-core
+mcp:
+  servers:
+    - test-filesystem
+    - context7

@@ -1,0 +1,40 @@
+# Backend (taiji-ai)
+taiji-ai/bin/
+taiji-ai/.taiji/
+taiji-ai/.wuji/
+taiji-ai/*.test
+taiji-ai/agent.test
+
+# Frontend (taiji-tui)
+taiji-tui/build/
+taiji-tui/highlight/target/
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.so.*
+*.dylib
+*.out
+coverage.*
+*.coverprofile
+profile.cov
+.cache/
+go.work
+go.work.sum
+
+# Secrets and env overrides
+.env
+.env.*
+!.env.example
+
+# Logs and temp files
+*.log
+tmp/
+temp/
+
+# OS junk
+.DS_Store
+Thumbs.db
+*~

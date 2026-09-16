@@ -1,0 +1,57 @@
+#ifndef TAIJI_EMBED_H
+#define TAIJI_EMBED_H
+
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct taiji_session_stats_t {
+    int32_t context_tokens;
+    int32_t context_window;
+    double context_used_pct;
+    int32_t input_tokens;
+    int32_t output_tokens;
+    double estimated_cost_usd;
+} taiji_session_stats_t;
+
+typedef struct taiji_turn_metrics_t {
+    int32_t total_duration_ms;
+    int32_t thinking_duration_ms;
+    int32_t output_tokens;
+    int32_t generation_duration_ms;
+    double tokens_per_sec;
+    int32_t had_thinking;
+} taiji_turn_metrics_t;
+
+typedef void (*taiji_delta_cb)(const char* delta, void* user_data);
+typedef void (*taiji_done_cb)(int ok, const char* error, const char* answer, void* user_data);
+typedef void (*taiji_event_cb)(const char* event_json, void* user_data);
+
+uint64_t taiji_init(char* work_dir, int local_mode, char** error_out);
+void taiji_close(uint64_t handle);
+
+int taiji_chat(uint64_t handle, char* goal, char* provider, taiji_delta_cb on_delta, taiji_done_cb on_done,
+               void* user_data);
+
+void taiji_set_event_callback(uint64_t handle, taiji_event_cb on_event, void* user_data);
+
+void taiji_cancel(uint64_t handle);
+
+char* taiji_session_label(uint64_t handle);
+char* taiji_session_name(uint64_t handle);
+char* taiji_session_id(uint64_t handle);
+char* taiji_work_dir(uint64_t handle);
+char* taiji_model_name(uint64_t handle);
+char* taiji_provider_label(uint64_t handle);
+char* taiji_mcp_status(uint64_t handle);
+int taiji_session_stats(uint64_t handle, taiji_session_stats_t* out);
+int taiji_last_turn_metrics(uint64_t handle, taiji_turn_metrics_t* out);
+char* taiji_init_error(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

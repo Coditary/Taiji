@@ -1,0 +1,43 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.so.*
+*.dylib
+bin/
+
+# Local Taiji runtime (config, sessions, sockets, synced providers)
+.taiji/
+.wuji/
+
+# Go build / test artifacts
+*.test
+*.out
+coverage.*
+*.coverprofile
+profile.cov
+.cache/
+
+# Go workspace (local multi-module setups)
+go.work
+go.work.sum
+
+# Secrets and env overrides
+.env
+.env.*
+!.env.example
+
+# Logs and temp files
+*.log
+tmp/
+temp/
+
+# OS junk
+.DS_Store
+Thumbs.db
+*~
+
+# Editor / IDE (uncomment if you want to share team settings)
+# .idea/
+# .vscode/
