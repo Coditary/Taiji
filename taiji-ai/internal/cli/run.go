@@ -66,10 +66,15 @@ func newRunCmd(app *App) *cobra.Command {
 				Session:    sess,
 				Providers:  rt.Providers,
 				Tools:      rt.Tools,
-				Skills:     rt.Skills,
+				Skills:        rt.Skills,
+				SkillsCatalog: rt.SkillsCatalog,
 				Config:     app.Config,
 				RAG:        rt.RAG,
-				MCP:        rt.MCP,
+				Memory:     rt.Memory,
+				MCP:              rt.MCP,
+				DecisionProfiles: rt.DecisionProfiles,
+				Hooks:            rt.Hooks,
+				Questions:        rt.Questions,
 				WorkDir:    workDir,
 				EventHandler: func(ev events.Event) {
 					if ev.Type != events.TypeThought {
@@ -117,12 +122,18 @@ func printEvent(w *os.File, ev events.Event) {
 	case events.TypeToolCall:
 		fmt.Fprintf(w, "tool %s(%s)\n", ev.ToolName, ev.Args)
 	case events.TypeObservation:
-		fmt.Fprintf(w, "observation: %s\n", ev.Text)
+		fmt.Fprintf(w, "observation %s: %s\n", ev.ToolName, ev.Text)
 		if ev.Data != nil {
 			if diffText, ok := ev.Data["diff"].(string); ok && strings.TrimSpace(diffText) != "" {
 				fmt.Fprintf(w, "%s\n", diffText)
 			}
 		}
+	case events.TypeMemoryRecalled, events.TypeMemoryStored, events.TypeMemoryRevised:
+		if strings.TrimSpace(ev.Text) != "" {
+			fmt.Fprintf(w, "%s: %s\n", ev.Type, ev.Text)
+		}
+	case events.TypeTurnMetrics:
+		fmt.Fprintf(w, "metrics: %v\n", ev.Data)
 	case events.TypeError:
 		fmt.Fprintf(w, "error: %s\n", ev.Text)
 	}

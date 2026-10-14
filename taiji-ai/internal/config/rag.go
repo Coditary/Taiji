@@ -1,9 +1,10 @@
 package config
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/coditary/taiji/internal/wujipath"
 )
 
 const (
@@ -84,19 +85,5 @@ func (r RAGConfig) GlobalStoreRoot(localRoot, wujiRoot string) string {
 }
 
 func resolveWujiProjectRoot(localRoot, wujiRoot string) string {
-	if v := strings.TrimSpace(os.Getenv("WUJI_ROOT")); v != "" {
-		return filepath.Clean(v)
-	}
-	root := strings.TrimSpace(wujiRoot)
-	base := strings.TrimSpace(localRoot)
-	if base == "" {
-		base = "."
-	}
-	if root == "" {
-		root = "../wuji-ai/wuji-core"
-	}
-	if filepath.IsAbs(root) {
-		return filepath.Clean(root)
-	}
-	return filepath.Clean(filepath.Join(base, root))
+	return wujipath.ResolveRoot(localRoot, wujiRoot)
 }

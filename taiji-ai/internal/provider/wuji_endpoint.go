@@ -4,35 +4,20 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/coditary/taiji/internal/wujipath"
 )
 
 func defaultWujiCoreEndpoint(wujiRoot string) string {
 	if v := strings.TrimSpace(os.Getenv("WUJI_CORE_ADDR")); v != "" {
 		return normalizeWujiEndpoint(v, "")
 	}
-	sock := filepath.Join(resolveWujiRoot(wujiRoot, "."), ".wuji", "run", "drivers", "core.sock")
+	sock := filepath.Join(wujiRoot, ".wuji", "run", "drivers", "core.sock")
 	return unixEndpoint(sock)
 }
 
 func resolveWujiRoot(wujiRoot, cfgRoot string) string {
-	if v := strings.TrimSpace(os.Getenv("WUJI_ROOT")); v != "" {
-		return filepath.Clean(v)
-	}
-	root := strings.TrimSpace(wujiRoot)
-	if root == "" {
-		root = strings.TrimSpace(cfgRoot)
-	}
-	if root == "" {
-		root = "."
-	}
-	if filepath.IsAbs(root) {
-		return filepath.Clean(root)
-	}
-	base := strings.TrimSpace(cfgRoot)
-	if base == "" {
-		base = "."
-	}
-	return filepath.Clean(filepath.Join(base, root))
+	return wujipath.ResolveRoot(cfgRoot, wujiRoot)
 }
 
 func normalizeWujiEndpoint(endpoint, cfgRoot string) string {

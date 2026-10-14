@@ -20,8 +20,14 @@ const (
 	TypeMessage      Type = "message"
 	TypeToolCall     Type = "tool_call"
 	TypeObservation  Type = "observation"
-	TypeError        Type = "error"
-	TypeDone         Type = "done"
+	TypeStreamReset  Type = "stream_reset"
+	TypeError          Type = "error"
+	TypeMemoryRecalled Type = "memory_recalled"
+	TypeMemoryStored   Type = "memory_stored"
+	TypeMemoryRevised  Type = "memory_revised"
+	TypeUserPrompt     Type = "user_prompt"
+	TypeDone           Type = "done"
+	TypeTurnMetrics    Type = "turn_metrics"
 )
 
 // Event is a single agent loop event.
@@ -37,6 +43,10 @@ type Event struct {
 	DurationMs int64          `json:"duration_ms,omitempty"`
 	IsMCP      bool           `json:"is_mcp,omitempty"`
 	MCPServer  string         `json:"mcp_server,omitempty"`
+	IsSkill    bool           `json:"is_skill,omitempty"`
+	IsDecision bool           `json:"is_decision,omitempty"`
+	IsAskUser  bool           `json:"is_ask_user,omitempty"`
+	SkillName  string         `json:"skill_name,omitempty"`
 	Data       map[string]any `json:"data,omitempty"`
 }
 
@@ -50,6 +60,14 @@ type Writer struct {
 // NewWriter creates an event writer.
 func NewWriter(path string) *Writer {
 	return &Writer{path: path}
+}
+
+// Path returns the JSONL file path (empty when events are not persisted).
+func (w *Writer) Path() string {
+	if w == nil {
+		return ""
+	}
+	return w.path
 }
 
 // Subscribe adds an in-memory subscriber.

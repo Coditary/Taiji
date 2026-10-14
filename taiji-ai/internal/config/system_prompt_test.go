@@ -16,6 +16,12 @@ func TestDefaultSystemPrompt(t *testing.T) {
 	if !strings.Contains(prompt, "emit a tool call immediately") {
 		t.Fatal("default prompt should require tool calls for actionable requests")
 	}
+	if !strings.Contains(prompt, "END of your message") {
+		t.Fatal("default prompt should document suffix-only fallback tool lines")
+	}
+	if !strings.Contains(prompt, "memory_recall") {
+		t.Fatal("default prompt should require lookup before claiming ignorance")
+	}
 }
 
 func TestDefaultTaggedCoTSystemPrompt(t *testing.T) {

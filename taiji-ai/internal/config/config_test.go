@@ -39,7 +39,7 @@ func TestConfigSaveAndLoad(t *testing.T) {
 	}
 }
 
-func TestRootLocalUsesCWDNotParentProject(t *testing.T) {
+func TestRootLocalFindsParentTaijiConfig(t *testing.T) {
 	project := t.TempDir()
 	runtimeDir := filepath.Join(project, dirName)
 	if err := os.MkdirAll(runtimeDir, 0o755); err != nil {
@@ -61,17 +61,34 @@ func TestRootLocalUsesCWDNotParentProject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if root != project {
+		t.Fatalf("root = %q, want %q", root, project)
+	}
+
+	root, ok := findProjectRoot(nested)
+	if !ok || root != project {
+		t.Fatalf("non-local walk-up = %q, want %q", root, project)
+	}
+}
+
+func TestRootLocalUsesCWDWithoutParentConfig(t *testing.T) {
+	project := t.TempDir()
+	nested := filepath.Join(project, "sub", "dir")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(nested)
+
+	root, err := Root(LoadOptions{Local: true})
+	if err != nil {
+		t.Fatal(err)
+	}
 	absNested, err := filepath.Abs(nested)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if root != absNested {
 		t.Fatalf("root = %q, want %q", root, absNested)
-	}
-
-	root, ok := findProjectRoot(nested)
-	if !ok || root != project {
-		t.Fatalf("non-local walk-up = %q, want %q", root, project)
 	}
 }
 

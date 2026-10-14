@@ -2,6 +2,12 @@
 
 #include "left_label.hpp"
 #include "mcp_sidebar.hpp"
+#include "left_anchored_split.hpp"
+#include "right_anchored_split.hpp"
+#include "session_context_menu.hpp"
+#include "session_sidebar.hpp"
+
+#include <tuinator/widgets/menu/menu_bar.hpp>
 
 #include <libtaiji.h>
 
@@ -16,11 +22,106 @@
 
 namespace {
 
-class ChatRoot : public tuinator::VBox {
+class AppShell : public tuinator::Widget {
   public:
-    explicit ChatRoot(tuinator::BoxOptions options) : tuinator::VBox(options) {}
+    explicit AppShell(tuinator::Theme theme) { context_menu_ = std::make_unique<SessionContextMenu>(theme); }
+
+    SessionContextMenu* context_menu() { return context_menu_.get(); }
 
     bool wants_full_screen() const override { return true; }
+
+    tuinator::Size preferred_size() const override {
+        if (bounds_.width > 0 && bounds_.height > 0) {
+            return bounds_.size();
+        }
+        if (!children_.empty()) {
+            return children_.front()->preferred_size();
+        }
+        return {80, 24};
+    }
+
+    void layout(tuinator::Rect bounds) override {
+        bounds_ = bounds;
+        if (!children_.empty()) {
+            children_.front()->layout(bounds_);
+        }
+        if (context_menu_ != nullptr) {
+            context_menu_->layout(bounds_);
+        }
+    }
+
+    void set_on_dirty(std::function<void(tuinator::Rect)> callback) override {
+        tuinator::Widget::set_on_dirty(std::move(callback));
+        if (context_menu_ != nullptr) {
+            context_menu_->set_on_dirty(on_dirty_);
+        }
+    }
+
+    tuinator::Widget* hit_test(tuinator::Point point) override {
+        if (!bounds_.contains(point)) {
+            return nullptr;
+        }
+        if (context_menu_ != nullptr && context_menu_->is_open()) {
+            if (tuinator::Widget* hit = context_menu_->hit_test(point)) {
+                return hit;
+            }
+        }
+        if (!children_.empty()) {
+            return children_.front()->hit_test(point);
+        }
+        return this;
+    }
+
+    bool captures_keyboard() const override {
+        return context_menu_ != nullptr && context_menu_->is_open();
+    }
+
+    void paint(tuinator::PaintContext& ctx) const override {
+        if (!children_.empty()) {
+            children_.front()->paint(ctx);
+        }
+        if (context_menu_ != nullptr && context_menu_->is_open()) {
+            context_menu_->paint(ctx);
+        }
+    }
+
+    bool handle_event(const tuinator::Event& event) override {
+        if (context_menu_ != nullptr && context_menu_->is_open()) {
+            if (context_menu_->handle_event(event)) {
+                mark_dirty();
+                return true;
+            }
+        }
+        if (!children_.empty() && children_.front()->handle_event(event)) {
+            mark_dirty();
+            return true;
+        }
+        return false;
+    }
+
+    void collect_focusable(std::vector<tuinator::Widget*>& out) override {
+        if (!children_.empty()) {
+            children_.front()->collect_focusable(out);
+        }
+    }
+
+    tuinator::Widget* hit_test_focusable(tuinator::Point point) override {
+        if (!bounds_.contains(point)) {
+            return nullptr;
+        }
+        if (context_menu_ != nullptr && context_menu_->is_open()) {
+            return context_menu_->hit_test_focusable(point);
+        }
+        if (!children_.empty()) {
+            return children_.front()->hit_test_focusable(point);
+        }
+        return nullptr;
+    }
+
+    std::string_view widget_type_name() const override { return "AppShell"; }
+
+  private:
+    std::unique_ptr<SessionContextMenu> context_menu_;
 };
 
 std::unique_ptr<tuinator::VBox> make_sidebar_section(const std::string& title, const tuinator::Theme& theme) {
@@ -33,12 +134,12 @@ std::unique_ptr<LeftLabel> make_sidebar_label(const std::string& text, const tui
     return std::make_unique<LeftLabel>(text, style);
 }
 
-std::vector<std::string> fetch_mcp_server_names(uint64_t handle) {
+std::vector<std::string> fetch_line_list(uint64_t handle, char* (*fetch)(uint64_t)) {
     std::vector<std::string> names;
-    if (handle == 0) {
+    if (handle == 0 || fetch == nullptr) {
         return names;
     }
-    char* raw = taiji_mcp_servers(handle);
+    char* raw = fetch(handle);
     if (raw == nullptr) {
         return names;
     }
@@ -60,6 +161,14 @@ std::vector<std::string> fetch_mcp_server_names(uint64_t handle) {
         start = end + 1;
     }
     return names;
+}
+
+std::vector<std::string> fetch_mcp_server_names(uint64_t handle) {
+    return fetch_line_list(handle, taiji_mcp_servers);
+}
+
+std::vector<std::string> fetch_active_skill_names(uint64_t handle) {
+    return fetch_line_list(handle, taiji_active_skills);
 }
 
 std::string format_token_count(int tokens) {
@@ -92,36 +201,66 @@ std::string format_cost_spent(double usd) {
     return buf;
 }
 
-std::string format_duration_ms(int64_t ms) {
-    char buf[32];
-    if (ms < 1000) {
-        std::snprintf(buf, sizeof(buf), "%dms", static_cast<int>(ms));
-    } else {
-        std::snprintf(buf, sizeof(buf), "%.1fs", static_cast<double>(ms) / 1000.0);
+std::string combined_assistant_text(const std::string& preamble, const std::string& followup) {
+    if (preamble.empty()) {
+        return followup;
     }
-    return buf;
+    if (followup.empty()) {
+        return preamble;
+    }
+    return preamble + "\n\n" + followup;
 }
 
-std::string format_turn_metrics_note(bool valid, int64_t total_ms, int64_t thinking_ms, double tokens_per_sec,
-                                     bool had_thinking) {
-    if (!valid || total_ms <= 0) {
+struct TurnMetricsInput {
+    bool valid = false;
+    int64_t total_duration_ms = 0;
+    int64_t wait_duration_ms = 0;
+    int64_t thinking_duration_ms = 0;
+    int64_t generation_duration_ms = 0;
+    int output_tokens = 0;
+    int input_tokens = 0;
+    double estimated_cost_usd = 0.0;
+    double tokens_per_sec = 0.0;
+    bool had_thinking = false;
+    int tool_calls = 0;
+    int64_t tool_duration_ms = 0;
+    int steps = 0;
+    int context_tokens = 0;
+    int context_window = 0;
+    double context_used_pct = 0.0;
+};
+
+void fill_turn_metrics_raw(const TurnMetricsInput& metrics, taiji_turn_metrics_t& raw) {
+    raw.total_duration_ms = static_cast<int32_t>(metrics.total_duration_ms);
+    raw.wait_duration_ms = static_cast<int32_t>(metrics.wait_duration_ms);
+    raw.thinking_duration_ms = static_cast<int32_t>(metrics.thinking_duration_ms);
+    raw.generation_duration_ms = static_cast<int32_t>(metrics.generation_duration_ms);
+    raw.output_tokens = metrics.output_tokens;
+    raw.input_tokens = metrics.input_tokens;
+    raw.estimated_cost_usd = metrics.estimated_cost_usd;
+    raw.tokens_per_sec = metrics.tokens_per_sec;
+    raw.had_thinking = metrics.had_thinking ? 1 : 0;
+    raw.tool_calls = metrics.tool_calls;
+    raw.tool_duration_ms = static_cast<int32_t>(metrics.tool_duration_ms);
+    raw.steps = metrics.steps;
+    raw.context_tokens = metrics.context_tokens;
+    raw.context_window = metrics.context_window;
+    raw.context_used_pct = metrics.context_used_pct;
+}
+
+std::string format_turn_metrics_line(uint64_t handle, const TurnMetricsInput& metrics, int max_width) {
+    if (!metrics.valid || handle == 0) {
         return "";
     }
-
-    std::string text = format_duration_ms(total_ms) + " total";
-    if (had_thinking && thinking_ms > 0) {
-        text += " · " + format_duration_ms(thinking_ms) + " thought";
+    taiji_turn_metrics_t raw{};
+    fill_turn_metrics_raw(metrics, raw);
+    char* text = taiji_format_turn_metrics(handle, &raw, max_width);
+    if (text == nullptr) {
+        return "";
     }
-    if (tokens_per_sec > 0.0) {
-        char buf[32];
-        if (tokens_per_sec >= 100.0) {
-            std::snprintf(buf, sizeof(buf), " · %.0f tok/s", tokens_per_sec);
-        } else {
-            std::snprintf(buf, sizeof(buf), " · %.1f tok/s", tokens_per_sec);
-        }
-        text += buf;
-    }
-    return text;
+    std::string out = text;
+    std::free(text);
+    return out;
 }
 
 tuinator::Style composer_input_style() {
@@ -161,8 +300,11 @@ tuinator::ScrollbarOptions chat_scrollbar_options() {
         .with_style(style);
 }
 
+constexpr int kNavSidebarCols = 26;
 constexpr int kSidebarCols = 28;
+constexpr int kMainMinCols = 48;
 constexpr int kPollIntervalMs = 33;
+
 constexpr int kStreamUiRefreshMs = 33;
 constexpr int kQueueUiRefreshMs = 200;
 
@@ -279,6 +421,89 @@ std::string json_extract_string(const std::string& json, const std::string& key)
     return "";
 }
 
+std::string json_extract_value(const std::string& json, const std::string& key) {
+    const std::string needle = "\"" + key + "\":";
+    const std::size_t pos = json.find(needle);
+    if (pos == std::string::npos) {
+        return "";
+    }
+    std::size_t i = pos + needle.size();
+    while (i < json.size() && (json[i] == ' ' || json[i] == '\t')) {
+        ++i;
+    }
+    if (i >= json.size()) {
+        return "";
+    }
+    if (json[i] == '"') {
+        return json_extract_string(json, key);
+    }
+    if (json[i] != '{' && json[i] != '[') {
+        return "";
+    }
+    const char open = json[i];
+    const char close = open == '{' ? '}' : ']';
+    int depth = 0;
+    const std::size_t start = i;
+    for (; i < json.size(); ++i) {
+        const char ch = json[i];
+        if (ch == '"') {
+            ++i;
+            while (i < json.size()) {
+                if (json[i] == '\\' && i + 1 < json.size()) {
+                    i += 2;
+                    continue;
+                }
+                if (json[i] == '"') {
+                    break;
+                }
+                ++i;
+            }
+            continue;
+        }
+        if (ch == open) {
+            ++depth;
+        } else if (ch == close) {
+            --depth;
+            if (depth == 0) {
+                return json.substr(start, i - start + 1);
+            }
+        }
+    }
+    return "";
+}
+
+double json_extract_double(const std::string& json, const std::string& key, double fallback = 0.0) {
+    const std::string needle = "\"" + key + "\":";
+    const std::size_t pos = json.find(needle);
+    if (pos == std::string::npos) {
+        return fallback;
+    }
+    std::size_t i = pos + needle.size();
+    while (i < json.size() && (json[i] == ' ' || json[i] == '\t')) {
+        ++i;
+    }
+    const std::size_t begin = i;
+    if (i < json.size() && (json[i] == '-' || json[i] == '+')) {
+        ++i;
+    }
+    while (i < json.size()) {
+        const char ch = json[i];
+        if (std::isdigit(static_cast<unsigned char>(ch)) || ch == '.') {
+            ++i;
+            continue;
+        }
+        break;
+    }
+    if (i == begin) {
+        return fallback;
+    }
+    try {
+        return std::stod(json.substr(begin, i - begin));
+    } catch (...) {
+        return fallback;
+    }
+}
+
 int64_t json_extract_int(const std::string& json, const std::string& key, int64_t fallback = -1) {
     const std::string needle = "\"" + key + "\":";
     const std::size_t pos = json.find(needle);
@@ -319,6 +544,142 @@ bool json_extract_bool(const std::string& json, const std::string& key) {
     return json.compare(i, 4, "true") == 0;
 }
 
+std::vector<std::string> json_extract_object_array(const std::string& json, const std::string& key) {
+    const std::string array_json = json_extract_value(json, key);
+    if (array_json.empty() || array_json.front() != '[') {
+        return {};
+    }
+
+    std::vector<std::string> out;
+    std::size_t i = 1;
+    while (i < array_json.size()) {
+        while (i < array_json.size() && (array_json[i] == ' ' || array_json[i] == '\t' || array_json[i] == ',')) {
+            ++i;
+        }
+        if (i >= array_json.size() || array_json[i] == ']') {
+            break;
+        }
+        if (array_json[i] != '{') {
+            break;
+        }
+        int depth = 0;
+        const std::size_t start = i;
+        for (; i < array_json.size(); ++i) {
+            const char ch = array_json[i];
+            if (ch == '"') {
+                ++i;
+                while (i < array_json.size()) {
+                    if (array_json[i] == '\\' && i + 1 < array_json.size()) {
+                        i += 2;
+                        continue;
+                    }
+                    if (array_json[i] == '"') {
+                        break;
+                    }
+                    ++i;
+                }
+                continue;
+            }
+            if (ch == '{') {
+                ++depth;
+            } else if (ch == '}') {
+                --depth;
+                if (depth == 0) {
+                    out.push_back(array_json.substr(start, i - start + 1));
+                    ++i;
+                    break;
+                }
+            }
+        }
+    }
+    return out;
+}
+
+} // namespace
+
+bool ChatApp::parse_tool_event(const std::string& json, std::size_t turn_index, ToolEventUpdate& update) {
+    const std::string type = json_extract_string(json, "type");
+    update.turn_index = turn_index;
+    update.tool_name = json_extract_string(json, "tool_name");
+
+    if (type == "tool_call") {
+        update.kind = ToolEventUpdate::Kind::ToolCall;
+        update.args = json_extract_value(json, "args");
+        update.is_mcp = json_extract_bool(json, "is_mcp");
+        update.is_skill = json_extract_bool(json, "is_skill");
+        update.is_decision = json_extract_bool(json, "is_decision");
+        update.is_ask_user = json_extract_bool(json, "is_ask_user");
+        if (update.tool_name == "invoke_skill") {
+            update.is_skill = true;
+        }
+        if (update.tool_name == "decide") {
+            update.is_decision = true;
+        }
+        if (update.tool_name == "ask_user") {
+            update.is_ask_user = true;
+        }
+        update.skill_name = json_extract_string(json, "skill_name");
+        update.mcp_server = json_extract_string(json, "mcp_server");
+        return true;
+    }
+    if (type == "observation") {
+        update.kind = ToolEventUpdate::Kind::Observation;
+        update.text = json_extract_string(json, "text");
+        update.diff = json_extract_string(json, "diff");
+        update.duration_ms = json_extract_int(json, "duration_ms", -1);
+        update.is_mcp = json_extract_bool(json, "is_mcp");
+        update.is_skill = json_extract_bool(json, "is_skill");
+        update.is_decision = json_extract_bool(json, "is_decision");
+        update.is_ask_user = json_extract_bool(json, "is_ask_user");
+        if (update.tool_name == "invoke_skill") {
+            update.is_skill = true;
+        }
+        if (update.tool_name == "decide") {
+            update.is_decision = true;
+        }
+        if (update.tool_name == "ask_user") {
+            update.is_ask_user = true;
+        }
+        update.skill_name = json_extract_string(json, "skill_name");
+        const std::string data_json = json_extract_value(json, "data");
+        if (update.is_skill && update.skill_name.empty() && !data_json.empty()) {
+            update.skill_name = json_extract_string(data_json, "skill");
+            if (update.diff.empty()) {
+                update.diff = json_extract_string(data_json, "diff");
+            }
+        }
+        if (update.is_decision && !data_json.empty()) {
+            update.decision_driver = json_extract_string(data_json, "driver");
+        }
+        update.mcp_server = json_extract_string(json, "mcp_server");
+        if (update.diff.empty()) {
+            const std::string data_key = "\"data\":";
+            const std::size_t data_pos = json.find(data_key);
+            if (data_pos != std::string::npos) {
+                update.diff = json_extract_string(json.substr(data_pos), "diff");
+            }
+        }
+        return true;
+    }
+    if (type == "think_delta") {
+        update.kind = ToolEventUpdate::Kind::ThinkDelta;
+        update.text = json_extract_string(json, "text");
+        return true;
+    }
+    if (type == "thought_start") {
+        update.kind = ToolEventUpdate::Kind::ThoughtStart;
+        return true;
+    }
+    if (type == "thought") {
+        update.kind = ToolEventUpdate::Kind::Thought;
+        update.text = json_extract_string(json, "text");
+        return true;
+    }
+    return false;
+}
+
+namespace {
+
 bool is_cancellation_error(const std::string& error) {
     if (error.empty()) {
         return false;
@@ -327,7 +688,7 @@ bool is_cancellation_error(const std::string& error) {
     for (char& ch : lower) {
         ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
     }
-    return lower.find("cancel") != std::string::npos;
+    return lower == "cancelled";
 }
 
 } // namespace
@@ -352,6 +713,7 @@ ChatApp::ChatApp(tuinator::Application& app)
     } else {
         taiji_set_event_callback(taiji_handle_, &ChatApp::on_event, this);
     }
+    sync_activity_handles();
 }
 
 ChatApp::~ChatApp() {
@@ -367,9 +729,14 @@ ChatApp::~ChatApp() {
 }
 
 void ChatApp::set_root() {
-    auto root = std::make_unique<ChatRoot>(tuinator::BoxOptions{.gap = 0, .padding = 0});
+    auto shell = std::make_unique<AppShell>(theme_);
+    session_context_menu_ = shell->context_menu();
+    session_context_menu_->set_on_open_changed([this](bool open) { app_.set_pointer_hover_tracking(open); });
+
+    auto workspace_root = std::make_unique<tuinator::VBox>(tuinator::BoxOptions{.gap = 0, .padding = 0});
 
     auto main_column = std::make_unique<tuinator::VBox>(tuinator::BoxOptions{.gap = 0, .padding = 1});
+    main_column_ = main_column.get();
     main_column->set_flex(1);
 
     auto chat_log = std::make_unique<tuinator::VBox>(tuinator::BoxOptions{.gap = 1, .padding = 0});
@@ -391,15 +758,29 @@ void ChatApp::set_root() {
     input_options.prompt = "› ";
     input_options.placeholder = "Nachricht schreiben…";
     auto input = std::make_unique<ChatTextInput>(input_options, input_style_, input_focused_style_);
-    input_ = input.get();
     input->set_flex(1);
-    input->set_on_change([this](const std::string&) { request_chat_layout_refresh(); });
+    input->set_on_change([this](const std::string&) {
+        request_chat_layout_refresh();
+        app_.repaint_all();
+    });
     input->set_on_submit([this](const std::string& value) { submit_message(value); });
+
+    auto question = std::make_unique<QuestionComposer>(input_style_, input_focused_style_);
+    question->set_on_submit([this](const std::string& request_id, std::vector<std::vector<std::string>> answers) {
+        submit_question_answers(request_id, std::move(answers));
+    });
+    question->set_on_reject([this](const std::string& request_id) { reject_question_prompt(request_id); });
+
+    auto composer_switch = std::make_unique<ComposerSwitch>(std::move(input), std::move(question));
+    composer_switch_ = composer_switch.get();
+    input_ = static_cast<ChatTextInput*>(composer_switch_->input_widget());
+    question_composer_ = static_cast<QuestionComposer*>(composer_switch_->question_widget());
+    composer_switch->set_flex(1);
 
     auto bottom_bar = std::make_unique<tuinator::VBox>(tuinator::BoxOptions{.gap = 0, .padding = 0});
 
     auto input_row = std::make_unique<tuinator::HBox>(tuinator::BoxOptions{.gap = 0, .padding = 0});
-    input_row->add_child(std::move(input));
+    input_row->add_child(std::move(composer_switch));
 
     auto composer = std::make_unique<tuinator::VBox>(tuinator::BoxOptions{.gap = 1, .padding = 0});
     auto queue_bar = std::make_unique<QueueStatusBar>(
@@ -451,34 +832,59 @@ void ChatApp::set_root() {
     }
     sidebar->add_child(std::move(mcp_box));
 
+    auto skills_box = make_sidebar_section("Skills", theme_);
+    auto skills_status = make_sidebar_label("(keine geladen)", theme_.label);
+    skills_status_label_ = skills_status.get();
+    skills_box->add_child(std::move(skills_status));
+    sidebar->add_child(std::move(skills_box));
+    refresh_skills_sidebar();
+
+    auto decisions_box = make_sidebar_section("Decisions", theme_);
+    auto decisions_status = make_sidebar_label("(keine)", theme_.label);
+    decisions_status_label_ = decisions_status.get();
+    decisions_box->add_child(std::move(decisions_status));
+    sidebar->add_child(std::move(decisions_box));
+    refresh_decisions_sidebar();
+
     auto lsp_box = make_sidebar_section("LSP", theme_);
     lsp_box->add_child(make_sidebar_label("deaktiviert", theme_.muted));
     sidebar->add_child(std::move(lsp_box));
 
     sidebar->add_child(make_sidebar_label("taiji-tui", theme_.muted));
 
-    auto workspace = std::make_unique<tuinator::SplitPane>(
-        std::move(main_column), std::move(sidebar),
-        tuinator::SplitPaneOptions{
-            .orientation = tuinator::SplitOrientation::Horizontal,
-            .first_size = 1,
-            .outer_border = false,
-        });
-    workspace->set_flex(1);
-    workspace_ = workspace.get();
-    root->add_child(std::move(workspace));
+    auto chat_split = std::make_unique<RightAnchoredSplit>(std::move(main_column), std::move(sidebar), kSidebarCols);
+    chat_split->set_flex(1);
 
-    app_.set_root(std::move(root));
+    auto session_nav = std::make_unique<SessionSidebar>(
+        theme_,
+        [this](const std::string& project_root, const std::string& session_id) {
+            switch_to_session(project_root, session_id);
+        },
+        [this](const std::string& project_root) { create_new_session(project_root); },
+        [this](const std::string& project_root, const std::string& session_id, tuinator::Point position) {
+            show_session_context_menu(position, project_root, session_id);
+        });
+    session_nav_ = session_nav.get();
+    session_nav->refresh(taiji_handle_);
+
+    auto outer_split = std::make_unique<LeftAnchoredSplit>(std::move(session_nav), std::move(chat_split), kNavSidebarCols);
+    outer_split->set_flex(1);
+    workspace_root->add_child(std::move(outer_split));
+
+    shell->add_child(std::move(workspace_root));
+    app_.set_root(std::move(shell));
     sync_workspace_layout();
     refresh_input_model_info();
     refresh_status_footer();
     refresh_queue_ui();
     focus_input();
+    refresh_session_nav();
+    reload_turns_from_backend();
     app_.set_interval(kPollIntervalMs, [this]() { poll_updates(); });
 }
 
 void ChatApp::sync_workspace_layout() {
-    if (workspace_ == nullptr) {
+    if (main_column_ == nullptr) {
         return;
     }
 
@@ -496,10 +902,9 @@ void ChatApp::sync_workspace_layout() {
     last_terminal_width_ = term.width;
     last_terminal_height_ = term.height;
 
-    const int main_cols = std::max(48, term.width - kSidebarCols - 1);
-    tuinator::SplitPaneOptions opts = workspace_->options();
-    opts.first_size = main_cols;
-    workspace_->set_options(opts);
+    if (session_nav_ != nullptr) {
+        session_nav_->set_width_hint(kNavSidebarCols);
+    }
     request_chat_layout_refresh();
 }
 
@@ -523,7 +928,7 @@ void ChatApp::poll_updates() {
         update_chat_wrap_widths();
     }
 
-    apply_pending_updates();
+    const bool had_pending_updates = apply_pending_updates();
 
     if (worker_busy_ && has_active_turn_) {
         refresh_turn_view(active_turn_index_);
@@ -534,6 +939,12 @@ void ChatApp::poll_updates() {
     }
 
     refresh_thinking_indicators();
+
+    // Widget mark_dirty() alone does not always reach the terminal backend while
+    // idle (e.g. right after a turn finishes). Force a frame when the chat changed.
+    if (had_pending_updates || worker_busy_ || chat_layout_dirty_) {
+        app_.invalidate();
+    }
 
     bool has_waiting = false;
     {
@@ -555,13 +966,69 @@ void ChatApp::poll_updates() {
 }
 
 void ChatApp::focus_input() {
-    if (input_ == nullptr) {
+    app_.refresh_focus();
+    if (question_prompt_active_ && question_composer_ != nullptr) {
+        question_composer_->mark_dirty();
         return;
     }
-    if (!input_->is_focused()) {
-        app_.refresh_focus();
+    if (input_ != nullptr) {
+        input_->mark_dirty();
     }
-    input_->mark_dirty();
+}
+
+void ChatApp::show_question_prompt(const QuestionPromptUpdate& prompt) {
+    if (question_composer_ == nullptr || composer_switch_ == nullptr) {
+        return;
+    }
+    int wrap_width = 60;
+    if (main_column_ != nullptr && main_column_->bounds().width > 0) {
+        wrap_width = std::max(16, main_column_->bounds().width - 2);
+    }
+    question_composer_->set_wrap_width(wrap_width);
+    composer_switch_->show_question();
+    question_composer_->begin(prompt.request_id, prompt.questions);
+    question_prompt_active_ = true;
+    set_footer_status("Frage beantworten  ·  Esc: abbrechen");
+    request_chat_layout_refresh();
+    focus_input();
+    app_.repaint_all();
+}
+
+void ChatApp::hide_question_prompt() {
+    if (question_composer_ != nullptr) {
+        question_composer_->clear();
+    }
+    if (composer_switch_ != nullptr) {
+        composer_switch_->show_input();
+    }
+    question_prompt_active_ = false;
+    set_footer_status("Shift+Enter: neue Zeile  ·  Enter: senden  ·  Esc: unterbrechen");
+    request_chat_layout_refresh();
+    focus_input();
+    app_.repaint_all();
+}
+
+void ChatApp::submit_question_answers(const std::string& request_id,
+                                      std::vector<std::vector<std::string>> answers) {
+    if (taiji_handle_ == 0 || request_id.empty()) {
+        hide_question_prompt();
+        return;
+    }
+    const std::string payload = encode_question_answers_json(answers);
+    char* request_id_buf = const_cast<char*>(request_id.c_str());
+    char* answers_buf = const_cast<char*>(payload.c_str());
+    if (taiji_question_reply(taiji_handle_, request_id_buf, answers_buf) == 0) {
+        set_footer_status("Antwort konnte nicht gesendet werden");
+    }
+    hide_question_prompt();
+}
+
+void ChatApp::reject_question_prompt(const std::string& request_id) {
+    if (taiji_handle_ != 0 && !request_id.empty()) {
+        char* request_id_buf = const_cast<char*>(request_id.c_str());
+        taiji_question_reject(taiji_handle_, request_id_buf);
+    }
+    hide_question_prompt();
 }
 
 void ChatApp::request_chat_layout_refresh() {
@@ -569,15 +1036,24 @@ void ChatApp::request_chat_layout_refresh() {
 }
 
 void ChatApp::update_chat_wrap_widths() {
-    const tuinator::Size term = app_.terminal_size();
-    if (term.width <= 0) {
-        return;
+    int wrap_width = kMainMinCols;
+    if (main_column_ != nullptr) {
+        const int main_width = main_column_->bounds().width;
+        if (main_width > 0) {
+            wrap_width = std::max(8, main_width - 2);
+        }
+    } else {
+        const tuinator::Size term = app_.terminal_size();
+        if (term.width > 0) {
+            wrap_width = std::max(8, term.width - kNavSidebarCols - kSidebarCols - 3);
+        }
     }
-
-    const int wrap_width = std::max(8, std::max(48, term.width - kSidebarCols - 1) - 2);
     for (const TurnView& view : turn_views_) {
         if (view.user != nullptr) {
             view.user->set_wrap_width(wrap_width);
+        }
+        if (view.assistant_lead != nullptr) {
+            view.assistant_lead->set_wrap_width(wrap_width);
         }
         if (view.assistant != nullptr) {
             view.assistant->set_wrap_width(wrap_width);
@@ -589,6 +1065,9 @@ void ChatApp::update_chat_wrap_widths() {
             view.metrics->set_wrap_width(wrap_width);
             view.metrics->set_right_inset(2);
         }
+    }
+    for (std::size_t i = 0; i < turn_views_.size(); ++i) {
+        refresh_turn_view(i);
     }
     if (queue_bar_ != nullptr) {
         queue_bar_->set_wrap_width(wrap_width);
@@ -605,7 +1084,7 @@ void ChatApp::submit_message(const std::string& text) {
         return text.substr(begin, end - begin + 1);
     }();
 
-    if (trimmed.empty() || taiji_handle_ == 0) {
+    if (trimmed.empty() || taiji_handle_ == 0 || question_prompt_active_) {
         return;
     }
 
@@ -613,8 +1092,48 @@ void ChatApp::submit_message(const std::string& text) {
         input_->set_value("");
     }
 
+    if (trimmed == "/skills") {
+        handle_skills_command();
+        return;
+    }
+    if (trimmed == "/decisions") {
+        handle_decisions_command();
+        return;
+    }
+
     enqueue_message(trimmed);
     pump_worker();
+}
+
+void ChatApp::handle_skills_command() {
+    char* raw = taiji_skills_list(taiji_handle_);
+    std::string reply = raw != nullptr ? std::string(raw) : "Skills konnten nicht geladen werden.";
+    if (raw != nullptr) {
+        std::free(raw);
+    }
+    append_local_reply("/skills", reply);
+}
+
+void ChatApp::handle_decisions_command() {
+    char* raw = taiji_decisions_list(taiji_handle_);
+    std::string reply = raw != nullptr ? std::string(raw) : "Decisions konnten nicht geladen werden.";
+    if (raw != nullptr) {
+        std::free(raw);
+    }
+    append_local_reply("/decisions", reply);
+}
+
+void ChatApp::append_local_reply(const std::string& user, const std::string& assistant) {
+    std::size_t turn_index = 0;
+    {
+        std::lock_guard<std::mutex> lock(state_mu_);
+        turn_index = turns_.size();
+        turns_.push_back(ChatTurn{.user = user, .assistant = assistant, .status = TurnStatus::Done});
+    }
+    ensure_turn_widgets(turn_index + 1);
+    refresh_turn_view(turn_index);
+    flush_chat_layout(true);
+    focus_input();
 }
 
 void ChatApp::enqueue_message(const std::string& text) {
@@ -678,8 +1197,14 @@ void ChatApp::run_job(std::size_t turn_index, const std::string& goal) {
     active_turn_index_ = turn_index;
     worker_busy_ = true;
     ensure_turn_widgets(turn_index + 1);
-    if (turn_index < turn_views_.size() && turn_views_[turn_index].activity != nullptr) {
-        turn_views_[turn_index].activity->clear();
+    if (turn_index < turn_views_.size()) {
+        TurnView& view = turn_views_[turn_index];
+        if (view.activity != nullptr) {
+            view.activity->clear();
+        }
+        if (view.assistant_lead != nullptr) {
+            view.assistant_lead->clear();
+        }
     }
     sync_turn_view(turn_index, running_turn, true, true, turn_index);
     refresh_queue_ui(true);
@@ -728,6 +1253,78 @@ void ChatApp::refresh_input_model_info() {
     }
     if (provider != nullptr) {
         std::free(provider);
+    }
+}
+
+void ChatApp::refresh_skills_sidebar() {
+    if (skills_status_label_ == nullptr) {
+        return;
+    }
+
+    const std::vector<std::string> names = fetch_active_skill_names(taiji_handle_);
+    if (names.empty()) {
+        skills_status_label_->set_text("(keine geladen)");
+        return;
+    }
+
+    std::string text;
+    for (const std::string& name : names) {
+        if (!text.empty()) {
+            text.push_back('\n');
+        }
+        text += "● ";
+        text += name;
+    }
+    skills_status_label_->set_text(text);
+}
+
+void ChatApp::refresh_decisions_sidebar() {
+    if (decisions_status_label_ == nullptr) {
+        return;
+    }
+    if (taiji_handle_ == 0) {
+        decisions_status_label_->set_text("(keine)");
+        return;
+    }
+    char* raw = taiji_decisions_list(taiji_handle_);
+    if (raw == nullptr) {
+        decisions_status_label_->set_text("(keine)");
+        return;
+    }
+    const std::string text = raw;
+    std::free(raw);
+
+    std::string preview;
+    std::size_t pos = 0;
+    while (pos < text.size()) {
+        const std::size_t line_end = text.find('\n', pos);
+        const std::string line = text.substr(pos, line_end == std::string::npos ? std::string::npos : line_end - pos);
+        pos = line_end == std::string::npos ? text.size() : line_end + 1;
+        if (line.rfind("- ", 0) != 0) {
+            continue;
+        }
+        const std::string name = line.substr(2, line.find(':') == std::string::npos ? std::string::npos : line.find(':') - 2);
+        if (name.empty()) {
+            continue;
+        }
+        if (!preview.empty()) {
+            preview.push_back('\n');
+        }
+        preview += "○ ";
+        preview += name;
+    }
+    if (preview.empty()) {
+        decisions_status_label_->set_text("(keine)");
+        return;
+    }
+    decisions_status_label_->set_text(preview);
+}
+
+void ChatApp::sync_activity_handles() {
+    for (TurnView& view : turn_views_) {
+        if (view.activity != nullptr) {
+            view.activity->set_taiji_handle(taiji_handle_);
+        }
     }
 }
 
@@ -860,7 +1457,7 @@ void ChatApp::copy_turn_response(std::size_t turn_index) {
         if (turn_index >= turns_.size()) {
             return;
         }
-        text = turns_[turn_index].assistant;
+        text = combined_assistant_text(turns_[turn_index].assistant_preamble, turns_[turn_index].assistant);
     }
     if (text.empty()) {
         return;
@@ -886,6 +1483,7 @@ void ChatApp::step_turn_version(std::size_t turn_index, int delta) {
             return;
         }
         turn.active_version = next;
+        turn.assistant_preamble.clear();
         turn.assistant = turn.versions[turn.active_version];
     }
 
@@ -906,19 +1504,27 @@ void ChatApp::start_regenerate(std::size_t turn_index) {
         }
         goal = turn.user;
 
-        if (turn.status == TurnStatus::Done && !turn.assistant.empty()) {
-            if (turn.versions.empty()) {
-                turn.versions.push_back(turn.assistant);
+        if (turn.status == TurnStatus::Done) {
+            const std::string full = combined_assistant_text(turn.assistant_preamble, turn.assistant);
+            if (!full.empty() && turn.versions.empty()) {
+                turn.versions.push_back(full);
                 turn.active_version = 0;
             }
         }
 
+        turn.assistant_preamble.clear();
         turn.assistant.clear();
         turn.metrics = {};
     }
 
-    if (turn_index < turn_views_.size() && turn_views_[turn_index].activity != nullptr) {
-        turn_views_[turn_index].activity->clear();
+    if (turn_index < turn_views_.size()) {
+        TurnView& view = turn_views_[turn_index];
+        if (view.activity != nullptr) {
+            view.activity->clear();
+        }
+        if (view.assistant_lead != nullptr) {
+            view.assistant_lead->clear();
+        }
     }
 
     run_job(turn_index, goal);
@@ -965,9 +1571,11 @@ void ChatApp::ensure_turn_widgets(std::size_t count) {
         auto user = std::make_unique<ChatMessage>("", theme_.accent, ChatMessage::Align::Left,
                                                   ChatMessage::Variant::UserPrompt);
         auto thinking = std::make_unique<ThinkingIndicator>(thinking_style_, thinking_style_);
-        auto activity = std::make_unique<ActivityLog>(thinking_style_, theme_.muted);
         tuinator::MarkdownViewOptions assistant_options;
         assistant_options.styles = tuinator::markdown_styles_from_theme(theme_);
+        auto assistant_lead = std::make_unique<AssistantMarkdown>(assistant_options);
+        auto activity = std::make_unique<ActivityLog>(thinking_style_, theme_.muted);
+        activity->set_taiji_handle(taiji_handle_);
         auto assistant = std::make_unique<AssistantMarkdown>(assistant_options);
 
         const std::size_t index = turn_views_.size();
@@ -988,20 +1596,30 @@ void ChatApp::ensure_turn_widgets(std::size_t count) {
             }
         });
 
+        auto block = std::make_unique<tuinator::VBox>(tuinator::BoxOptions{.gap = 1, .padding = 0});
+        auto response = std::make_unique<tuinator::VBox>(tuinator::BoxOptions{.gap = 1, .padding = 0});
+
         TurnView view{
+            .block = block.get(),
             .user = user.get(),
             .thinking = thinking.get(),
+            .assistant_lead = assistant_lead.get(),
             .activity = activity.get(),
             .assistant = assistant.get(),
             .metrics = metrics.get(),
         };
         turn_views_.push_back(view);
 
-        chat_log_->add_child(std::move(user));
-        chat_log_->add_child(std::move(thinking));
-        chat_log_->add_child(std::move(activity));
-        chat_log_->add_child(std::move(assistant));
-        chat_log_->add_child(std::move(metrics));
+        // Activity (route, skill search, tools) before the thinking spinner so
+        // deterministic prefetch steps appear above "Thinking…" while the LLM runs.
+        response->add_child(std::move(activity));
+        response->add_child(std::move(thinking));
+        response->add_child(std::move(assistant_lead));
+        response->add_child(std::move(assistant));
+        response->add_child(std::move(metrics));
+        block->add_child(std::move(user));
+        block->add_child(std::move(response));
+        chat_log_->add_child(std::move(block));
     }
 }
 
@@ -1014,10 +1632,14 @@ void ChatApp::sync_turn_view(std::size_t index, const ChatTurn& turn, bool worke
     const TurnView& view = turn_views_[index];
 
     if (turn.status == TurnStatus::Cancelled) {
-        view.user->set_text("");
+        view.user->set_text(turn.user);
+        view.user->set_style(theme_.accent);
         view.thinking->set_active(false);
         if (view.activity != nullptr) {
             view.activity->clear();
+        }
+        if (view.assistant_lead != nullptr) {
+            view.assistant_lead->clear();
         }
         view.assistant->clear();
         if (view.metrics != nullptr) {
@@ -1027,8 +1649,8 @@ void ChatApp::sync_turn_view(std::size_t index, const ChatTurn& turn, bool worke
     }
 
     if (turn.status == TurnStatus::Queued) {
-        view.user->set_text(turn.user);
-        view.user->set_style(theme_.muted);
+        // Queued prompts are shown only in QueueStatusBar (» preview) until they run.
+        view.user->set_text("");
     } else {
         view.user->set_text(turn.user);
         view.user->set_style(theme_.accent);
@@ -1036,18 +1658,27 @@ void ChatApp::sync_turn_view(std::size_t index, const ChatTurn& turn, bool worke
 
     const bool is_active_turn =
         turn.status == TurnStatus::Running && worker_busy && has_active_turn && active_turn == index;
-    const bool activity_running = view.activity != nullptr && view.activity->has_running();
-    const bool generating = is_active_turn && !activity_running;
-    const bool thinking = generating && turn.assistant.empty();
-    const bool showing_indicator = is_active_turn && (activity_running || generating);
+    const bool waiting_for_user = question_prompt_active_ && is_active_turn;
+    const bool activity_running =
+        view.activity != nullptr && view.activity->has_running() && !waiting_for_user;
+    const bool tools_started = view.activity != nullptr && view.activity->has_entries();
+    const bool generating = is_active_turn && !activity_running && !waiting_for_user;
+    const bool waiting_for_model =
+        generating && turn.assistant.empty() && turn.assistant_preamble.empty();
+    // After tools finished, hide the spinner until answer tokens arrive — Route/List
+    // already show progress; "Thinking" was misleading for nothink models.
+    const bool show_wait_spinner = waiting_for_model && !tools_started;
+    const bool showing_indicator = is_active_turn && !waiting_for_user &&
+                                   (activity_running || show_wait_spinner ||
+                                    (generating && !waiting_for_model));
     view.thinking->set_active(showing_indicator);
     if (showing_indicator) {
         if (activity_running) {
             view.thinking->set_label(view.activity->running_label());
-        } else if (thinking) {
-            view.thinking->set_label("Thinking");
+        } else if (waiting_for_model) {
+            view.thinking->set_label("Loading model…");
         } else {
-            view.thinking->set_label("Writing…");
+            view.thinking->set_label("Generating…");
         }
     }
 
@@ -1055,6 +1686,9 @@ void ChatApp::sync_turn_view(std::size_t index, const ChatTurn& turn, bool worke
         if (view.activity != nullptr) {
             view.activity->clear();
         }
+        if (view.assistant_lead != nullptr) {
+            view.assistant_lead->clear();
+        }
         view.assistant->clear();
         if (view.metrics != nullptr) {
             view.metrics->clear();
@@ -1062,23 +1696,72 @@ void ChatApp::sync_turn_view(std::size_t index, const ChatTurn& turn, bool worke
         return;
     }
 
-    if (thinking) {
-        view.assistant->clear();
+    const bool split_turn = !turn.assistant_preamble.empty();
+    std::string lead_text;
+    std::string followup_text;
+    if (split_turn) {
+        lead_text = turn.assistant_preamble;
+        followup_text = turn.assistant;
+    } else if (tools_started) {
+        // Text that streamed before tool events were shown belongs below tool activity.
+        followup_text = turn.assistant;
+    } else {
+        lead_text = turn.assistant;
+    }
+
+    if (view.assistant_lead != nullptr) {
+        if (!lead_text.empty()) {
+            view.assistant_lead->sync_from(lead_text, false);
+        } else if (!view.assistant_lead->is_empty()) {
+            view.assistant_lead->clear();
+        }
+    }
+
+    if (waiting_for_model) {
         if (view.metrics != nullptr) {
             view.metrics->clear();
         }
         return;
     }
 
-    view.assistant->sync_from(turn.assistant, false);
+    if (view.assistant != nullptr) {
+        if (!followup_text.empty()) {
+            view.assistant->sync_from(followup_text, false);
+        } else if (!view.assistant->is_empty()) {
+            view.assistant->clear();
+        }
+    }
     if (view.metrics != nullptr) {
-        const std::string note =
-            format_turn_metrics_note(turn.metrics.valid, turn.metrics.total_duration_ms,
-                                     turn.metrics.thinking_duration_ms, turn.metrics.tokens_per_sec,
-                                     turn.metrics.had_thinking);
+        const std::string full_text = combined_assistant_text(turn.assistant_preamble, turn.assistant);
+        const TurnMetricsInput metrics_input{
+            turn.metrics.valid,
+            turn.metrics.total_duration_ms,
+            turn.metrics.wait_duration_ms,
+            turn.metrics.thinking_duration_ms,
+            turn.metrics.generation_duration_ms,
+            turn.metrics.output_tokens,
+            turn.metrics.input_tokens,
+            turn.metrics.estimated_cost_usd,
+            turn.metrics.tokens_per_sec,
+            turn.metrics.had_thinking,
+            turn.metrics.tool_calls,
+            turn.metrics.tool_duration_ms,
+            turn.metrics.steps,
+            turn.metrics.context_tokens,
+            turn.metrics.context_window,
+            turn.metrics.context_used_pct,
+        };
         const std::size_t version_count =
-            turn.versions.empty() ? (turn.assistant.empty() ? 0 : 1) : turn.versions.size();
-        const bool show_actions = turn.status == TurnStatus::Done && !turn.assistant.empty();
+            turn.versions.empty() ? (full_text.empty() ? 0 : 1) : turn.versions.size();
+        const bool turn_actions = turn.status == TurnStatus::Done && !full_text.empty();
+        const bool show_actions = turn_actions && taiji_turn_metrics_show_actions(taiji_handle_) != 0;
+        int wrap_width = 48;
+        if (main_column_ != nullptr && main_column_->bounds().width > 0) {
+            wrap_width = std::max(16, main_column_->bounds().width - 2);
+        }
+        const int stats_width =
+            std::max(16, wrap_width - TurnMetricsNote::reserved_right_width(show_actions, version_count));
+        const std::string note = format_turn_metrics_line(taiji_handle_, metrics_input, stats_width);
         if (!show_actions && note.empty()) {
             view.metrics->clear();
         } else {
@@ -1217,18 +1900,321 @@ void ChatApp::refresh_session_sidebar() {
     }
 }
 
+void ChatApp::refresh_session_nav() {
+    if (session_nav_ == nullptr) {
+        return;
+    }
+    session_nav_->refresh(taiji_handle_);
+}
+
+void ChatApp::clear_turn_view(std::size_t index) {
+    if (index >= turn_views_.size()) {
+        return;
+    }
+    const TurnView& view = turn_views_[index];
+    if (view.user != nullptr) {
+        view.user->set_text("");
+    }
+    if (view.thinking != nullptr) {
+        view.thinking->set_active(false);
+    }
+    if (view.activity != nullptr) {
+        view.activity->clear();
+    }
+    if (view.assistant_lead != nullptr) {
+        view.assistant_lead->clear();
+    }
+    if (view.assistant != nullptr) {
+        view.assistant->clear();
+    }
+    if (view.metrics != nullptr) {
+        view.metrics->clear();
+    }
+}
+
+void ChatApp::reload_turns_from_backend() {
+    if (taiji_handle_ == 0) {
+        return;
+    }
+
+    char* raw = taiji_session_turns(taiji_handle_);
+    if (raw == nullptr) {
+        return;
+    }
+    const std::string json(raw);
+    std::free(raw);
+
+    std::vector<ChatTurn> loaded;
+    std::vector<std::vector<std::string>> activity_by_turn;
+    std::size_t i = 0;
+    while (i < json.size()) {
+        const std::size_t start = json.find('{', i);
+        if (start == std::string::npos) {
+            break;
+        }
+        int depth = 0;
+        std::size_t end = start;
+        for (; end < json.size(); ++end) {
+            if (json[end] == '{') {
+                ++depth;
+            } else if (json[end] == '}') {
+                --depth;
+                if (depth == 0) {
+                    break;
+                }
+            }
+        }
+        if (depth != 0) {
+            break;
+        }
+        const std::string object = json.substr(start, end - start + 1);
+        ChatTurn turn;
+        turn.user = json_extract_string(object, "user");
+        turn.assistant = json_extract_string(object, "assistant");
+        turn.status = TurnStatus::Done;
+        const std::string metrics_json = json_extract_value(object, "metrics");
+        if (!metrics_json.empty()) {
+            const int64_t total_ms = json_extract_int(metrics_json, "total_duration_ms", 0);
+            if (total_ms > 0) {
+                turn.metrics.valid = true;
+                turn.metrics.total_duration_ms = total_ms;
+                turn.metrics.wait_duration_ms = json_extract_int(metrics_json, "wait_duration_ms", 0);
+                turn.metrics.thinking_duration_ms = json_extract_int(metrics_json, "thinking_duration_ms", 0);
+                turn.metrics.generation_duration_ms =
+                    json_extract_int(metrics_json, "generation_duration_ms", 0);
+                turn.metrics.output_tokens =
+                    static_cast<int>(json_extract_int(metrics_json, "output_tokens", 0));
+                turn.metrics.input_tokens = static_cast<int>(json_extract_int(metrics_json, "input_tokens", 0));
+                turn.metrics.estimated_cost_usd =
+                    json_extract_double(metrics_json, "estimated_cost_usd", 0.0);
+                turn.metrics.had_thinking = json_extract_bool(metrics_json, "had_thinking");
+                turn.metrics.tokens_per_sec =
+                    json_extract_double(metrics_json, "tokens_per_sec", 0.0);
+                turn.metrics.tool_calls = static_cast<int>(json_extract_int(metrics_json, "tool_calls", 0));
+                turn.metrics.tool_duration_ms = json_extract_int(metrics_json, "tool_duration_ms", 0);
+                turn.metrics.steps = static_cast<int>(json_extract_int(metrics_json, "steps", 0));
+                turn.metrics.context_tokens =
+                    static_cast<int>(json_extract_int(metrics_json, "context_tokens", 0));
+                turn.metrics.context_window =
+                    static_cast<int>(json_extract_int(metrics_json, "context_window", 0));
+                turn.metrics.context_used_pct =
+                    json_extract_double(metrics_json, "context_used_pct", 0.0);
+            }
+        }
+        if (!turn.user.empty()) {
+            loaded.push_back(std::move(turn));
+            activity_by_turn.push_back(json_extract_object_array(object, "activity"));
+        }
+        i = end + 1;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(state_mu_);
+        turns_ = std::move(loaded);
+        job_queue_.clear();
+    }
+
+    std::size_t turn_count = 0;
+    {
+        std::lock_guard<std::mutex> lock(state_mu_);
+        turn_count = turns_.size();
+    }
+    ensure_turn_widgets(turn_count);
+    for (std::size_t idx = 0; idx < turn_views_.size(); ++idx) {
+        if (idx < turn_count) {
+            ChatTurn turn;
+            {
+                std::lock_guard<std::mutex> lock(state_mu_);
+                turn = turns_[idx];
+            }
+            sync_turn_view(idx, turn, false, false, 0);
+            if (idx < activity_by_turn.size()) {
+                for (const std::string& event_json : activity_by_turn[idx]) {
+                    ToolEventUpdate update;
+                    if (ChatApp::parse_tool_event(event_json, idx, update)) {
+                        apply_tool_event(update);
+                    }
+                }
+            }
+        } else {
+            clear_turn_view(idx);
+        }
+    }
+    request_chat_layout_refresh();
+    flush_chat_layout(true);
+}
+
+void ChatApp::switch_to_session(const std::string& project_root, const std::string& session_id) {
+    if (taiji_handle_ == 0 || session_id.empty()) {
+        return;
+    }
+    if (worker_busy_) {
+        taiji_cancel(taiji_handle_);
+    }
+    if (worker_.joinable()) {
+        worker_.join();
+    }
+    worker_busy_ = false;
+    has_active_turn_ = false;
+
+    char* error = nullptr;
+    if (taiji_session_switch(taiji_handle_, const_cast<char*>(project_root.c_str()),
+                             const_cast<char*>(session_id.c_str()), &error) == 0) {
+        if (error != nullptr) {
+            set_footer_status(std::string("Session wechseln fehlgeschlagen: ") + error);
+            std::free(error);
+        }
+        return;
+    }
+    if (error != nullptr) {
+        std::free(error);
+    }
+
+    reload_turns_from_backend();
+    refresh_session_sidebar();
+    refresh_session_nav();
+    refresh_context_sidebar();
+    refresh_mcp_sidebar();
+    refresh_skills_sidebar();
+    refresh_status_footer();
+    focus_input();
+}
+
+void ChatApp::show_session_context_menu(const tuinator::Point& position, const std::string& project_root,
+                                        const std::string& session_id) {
+    if (session_context_menu_ == nullptr || session_id.empty()) {
+        return;
+    }
+
+    SessionContextMenu* menu = session_context_menu_;
+
+    const std::string project = project_root;
+    const std::string id = session_id;
+    menu->set_items({
+        SessionContextMenu::Item{"Öffnen", [this, project, id]() { switch_to_session(project, id); }},
+        SessionContextMenu::Item{"Löschen", [this, project, id]() { delete_session(project, id); }},
+    });
+    menu->show(position);
+    app_.repaint_all();
+}
+
+void ChatApp::delete_session(const std::string& project_root, const std::string& session_id) {
+    if (taiji_handle_ == 0 || session_id.empty()) {
+        return;
+    }
+    if (worker_busy_) {
+        taiji_cancel(taiji_handle_);
+    }
+    if (worker_.joinable()) {
+        worker_.join();
+    }
+    worker_busy_ = false;
+    has_active_turn_ = false;
+
+    char* current_id = taiji_session_id(taiji_handle_);
+    const bool deleting_current = current_id != nullptr && session_id == current_id;
+    if (current_id != nullptr) {
+        std::free(current_id);
+    }
+
+    char* error = nullptr;
+    if (taiji_session_delete(taiji_handle_, const_cast<char*>(project_root.c_str()),
+                             const_cast<char*>(session_id.c_str()), &error) == 0) {
+        if (error != nullptr) {
+            set_footer_status(std::string("Session löschen fehlgeschlagen: ") + error);
+            std::free(error);
+        }
+        return;
+    }
+    if (error != nullptr) {
+        std::free(error);
+    }
+
+    if (deleting_current) {
+        {
+            std::lock_guard<std::mutex> lock(state_mu_);
+            turns_.clear();
+            job_queue_.clear();
+        }
+        for (std::size_t idx = 0; idx < turn_views_.size(); ++idx) {
+            clear_turn_view(idx);
+        }
+        request_chat_layout_refresh();
+        flush_chat_layout(true);
+    }
+
+    refresh_session_sidebar();
+    refresh_session_nav();
+    refresh_context_sidebar();
+    refresh_status_footer();
+    focus_input();
+}
+
+void ChatApp::create_new_session(const std::string& project_root) {
+    if (taiji_handle_ == 0) {
+        return;
+    }
+    if (worker_busy_) {
+        taiji_cancel(taiji_handle_);
+    }
+    if (worker_.joinable()) {
+        worker_.join();
+    }
+    worker_busy_ = false;
+    has_active_turn_ = false;
+
+    char* error = nullptr;
+    const char* root_arg = project_root.empty() ? nullptr : project_root.c_str();
+    if (taiji_session_new(taiji_handle_, const_cast<char*>(root_arg), &error) == 0) {
+        if (error != nullptr) {
+            set_footer_status(std::string("Neue Session fehlgeschlagen: ") + error);
+            std::free(error);
+        }
+        return;
+    }
+    if (error != nullptr) {
+        std::free(error);
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(state_mu_);
+        turns_.clear();
+        job_queue_.clear();
+    }
+    for (std::size_t idx = 0; idx < turn_views_.size(); ++idx) {
+        clear_turn_view(idx);
+    }
+    request_chat_layout_refresh();
+    flush_chat_layout(true);
+
+    if (!project_root.empty() && session_nav_ != nullptr) {
+        session_nav_->expand_project(project_root);
+    }
+
+    refresh_session_sidebar();
+    refresh_session_nav();
+    refresh_context_sidebar();
+    refresh_mcp_sidebar();
+    refresh_skills_sidebar();
+    refresh_status_footer();
+    focus_input();
+}
+
 void ChatApp::on_job_finished(std::size_t turn_index, bool ok, const std::string& error, const std::string& answer) {
     {
         std::lock_guard<std::mutex> lock(state_mu_);
         if (turn_index < turns_.size()) {
             ChatTurn& turn = turns_[turn_index];
             if (ok) {
-                if (turn.assistant.empty() && !answer.empty()) {
+                const bool has_split = !turn.assistant_preamble.empty();
+                if (!has_split && turn.assistant.empty() && !answer.empty()) {
                     turn.assistant = answer;
-                } else if (turn.assistant.empty()) {
+                } else if (has_split && turn.assistant.empty() && !answer.empty()) {
+                    turn.assistant = answer;
+                } else if (!has_split && turn.assistant.empty() && turn.assistant_preamble.empty()) {
                     turn.assistant = "(keine Antwort)";
                 }
-                turn.versions.push_back(turn.assistant);
+                turn.versions.push_back(combined_assistant_text(turn.assistant_preamble, turn.assistant));
                 turn.active_version = turn.versions.size() - 1;
                 turn.status = TurnStatus::Done;
                 turn.metrics = {};
@@ -1237,13 +2223,24 @@ void ChatApp::on_job_finished(std::size_t turn_index, bool ok, const std::string
                     if (taiji_last_turn_metrics(taiji_handle_, &raw) != 0) {
                         turn.metrics.valid = true;
                         turn.metrics.total_duration_ms = raw.total_duration_ms;
+                        turn.metrics.wait_duration_ms = raw.wait_duration_ms;
                         turn.metrics.thinking_duration_ms = raw.thinking_duration_ms;
+                        turn.metrics.generation_duration_ms = raw.generation_duration_ms;
+                        turn.metrics.output_tokens = raw.output_tokens;
+                        turn.metrics.input_tokens = raw.input_tokens;
+                        turn.metrics.estimated_cost_usd = raw.estimated_cost_usd;
                         turn.metrics.tokens_per_sec = raw.tokens_per_sec;
                         turn.metrics.had_thinking = raw.had_thinking != 0;
+                        turn.metrics.tool_calls = raw.tool_calls;
+                        turn.metrics.tool_duration_ms = raw.tool_duration_ms;
+                        turn.metrics.steps = raw.steps;
+                        turn.metrics.context_tokens = raw.context_tokens;
+                        turn.metrics.context_window = raw.context_window;
+                        turn.metrics.context_used_pct = raw.context_used_pct;
                     }
                 }
             } else if (is_cancellation_error(error)) {
-                if (turn.assistant.empty()) {
+                if (turn.assistant.empty() && turn.assistant_preamble.empty()) {
                     if (!turn.versions.empty()) {
                         turn.active_version = turn.versions.size() - 1;
                         turn.assistant = turn.versions[turn.active_version];
@@ -1268,6 +2265,8 @@ void ChatApp::on_job_finished(std::size_t turn_index, bool ok, const std::string
 
     has_active_turn_ = false;
     worker_busy_ = false;
+    hide_question_prompt();
+    pending_ask_user_args_.erase(turn_index);
 
     ensure_turn_widgets(turn_index + 1);
     if (turn_index < turn_views_.size() && turn_views_[turn_index].activity != nullptr) {
@@ -1278,10 +2277,16 @@ void ChatApp::on_job_finished(std::size_t turn_index, bool ok, const std::string
     flush_chat_layout(true);
 
     refresh_session_sidebar();
+    refresh_session_nav();
     refresh_context_sidebar();
+    refresh_skills_sidebar();
 
     refresh_queue_ui(true);
     focus_input();
+
+    if (!ok && !is_cancellation_error(error)) {
+        set_footer_status(error.empty() ? "Anfrage fehlgeschlagen" : error);
+    }
 
     if (pending_regenerate_turn_.has_value()) {
         const std::size_t regenerate_index = *pending_regenerate_turn_;
@@ -1304,10 +2309,30 @@ void ChatApp::apply_tool_event(const ToolEventUpdate& update) {
     }
     switch (update.kind) {
     case ToolEventUpdate::Kind::ToolCall:
-        view.activity->start_tool(update.tool_name, update.args, update.is_mcp, update.mcp_server);
+        if (update.is_ask_user || update.tool_name == "ask_user") {
+            pending_ask_user_args_[update.turn_index] = update.args;
+            break;
+        }
+        view.activity->start_tool(update.tool_name, update.args, update.is_mcp, update.is_skill,
+                                  update.skill_name, update.mcp_server, update.is_decision,
+                                  update.decision_driver, update.is_ask_user);
         break;
     case ToolEventUpdate::Kind::Observation:
-        view.activity->finish_tool(update.tool_name, update.text, update.diff, update.duration_ms);
+        if (update.is_ask_user || update.tool_name == "ask_user") {
+            std::string args;
+            if (auto it = pending_ask_user_args_.find(update.turn_index); it != pending_ask_user_args_.end()) {
+                args = it->second;
+                pending_ask_user_args_.erase(it);
+            }
+            view.activity->finish_question(args, update.text, update.duration_ms);
+            break;
+        }
+        view.activity->finish_tool(update.tool_name, update.text, update.diff, update.duration_ms,
+                                   update.skill_name, update.is_decision, update.decision_driver,
+                                   update.is_ask_user);
+        if (update.is_skill) {
+            refresh_skills_sidebar();
+        }
         break;
     case ToolEventUpdate::Kind::ThinkDelta:
         view.activity->append_thinking(update.text);
@@ -1325,30 +2350,93 @@ void ChatApp::apply_tool_event(const ToolEventUpdate& update) {
     scroll_chat_to_bottom(false);
 }
 
-void ChatApp::apply_pending_updates() {
+bool ChatApp::apply_pending_updates() {
     std::string stream_delta;
     std::size_t stream_turn = 0;
     std::deque<ToolEventUpdate> tool_events;
     TerminalUpdate terminal{};
     bool has_terminal = false;
+    QuestionPromptUpdate question_prompt{};
+    bool has_question_prompt = false;
 
+    bool stream_reset = false;
+    std::size_t stream_reset_turn = 0;
+    std::string stream_reset_text;
     {
         std::lock_guard<std::mutex> lock(state_mu_);
         stream_delta.swap(pending_stream_delta_);
         stream_turn = pending_stream_turn_;
         tool_events.swap(pending_tool_events_);
+        if (has_pending_stream_reset_) {
+            stream_reset = true;
+            stream_reset_turn = pending_stream_reset_turn_;
+            stream_reset_text = pending_stream_reset_text_;
+            has_pending_stream_reset_ = false;
+            pending_stream_reset_text_.clear();
+        }
         if (has_pending_terminal_) {
             terminal = pending_terminal_;
             has_terminal = true;
             has_pending_terminal_ = false;
         }
+        if (has_pending_question_prompt_) {
+            question_prompt = pending_question_prompt_;
+            has_question_prompt = true;
+            has_pending_question_prompt_ = false;
+        }
     }
 
+    bool changed = false;
+
+    if (has_question_prompt) {
+        changed = true;
+        show_question_prompt(question_prompt);
+    }
+
+    if (stream_reset && !stream_reset_text.empty()) {
+        changed = true;
+        {
+            std::lock_guard<std::mutex> lock(state_mu_);
+            if (stream_reset_turn < turns_.size()) {
+                ChatTurn& turn = turns_[stream_reset_turn];
+                const std::string existing = turn.assistant;
+                turn.assistant_preamble = stream_reset_text;
+                if (!existing.empty() && existing != stream_reset_text) {
+                    if (existing.size() > stream_reset_text.size() &&
+                        existing.compare(0, stream_reset_text.size(), stream_reset_text) == 0) {
+                        std::string suffix = existing.substr(stream_reset_text.size());
+                        const std::size_t start = suffix.find_first_not_of(" \t\r\n");
+                        turn.assistant = start == std::string::npos ? "" : suffix.substr(start);
+                    } else {
+                        turn.assistant = existing;
+                    }
+                } else {
+                    turn.assistant.clear();
+                }
+            }
+        }
+        ensure_turn_widgets(stream_reset_turn + 1);
+        if (stream_reset_turn < turn_views_.size()) {
+            TurnView& view = turn_views_[stream_reset_turn];
+            if (view.assistant_lead != nullptr) {
+                view.assistant_lead->sync_from(stream_reset_text, true);
+            }
+            if (view.assistant != nullptr) {
+                view.assistant->clear();
+            }
+        }
+        refresh_turn_view(stream_reset_turn);
+    }
+
+    if (!tool_events.empty()) {
+        changed = true;
+    }
     for (const auto& event : tool_events) {
         apply_tool_event(event);
     }
 
     if (!stream_delta.empty()) {
+        changed = true;
         append_assistant_delta(stream_turn, stream_delta);
         // Answer text ends any ongoing thinking phase.
         ensure_turn_widgets(stream_turn + 1);
@@ -1361,9 +2449,10 @@ void ChatApp::apply_pending_updates() {
     }
 
     if (!has_terminal) {
-        return;
+        return changed;
     }
 
+    changed = true;
     switch (terminal.kind) {
     case TerminalUpdate::Kind::Done:
         on_job_finished(terminal.turn_index, true, "", terminal.answer);
@@ -1372,6 +2461,7 @@ void ChatApp::apply_pending_updates() {
         on_job_finished(terminal.turn_index, false, terminal.text, "");
         break;
     }
+    return changed;
 }
 
 void ChatApp::on_delta(const char* delta, void* user_data) {
@@ -1397,39 +2487,26 @@ void ChatApp::on_event(const char* event_json, void* user_data) {
     }
 
     const std::string json = event_json;
-    const std::string type = json_extract_string(json, "type");
-    ToolEventUpdate update;
-    update.turn_index = self->active_turn_index_.load();
-    update.tool_name = json_extract_string(json, "tool_name");
-
-    if (type == "tool_call") {
-        update.kind = ToolEventUpdate::Kind::ToolCall;
-        update.args = json_extract_string(json, "args");
-        update.is_mcp = json_extract_bool(json, "is_mcp");
-        update.mcp_server = json_extract_string(json, "mcp_server");
-    } else if (type == "observation") {
-        update.kind = ToolEventUpdate::Kind::Observation;
-        update.text = json_extract_string(json, "text");
-        update.diff = json_extract_string(json, "diff");
-        update.duration_ms = json_extract_int(json, "duration_ms", -1);
-        update.is_mcp = json_extract_bool(json, "is_mcp");
-        update.mcp_server = json_extract_string(json, "mcp_server");
-        if (update.diff.empty()) {
-            const std::string data_key = "\"data\":";
-            const std::size_t data_pos = json.find(data_key);
-            if (data_pos != std::string::npos) {
-                update.diff = json_extract_string(json.substr(data_pos), "diff");
-            }
+    if (json_extract_string(json, "type") == "user_prompt") {
+        QuestionPromptUpdate prompt;
+        if (parse_user_prompt_event(json, prompt.request_id, prompt.questions)) {
+            std::lock_guard<std::mutex> lock(self->state_mu_);
+            self->pending_question_prompt_ = std::move(prompt);
+            self->has_pending_question_prompt_ = true;
         }
-    } else if (type == "think_delta") {
-        update.kind = ToolEventUpdate::Kind::ThinkDelta;
-        update.text = json_extract_string(json, "text");
-    } else if (type == "thought_start") {
-        update.kind = ToolEventUpdate::Kind::ThoughtStart;
-    } else if (type == "thought") {
-        update.kind = ToolEventUpdate::Kind::Thought;
-        update.text = json_extract_string(json, "text");
-    } else {
+        return;
+    }
+
+    if (json_extract_string(json, "type") == "stream_reset") {
+        std::lock_guard<std::mutex> lock(self->state_mu_);
+        self->pending_stream_reset_turn_ = self->active_turn_index_.load();
+        self->pending_stream_reset_text_ = json_extract_string(json, "text");
+        self->has_pending_stream_reset_ = true;
+        return;
+    }
+
+    ToolEventUpdate update;
+    if (!ChatApp::parse_tool_event(json, self->active_turn_index_.load(), update)) {
         return;
     }
 

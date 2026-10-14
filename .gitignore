@@ -1,13 +1,23 @@
-# Backend (taiji-ai)
+# Local Taiji / Wuji runtime (config, sessions, memory, skills cache)
+.taiji/
+.wuji/
+
+# Backend (taiji-ai) — CLI + eval tools
 taiji-ai/bin/
-taiji-ai/.taiji/
-taiji-ai/.wuji/
 taiji-ai/*.test
 taiji-ai/agent.test
 
-# Frontend (taiji-tui)
+# Eval / bench binaries (if built with go build -o outside bin/)
+/decision-eval
+/memory-eval
+/memory-bench
+/memory-scenario-eval
+
+# Frontend (taiji-tui) — TUI binary + embedded Go archive
 taiji-tui/build/
-taiji-tui/highlight/target/
+taiji-tui/build/taiji-tui
+**/libtaiji.a
+**/libtaiji.h
 
 # Go
 *.exe
@@ -34,7 +44,11 @@ go.work.sum
 tmp/
 temp/
 
-# OS junk
+# Editor / OS
 .DS_Store
 Thumbs.db
 *~
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -13,6 +13,7 @@ class AssistantMarkdown : public tuinator::Widget {
     void append(std::string_view chunk);
     void set_markdown(std::string text);
     void clear();
+    bool is_empty() const;
     void set_wrap_width(int width);
     void sync_from(const std::string& text, bool clear_first);
 

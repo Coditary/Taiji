@@ -1,12 +1,133 @@
 #include "activity_log.hpp"
 
+#include <libtaiji.h>
+
 #include <tuinator/render/text.hpp>
 
 #include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <sstream>
 
 namespace {
+
+std::string json_string_field(const std::string& json, const std::string& key);
+
+bool is_invoke_skill_tool_name(const std::string& name) {
+    return name == "invoke_skill";
+}
+
+std::string skill_name_from_args(const std::string& args);
+
+std::string question_header_from_args(const std::string& args) {
+    const std::string header = json_string_field(args, "header");
+    if (!header.empty()) {
+        return header;
+    }
+    const std::string question = json_string_field(args, "question");
+    if (!question.empty()) {
+        return question.size() > 42 ? question.substr(0, 39) + "..." : question;
+    }
+    return "Question";
+}
+
+std::string decision_state_from_args(const std::string& args) {
+    for (const char* key : {"state", "text"}) {
+        const std::string value = json_string_field(args, key);
+        if (!value.empty()) {
+            return value;
+        }
+    }
+    return {};
+}
+
+std::string json_string_field(const std::string& json, const std::string& key) {
+    const std::string needle = "\"" + key + "\":";
+    const std::size_t pos = json.find(needle);
+    if (pos == std::string::npos) {
+        return {};
+    }
+    std::size_t i = pos + needle.size();
+    while (i < json.size() && (json[i] == ' ' || json[i] == '\t')) {
+        ++i;
+    }
+    if (i >= json.size() || json[i] != '"') {
+        return {};
+    }
+    ++i;
+    std::string out;
+    while (i < json.size()) {
+        const char ch = json[i++];
+        if (ch == '"') {
+            return out;
+        }
+        if (ch == '\\' && i < json.size()) {
+            out.push_back(json[i++]);
+            continue;
+        }
+        out.push_back(ch);
+    }
+    return {};
+}
+
+std::string trim_copy(const std::string& text) {
+    const auto begin = text.find_first_not_of(" \t\n\r");
+    if (begin == std::string::npos) {
+        return {};
+    }
+    const auto end = text.find_last_not_of(" \t\n\r");
+    return text.substr(begin, end - begin + 1);
+}
+
+std::string question_answer_summary(const std::string& text) {
+    const std::string trimmed = trim_copy(text);
+    if (trimmed.empty()) {
+        return {};
+    }
+    const std::string prefix = "User has answered your questions: ";
+    if (trimmed.rfind(prefix, 0) != 0) {
+        return trimmed;
+    }
+    std::string rest = trimmed.substr(prefix.size());
+    const std::size_t cont = rest.find(". Continue");
+    if (cont != std::string::npos) {
+        rest = rest.substr(0, cont);
+    }
+    return trim_copy(rest);
+}
+
+std::string skill_name_from_args(const std::string& args) {
+    if (args.empty()) {
+        return {};
+    }
+    for (const char* key : {"name", "skill", "skill_name"}) {
+        const std::string value = json_string_field(args, key);
+        if (!value.empty() && !is_invoke_skill_tool_name(value)) {
+            return value;
+        }
+    }
+    const std::string nested = json_string_field(args, "arguments");
+    if (!nested.empty()) {
+        return skill_name_from_args(nested);
+    }
+    return {};
+}
+
+std::string skill_name_from_result_text(const std::string& text) {
+    const std::string marker = "## Skill: ";
+    const std::size_t pos = text.find(marker);
+    if (pos == std::string::npos) {
+        return {};
+    }
+    const std::size_t start = pos + marker.size();
+    const std::size_t end = text.find('\n', start);
+    const std::string name = end == std::string::npos ? text.substr(start) : text.substr(start, end - start);
+    const std::string trimmed = trim_copy(name);
+    if (trimmed.empty() || is_invoke_skill_tool_name(trimmed)) {
+        return {};
+    }
+    return trimmed;
+}
 
 constexpr int kHeaderIndent = 4; // chevron + status icon + spaces
 constexpr int kBodyBarCol = 2;
@@ -24,6 +145,36 @@ tuinator::Style make_done_style() {
     style.foreground_rgb = tuinator::rgb(150, 200, 170);
     style.bold = true;
     return style;
+}
+
+tuinator::Style make_failed_style() {
+    tuinator::Style style;
+    style.foreground_rgb = tuinator::rgb(235, 120, 120);
+    style.bold = true;
+    return style;
+}
+
+tuinator::Style make_failed_body_style() {
+    tuinator::Style style;
+    style.foreground_rgb = tuinator::rgb(235, 120, 120);
+    return style;
+}
+
+bool tool_observation_failed(const std::string& text) {
+    const std::string trimmed = trim_copy(text);
+    constexpr char kPrefix[] = "error:";
+    if (trimmed.size() < sizeof(kPrefix) - 1) {
+        return false;
+    }
+    for (std::size_t i = 0; i < sizeof(kPrefix) - 1; ++i) {
+        const unsigned char c = static_cast<unsigned char>(trimmed[i]);
+        const unsigned char expected = static_cast<unsigned char>(kPrefix[i]);
+        const unsigned char lower = c >= 'A' && c <= 'Z' ? static_cast<unsigned char>(c - 'A' + 'a') : c;
+        if (lower != expected) {
+            return false;
+        }
+    }
+    return true;
 }
 
 tuinator::Style make_add_style() {
@@ -312,7 +463,8 @@ std::vector<std::string> pretty_args_lines(const std::string& args) {
 } // namespace
 
 ActivityLog::ActivityLog(tuinator::Style active_style, tuinator::Style muted_style)
-    : active_style_(active_style), done_style_(make_done_style()), muted_style_(muted_style),
+    : active_style_(active_style), done_style_(make_done_style()), failed_style_(make_failed_style()),
+      failed_body_style_(make_failed_body_style()), muted_style_(muted_style),
       body_style_(muted_style), thinking_body_style_(muted_style), heading_style_(muted_style),
       add_style_(make_add_style()), del_style_(make_del_style()), bar_style_(muted_style) {
     thinking_body_style_.italic = true;
@@ -334,6 +486,8 @@ std::string ActivityLog::scope_label(Scope scope) {
     case Scope::Tool: return "Tool";
     case Scope::MCP: return "MCP";
     case Scope::Skill: return "Skill";
+    case Scope::Decision: return "Decision";
+    case Scope::Question: return "Question";
     }
     return "Tool";
 }
@@ -448,18 +602,43 @@ void ActivityLog::finish_all() {
     }
 }
 
-void ActivityLog::start_tool(const std::string& tool_name, const std::string& args, bool is_mcp,
-                             const std::string& mcp_server) {
+void ActivityLog::start_tool(const std::string& tool_name, const std::string& args, bool is_mcp, bool is_skill,
+                             const std::string& skill_name, const std::string& mcp_server, bool is_decision,
+                             const std::string& decision_driver, bool is_ask_user) {
     // A tool call ends any ongoing thinking phase.
     end_thinking();
+    if (is_ask_user || tool_name == "ask_user") {
+        return;
+    }
 
     Entry entry;
-    entry.scope = is_mcp ? Scope::MCP : Scope::Tool;
+    const bool skill_call = is_skill || tool_name == "invoke_skill";
+    const bool decision_call = is_decision || tool_name == "decide";
+    if (decision_call) {
+        entry.scope = Scope::Decision;
+    } else if (skill_call) {
+        entry.scope = Scope::Skill;
+    } else if (is_mcp) {
+        entry.scope = Scope::MCP;
+    } else {
+        entry.scope = Scope::Tool;
+    }
     entry.running = true;
     entry.name = tool_name;
     entry.server = mcp_server;
+    entry.skill_name = skill_name;
+    if (skill_call && entry.skill_name.empty()) {
+        entry.skill_name = skill_name_from_args(args);
+    }
+    if (skill_call && is_invoke_skill_tool_name(entry.skill_name)) {
+        entry.skill_name.clear();
+    }
+    entry.decision_driver = decision_driver;
     entry.args = args;
     entry.started_at = std::chrono::steady_clock::now();
+    if (decision_call) {
+        entry.expanded = true;
+    }
     entries_.push_back(std::move(entry));
     mark_dirty();
     mark_layout_dirty();
@@ -494,8 +673,31 @@ std::vector<ActivityLog::BodyLine> ActivityLog::parse_diff(const std::string& di
     return lines;
 }
 
+void ActivityLog::finish_question(const std::string& args, const std::string& text, int64_t duration_ms) {
+    end_thinking();
+    Entry entry;
+    entry.scope = Scope::Question;
+    entry.question_header = question_header_from_args(args);
+    entry.body = question_answer_summary(text);
+    entry.args = args;
+    entry.expanded = false;
+    entry.spacer_after = true;
+    entry.failed = tool_observation_failed(text);
+    if (duration_ms >= 0) {
+        entry.duration_ms = duration_ms;
+        entry.has_duration = true;
+    }
+    entries_.push_back(std::move(entry));
+    mark_dirty();
+    mark_layout_dirty();
+}
+
 void ActivityLog::finish_tool(const std::string& tool_name, const std::string& text, const std::string& diff,
-                              int64_t duration_ms) {
+                              int64_t duration_ms, const std::string& skill_name, bool is_decision,
+                              const std::string& decision_driver, bool is_ask_user) {
+    if (is_ask_user || tool_name == "ask_user") {
+        return;
+    }
     Entry* entry = nullptr;
     for (auto it = entries_.rbegin(); it != entries_.rend(); ++it) {
         if (it->running && it->scope != Scope::Thinking && it->name == tool_name) {
@@ -513,14 +715,45 @@ void ActivityLog::finish_tool(const std::string& tool_name, const std::string& t
     }
     if (entry == nullptr) {
         Entry fallback;
-        fallback.scope = Scope::Tool;
+        if (is_decision || tool_name == "decide") {
+            fallback.scope = Scope::Decision;
+            fallback.expanded = true;
+        } else if (tool_name == "invoke_skill") {
+            fallback.scope = Scope::Skill;
+        } else {
+            fallback.scope = Scope::Tool;
+        }
         fallback.name = tool_name;
         fallback.started_at = std::chrono::steady_clock::now();
         entries_.push_back(std::move(fallback));
         entry = &entries_.back();
     }
 
+    if (entry->scope == Scope::Decision || is_decision || tool_name == "decide") {
+        entry->scope = Scope::Decision;
+        entry->expanded = true;
+    }
+    if (!decision_driver.empty()) {
+        entry->decision_driver = decision_driver;
+    }
+    if (!skill_name.empty() && !is_invoke_skill_tool_name(skill_name)) {
+        entry->skill_name = skill_name;
+    }
     entry->body = text;
+    entry->failed = tool_observation_failed(text);
+    if (entry->scope == Scope::Skill && entry->skill_name.empty()) {
+        entry->skill_name = skill_name_from_result_text(text);
+    }
+    if (entry->scope == Scope::Skill && entry->skill_name.empty()) {
+        entry->skill_name = skill_name_from_args(entry->args);
+    }
+    if (entry->scope == Scope::Skill && is_invoke_skill_tool_name(entry->skill_name)) {
+        entry->skill_name.clear();
+    }
+    if (entry->scope == Scope::Skill && !entry->skill_name.empty()) {
+        mark_dirty();
+        mark_layout_dirty();
+    }
     if (!diff.empty()) {
         entry->diff = parse_diff(diff, muted_style_, add_style_, del_style_);
     }
@@ -548,9 +781,9 @@ std::string ActivityLog::running_label() const {
         if (entry.scope == Scope::Thinking) {
             return "Thinking…";
         }
-        return scope_label(entry.scope) + " · " + entry.name;
+        return entry_title(entry);
     }
-    return "Working…";
+    return "Loading model…";
 }
 
 void ActivityLog::tick(int dt_ms) {
@@ -575,6 +808,23 @@ void ActivityLog::set_wrap_width(int width) {
     mark_layout_dirty();
 }
 
+void ActivityLog::set_taiji_handle(uint64_t handle) {
+    taiji_handle_ = handle;
+}
+
+std::string ActivityLog::tool_display_title(const std::string& tool_name) const {
+    if (taiji_handle_ == 0 || tool_name.empty()) {
+        return {};
+    }
+    char* raw = taiji_tool_display_title(taiji_handle_, const_cast<char*>(tool_name.c_str()));
+    if (raw == nullptr) {
+        return {};
+    }
+    std::string title(raw);
+    std::free(raw);
+    return title;
+}
+
 int ActivityLog::wrap_cols() const {
     if (bounds_.width > 0) {
         return std::max(8, bounds_.width);
@@ -589,6 +839,62 @@ int ActivityLog::body_wrap_cols() const {
     return std::max(8, wrap_cols() - kBodyIndent);
 }
 
+std::string ActivityLog::entry_title(const Entry& entry) const {
+    if (entry.scope == Scope::MCP) {
+        std::string text = "MCP";
+        if (!entry.server.empty()) {
+            text += " · " + entry.server;
+        }
+        if (!entry.name.empty()) {
+            if (const std::string label = tool_display_title(entry.name); !label.empty()) {
+                text += " · " + label;
+            } else {
+                text += " · " + entry.name;
+            }
+        }
+        return text;
+    }
+    if (entry.scope == Scope::Skill) {
+        std::string text = "Skill";
+        std::string skill = entry.skill_name;
+        if (skill.empty()) {
+            skill = skill_name_from_args(entry.args);
+        }
+        if (!skill.empty() && !is_invoke_skill_tool_name(skill)) {
+            text += " · " + skill;
+        }
+        return text;
+    }
+    if (entry.scope == Scope::Decision) {
+        std::string text = "Decision";
+        if (!entry.decision_driver.empty()) {
+            text += " · " + entry.decision_driver;
+        } else if (!entry.name.empty() && entry.name != "decide") {
+            text += " · " + entry.name;
+        }
+        return text;
+    }
+    if (entry.scope == Scope::Question) {
+        if (!entry.question_header.empty()) {
+            return "Question · " + entry.question_header;
+        }
+        return "Question";
+    }
+    if (entry.scope == Scope::Tool && !entry.name.empty()) {
+        if (const std::string label = tool_display_title(entry.name); !label.empty()) {
+            if (entry.name == "skill_search" && !entry.skill_name.empty()) {
+                return label + " · " + entry.skill_name;
+            }
+            return label;
+        }
+    }
+    std::string text = scope_label(entry.scope);
+    if (!entry.name.empty()) {
+        text += " · " + entry.name;
+    }
+    return text;
+}
+
 std::string ActivityLog::header_text(const Entry& entry) const {
     if (entry.scope == Scope::Thinking) {
         if (entry.running) {
@@ -600,14 +906,13 @@ std::string ActivityLog::header_text(const Entry& entry) const {
         return "Thought";
     }
 
-    std::string text = scope_label(entry.scope);
-    if (!entry.name.empty()) {
-        text += " · " + entry.name;
+    std::string text = entry_title(entry);
+    if (entry.scope != Scope::Skill && entry.scope != Scope::Decision && entry.scope != Scope::Question &&
+        (entry.running || entry.has_duration)) {
+        text += " · " + format_duration(elapsed_ms(entry));
     }
-    if (entry.scope == Scope::MCP && !entry.server.empty()) {
-        text += " · " + entry.server;
-    }
-    if (entry.running || entry.has_duration) {
+    if ((entry.scope == Scope::Decision || entry.scope == Scope::Question) &&
+        (entry.running || entry.has_duration)) {
         text += " · " + format_duration(elapsed_ms(entry));
     }
     return text;
@@ -645,8 +950,71 @@ std::vector<ActivityLog::BodyLine> ActivityLog::thinking_body_lines(const Entry&
     return lines;
 }
 
+std::vector<ActivityLog::BodyLine> ActivityLog::decision_body_lines(const Entry& entry) const {
+    std::vector<BodyLine> lines;
+    const tuinator::Style& text_style = entry.failed ? failed_body_style_ : body_style_;
+    const tuinator::Style& title_style = entry.failed ? failed_style_ : heading_style_;
+    const tuinator::Style& hint_style = entry.failed ? failed_body_style_ : muted_style_;
+
+    lines.push_back(BodyLine{.text = "Input", .style = title_style, .bar = true});
+
+    const std::string state = decision_state_from_args(entry.args);
+    if (!state.empty()) {
+        auto wrapped = wrap_text("state: " + state, body_wrap_cols());
+        for (auto& line : wrapped) {
+            lines.push_back(BodyLine{.text = std::move(line), .style = text_style, .bar = true});
+        }
+    }
+
+    auto params = pretty_args_lines(entry.args);
+    std::size_t omitted_params = 0;
+    if (params.size() > kMaxParamLines) {
+        omitted_params = params.size() - kMaxParamLines;
+        params.resize(kMaxParamLines);
+    }
+    for (auto& line : params) {
+        if (!state.empty() && line.find("\"state\"") != std::string::npos) {
+            continue;
+        }
+        if (!state.empty() && line.find("\"text\"") != std::string::npos) {
+            continue;
+        }
+        lines.push_back(BodyLine{.text = std::move(line), .style = text_style, .bar = true});
+    }
+    if (omitted_params > 0) {
+        lines.push_back(BodyLine{.text = "… (" + std::to_string(omitted_params) + " more lines)",
+                                 .style = hint_style, .bar = true});
+    }
+
+    if (!entry.body.empty()) {
+        auto result = wrap_text(entry.body, body_wrap_cols());
+        std::size_t omitted = 0;
+        if (result.size() > kMaxResultLines) {
+            omitted = result.size() - kMaxResultLines;
+            result.resize(kMaxResultLines);
+        }
+        lines.push_back(BodyLine{.text = "Result", .style = title_style, .bar = true});
+        for (auto& line : result) {
+            lines.push_back(BodyLine{.text = std::move(line), .style = text_style, .bar = true});
+        }
+        if (omitted > 0) {
+            lines.push_back(BodyLine{.text = "… (" + std::to_string(omitted) + " more lines)",
+                                     .style = hint_style, .bar = true});
+        }
+    }
+
+    if (lines.size() <= 1) {
+        lines.push_back(BodyLine{.text = entry.running ? "(deciding…)" : "(no input)",
+                                 .style = hint_style, .bar = true});
+    }
+    return lines;
+}
+
 std::vector<ActivityLog::BodyLine> ActivityLog::tool_body_lines(const Entry& entry) const {
     std::vector<BodyLine> lines;
+    const tuinator::Style& text_style = entry.failed ? failed_body_style_ : body_style_;
+    const tuinator::Style& title_style = entry.failed ? failed_style_ : heading_style_;
+    const tuinator::Style& hint_style = entry.failed ? failed_body_style_ : muted_style_;
 
     auto params = pretty_args_lines(entry.args);
     std::size_t omitted_params = 0;
@@ -655,13 +1023,13 @@ std::vector<ActivityLog::BodyLine> ActivityLog::tool_body_lines(const Entry& ent
         params.resize(kMaxParamLines);
     }
     if (!params.empty()) {
-        lines.push_back(BodyLine{.text = "Parameters", .style = heading_style_, .bar = true});
+        lines.push_back(BodyLine{.text = "Parameters", .style = title_style, .bar = true});
         for (auto& line : params) {
-            lines.push_back(BodyLine{.text = std::move(line), .style = body_style_, .bar = true});
+            lines.push_back(BodyLine{.text = std::move(line), .style = text_style, .bar = true});
         }
         if (omitted_params > 0) {
             lines.push_back(BodyLine{.text = "… (" + std::to_string(omitted_params) + " more lines)",
-                                     .style = muted_style_, .bar = true});
+                                     .style = hint_style, .bar = true});
         }
     }
 
@@ -672,23 +1040,42 @@ std::vector<ActivityLog::BodyLine> ActivityLog::tool_body_lines(const Entry& ent
             omitted = result.size() - kMaxResultLines;
             result.resize(kMaxResultLines);
         }
-        lines.push_back(BodyLine{.text = "Result", .style = heading_style_, .bar = true});
+        lines.push_back(BodyLine{.text = "Result", .style = title_style, .bar = true});
         for (auto& line : result) {
-            lines.push_back(BodyLine{.text = std::move(line), .style = body_style_, .bar = true});
+            lines.push_back(BodyLine{.text = std::move(line), .style = text_style, .bar = true});
         }
         if (omitted > 0) {
             lines.push_back(BodyLine{.text = "… (" + std::to_string(omitted) + " more lines)",
-                                     .style = muted_style_, .bar = true});
+                                     .style = hint_style, .bar = true});
         }
     }
 
-    for (const auto& line : entry.diff) {
-        lines.push_back(line);
+    for (auto line : entry.diff) {
+        if (entry.failed) {
+            line.style = failed_body_style_;
+        }
+        lines.push_back(std::move(line));
     }
 
     if (lines.empty()) {
         lines.push_back(BodyLine{.text = entry.running ? "(running…)" : "(no output)",
-                                 .style = muted_style_, .bar = true});
+                                 .style = hint_style, .bar = true});
+    }
+    return lines;
+}
+
+std::vector<ActivityLog::BodyLine> ActivityLog::question_body_lines(const Entry& entry) const {
+    std::vector<BodyLine> lines;
+    const tuinator::Style& text_style = entry.failed ? failed_body_style_ : body_style_;
+    const tuinator::Style& hint_style = entry.failed ? failed_body_style_ : muted_style_;
+    if (!entry.body.empty()) {
+        for (auto& line : wrap_text(entry.body, body_wrap_cols())) {
+            lines.push_back(BodyLine{.text = std::move(line), .style = text_style, .bar = true});
+        }
+    }
+    if (lines.empty()) {
+        lines.push_back(BodyLine{.text = entry.failed ? "(dismissed)" : "(answered)",
+                                 .style = hint_style, .bar = true});
     }
     return lines;
 }
@@ -697,6 +1084,12 @@ std::vector<ActivityLog::BodyLine> ActivityLog::body_lines(const Entry& entry) c
     if (entry.scope == Scope::Thinking) {
         return thinking_body_lines(entry);
     }
+    if (entry.scope == Scope::Decision) {
+        return decision_body_lines(entry);
+    }
+    if (entry.scope == Scope::Question) {
+        return question_body_lines(entry);
+    }
     return tool_body_lines(entry);
 }
 
@@ -704,6 +1097,9 @@ int ActivityLog::entry_height(const Entry& entry) const {
     int height = 1;
     if (entry.expanded) {
         height += static_cast<int>(body_lines(entry).size());
+    }
+    if (entry.spacer_after) {
+        ++height;
     }
     return height;
 }
@@ -752,14 +1148,17 @@ void ActivityLog::paint(tuinator::PaintContext& ctx) const {
         }
 
         const char* chevron = entry.expanded ? "▾" : "▸";
-        ctx.canvas.draw_text({0, y}, chevron, muted_style_);
+        const tuinator::Style& chrome_style = entry.failed ? failed_body_style_ : muted_style_;
+        ctx.canvas.draw_text({0, y}, chevron, chrome_style);
 
-        const char* status = entry.running ? spinner_frame() : "✓";
-        const tuinator::Style& status_style = entry.running ? active_style_ : done_style_;
+        const char* status = entry.running ? spinner_frame() : (entry.failed ? "✗" : "✓");
+        const tuinator::Style& status_style =
+            entry.running ? active_style_ : (entry.failed ? failed_style_ : done_style_);
         ctx.canvas.draw_text({2, y}, status, status_style);
 
         const std::string header = header_text(entry);
-        const tuinator::Style& header_style = entry.running ? active_style_ : body_style_;
+        const tuinator::Style& header_style =
+            entry.running ? active_style_ : (entry.failed ? failed_style_ : body_style_);
         const int max_columns = std::max(0, bounds_.width - kHeaderIndent);
         const std::size_t bytes = tuinator::text_byte_length_for_width(header, max_columns);
         if (bytes > 0) {
@@ -776,13 +1175,18 @@ void ActivityLog::paint(tuinator::PaintContext& ctx) const {
                 break;
             }
             if (line.bar) {
-                ctx.canvas.draw_text({kBodyBarCol, y}, "│", bar_style_);
+                const tuinator::Style& bar_style = entry.failed ? failed_body_style_ : bar_style_;
+                ctx.canvas.draw_text({kBodyBarCol, y}, "│", bar_style);
             }
             const int body_columns = std::max(0, bounds_.width - kBodyIndent);
             const std::size_t body_bytes = tuinator::text_byte_length_for_width(line.text, body_columns);
             if (body_bytes > 0) {
                 ctx.canvas.draw_text({kBodyIndent, y}, line.text.substr(0, body_bytes), line.style);
             }
+            ++y;
+        }
+
+        if (entry.spacer_after && y < bounds_.height) {
             ++y;
         }
     }

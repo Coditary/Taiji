@@ -10,7 +10,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	taijicfg "github.com/coditary/taiji/internal/config"
-	wujiv1 "github.com/coditary/wuji/api/proto/v1"
+	"github.com/coditary/taiji/internal/wujipath"
+	wujiv1 "github.com/coditary/wuji-core/api/proto/v1"
 )
 
 // WujiCoreClient talks to a Wuji core daemon over gRPC.
@@ -20,7 +21,11 @@ type WujiCoreClient struct {
 }
 
 // DialWujiCore connects to the Wuji core at endpoint and verifies with Ping.
-func DialWujiCore(ctx context.Context, endpoint string) (*WujiCoreClient, error) {
+// When root is non-empty and the socket is missing, wuji-core is started automatically.
+func DialWujiCore(ctx context.Context, endpoint, root string) (*WujiCoreClient, error) {
+	if err := EnsureWujiCore(ctx, root, endpoint); err != nil {
+		return nil, FormatWujiConnectError(endpoint, err)
+	}
 	target := dialTarget(endpoint)
 	conn, err := grpc.NewClient(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -129,5 +134,25 @@ func ResolveTaijiWujiEndpoint(cfgRoot, wujiEndpoint, wujiRoot string) string {
 	if ep != "" && ep != "auto" {
 		return normalizeWujiEndpoint(ep, cfgRoot)
 	}
-	return defaultWujiCoreEndpoint(resolveWujiRoot(strings.TrimSpace(wujiRoot), cfgRoot))
+	return defaultWujiCoreEndpoint(resolveWujiRoot(wujiRoot, cfgRoot))
+}
+
+// ResolveWujiRoot returns the Wuji project root for Taiji config.
+func ResolveWujiRoot(cfg *taijicfg.Config) string {
+	if cfg == nil {
+		return resolveWujiRoot("", "")
+	}
+	return resolveWujiRoot(cfg.Wuji.WujiRoot, cfg.Root)
+}
+
+// EnsureWujiCore starts wuji-core when it is not already listening.
+func EnsureWujiCore(ctx context.Context, root, endpoint string) error {
+	root = strings.TrimSpace(root)
+	if root == "" {
+		root = resolveWujiRoot("", "")
+	}
+	if err := wujipath.EnsureWujiConfig(root); err != nil {
+		return err
+	}
+	return wujipath.EnsureCoreDaemon(ctx, root, endpoint)
 }

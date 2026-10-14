@@ -7,7 +7,46 @@ import (
 	"github.com/coditary/taiji/internal/session"
 )
 
-const toolUseNudge = "Do not describe tools in text. Call the appropriate tool now with valid JSON arguments."
+const toolUseNudge = session.ToolUseNudgePrompt
+
+// goalExpectsDecisions reports whether the user request likely needs the decide tool.
+func goalExpectsDecisions(goal string) bool {
+	g := strings.ToLower(strings.TrimSpace(goal))
+	if g == "" {
+		return false
+	}
+	excludes := []string{
+		"was ist", "what is", "explain", "erklär", "how does", "wie funktioniert",
+		"list ", "liste", "read ", "lies ", "grep", "glob", "show files", "run ",
+		"shell", "command", "befehl", "datei", "file ", "directory", "verzeichnis",
+		"hello", "hallo", "thanks", "danke", "2+2", "2 + 2",
+		"was kostet", "what does", "how much", "welche datei", "which file",
+		"contains", "enthält", "config file", "config.yaml",
+	}
+	for _, ex := range excludes {
+		if strings.Contains(g, ex) {
+			return false
+		}
+	}
+	keywords := []string{
+		"soll ich", "lohnt sich", "kaufen", "kauf ", "kaufentscheid", "ausgeben",
+		"investieren", "budget", "zu teuer", "warten oder", "jetzt kaufen",
+		"entscheid", "welche option", "was würdest du", "rate mir", "berate mich",
+		"should i buy", "worth buying", "worth it", "purchase decision",
+		"buy or wait", "buy or skip", "decide whether", "help me decide",
+		"invest in", "afford", "can i afford", "should i get", "should i purchase",
+		"which team", "welches team", "handle this", "route to", "wer soll",
+		"payout", "failed", "fehlgeschlagen", "urgent", "dringend",
+		"should we deploy", "deploy to prod", "hire", "einstellen", "accept the offer",
+		"risk", "risiko", "priorität", "priority",
+	}
+	for _, kw := range keywords {
+		if strings.Contains(g, kw) {
+			return true
+		}
+	}
+	return false
+}
 
 // goalExpectsTools reports whether the user request likely needs a filesystem or shell tool.
 func goalExpectsTools(goal string) bool {
@@ -31,6 +70,23 @@ func goalExpectsTools(goal string) bool {
 }
 
 // respDescribesToolUse detects prose about tools instead of structured tool calls.
+func respDescribesDecideUse(content string) bool {
+	c := strings.ToLower(strings.TrimSpace(content))
+	if c == "" {
+		return false
+	}
+	markers := []string{
+		"`decide`", "decide tool", "decision engine", "decide({",
+		"decide ({", "call decide", "rufe decide", "decide-Tool",
+	}
+	for _, m := range markers {
+		if strings.Contains(c, m) {
+			return true
+		}
+	}
+	return false
+}
+
 func respDescribesToolUse(content string) bool {
 	c := strings.ToLower(strings.TrimSpace(content))
 	if c == "" {
@@ -41,6 +97,7 @@ func respDescribesToolUse(content string) bool {
 		"ich werde", "ich würde", "ich kann als", "cannot execute",
 		"kann nicht ausführen", "kann keine befehle", "tool to ",
 		"`list_dir`", "`read_file`", "`grep`", "`glob_search`", "`shell`",
+		"[tool call]",
 	}
 	for _, m := range markers {
 		if strings.Contains(c, m) {
@@ -57,10 +114,7 @@ func resolveToolChoice(goal string, tools []provider.ToolDef, messages []provide
 	if nudged {
 		return "required"
 	}
-	if hasRecentToolObservation(messages) {
-		return "none"
-	}
-	if step == 1 && goalExpectsTools(goal) {
+	if step == 1 && (goalExpectsTools(goal) || goalExpectsDecisions(goal)) {
 		return "required"
 	}
 	return "auto"
@@ -90,6 +144,26 @@ func lastToolObservation(messages []provider.Message) string {
 		}
 	}
 	return ""
+}
+
+func duplicateToolObservation(messages []provider.Message, call provider.ToolCall) string {
+	for i := len(messages) - 1; i >= 0; i-- {
+		m := messages[i]
+		if m.Role != provider.RoleAssistant || len(m.ToolCalls) == 0 {
+			continue
+		}
+		for _, prev := range m.ToolCalls {
+			if prev.Name != call.Name || strings.TrimSpace(prev.Args) != strings.TrimSpace(call.Args) {
+				continue
+			}
+			for j := i + 1; j < len(messages); j++ {
+				if messages[j].Role == provider.RoleTool && messages[j].ToolCallID == prev.ID {
+					return messages[j].Content
+				}
+			}
+		}
+	}
+	return "duplicate tool call skipped"
 }
 
 func isDuplicateToolCall(messages []provider.Message, call provider.ToolCall) bool {
@@ -129,7 +203,6 @@ func buildCompletionRequest(
 	toolChoice := resolveToolChoice(req.Goal, toolDefs, messages, step, toolNudged)
 	tools := toolDefs
 	if toolChoice == "none" {
-		// Omit tools so local models cannot keep calling them after an observation.
 		tools = nil
 		toolChoice = ""
 	}

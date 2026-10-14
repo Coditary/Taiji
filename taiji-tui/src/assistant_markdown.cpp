@@ -4,6 +4,17 @@
 
 namespace {
 
+std::string trim_trailing_whitespace(std::string text) {
+    while (!text.empty()) {
+        const char ch = text.back();
+        if (ch != '\n' && ch != '\r' && ch != ' ' && ch != '\t') {
+            break;
+        }
+        text.pop_back();
+    }
+    return text;
+}
+
 int effective_wrap_width(int wrap_width_hint, int bounds_width) {
     if (wrap_width_hint > 0) {
         return wrap_width_hint;
@@ -29,7 +40,7 @@ void AssistantMarkdown::append(std::string_view chunk) {
 }
 
 void AssistantMarkdown::set_markdown(std::string text) {
-    view_.set_markdown(std::move(text));
+    view_.set_markdown(trim_trailing_whitespace(std::move(text)));
     relayout_content();
 }
 
@@ -39,8 +50,12 @@ void AssistantMarkdown::clear() {
     }
     view_.clear();
     cached_width_ = 0;
-    cached_height_ = 1;
+    cached_height_ = 0;
     mark_layout_dirty();
+}
+
+bool AssistantMarkdown::is_empty() const {
+    return view_.source().empty();
 }
 
 void AssistantMarkdown::set_wrap_width(int width) {
@@ -57,21 +72,23 @@ void AssistantMarkdown::sync_from(const std::string& text, bool clear_first) {
     if (clear_first) {
         clear();
     }
-    if (text.empty()) {
+    std::string normalized = trim_trailing_whitespace(text);
+    if (normalized.empty()) {
         return;
     }
 
     const std::string& existing = view_.source();
     if (existing.empty()) {
-        view_.append(text);
-    } else if (text.size() >= existing.size() && text.compare(0, existing.size(), existing) == 0) {
-        if (text.size() > existing.size()) {
-            view_.append(std::string_view(text).substr(existing.size()));
+        view_.append(normalized);
+    } else if (normalized.size() >= existing.size() &&
+               normalized.compare(0, existing.size(), existing) == 0) {
+        if (normalized.size() > existing.size()) {
+            view_.append(std::string_view(normalized).substr(existing.size()));
         } else if (view_.content_height() > 0) {
             return;
         }
     } else {
-        set_markdown(text);
+        set_markdown(std::move(normalized));
         return;
     }
 
@@ -117,6 +134,9 @@ void AssistantMarkdown::refresh_measure_cache(int width) const {
 }
 
 tuinator::Size AssistantMarkdown::preferred_size() const {
+    if (view_.source().empty()) {
+        return {0, 0};
+    }
     const int width = wrap_width_hint_ > 0 ? wrap_width_hint_ : 72;
     refresh_measure_cache(width);
     return {width, std::max(1, view_.content_height())};
@@ -129,8 +149,9 @@ void AssistantMarkdown::layout(tuinator::Rect bounds) {
     }
 
     const int inner_width = std::max(1, bounds.width - content_indent_);
-    const int height = std::max(bounds.height, cached_height_);
-    view_.layout({0, 0, inner_width, height});
+    const int height =
+        cached_height_ > 0 ? cached_height_ : (bounds.height > 0 ? bounds.height : view_.content_height());
+    view_.layout({0, 0, inner_width, std::max(1, height)});
 }
 
 void AssistantMarkdown::paint(tuinator::PaintContext& ctx) const {

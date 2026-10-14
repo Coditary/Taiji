@@ -1,0 +1,7 @@
+# Optional global synonym groups for Taiji memory recall (BM25 query expansion).
+# Copy to ~/.taiji/memory-synonyms.yaml to customize.
+groups:
+  - [name, vorname, heißt, heiße, nennen, identität, identity, benutzer, user]
+  - [farbe, lieblingsfarbe, favorite, favourite, colour, color]
+  - [sprache, language, deutsch, english, locale]
+  - [projekt, project, repo, repository, codebase]

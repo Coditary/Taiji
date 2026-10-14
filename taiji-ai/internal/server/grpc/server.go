@@ -78,6 +78,8 @@ func (s *Server) Run(req *taijiv1.RunRequest, stream taijiv1.TaijiAgent_RunServe
 		}
 	}
 
+	s.rt.Questions.SetPrompter(nil)
+
 	_, err := agent.Run(ctx, agent.RunRequest{
 		Goal:       req.GetGoal(),
 		ProviderID: req.GetProvider(),
@@ -85,10 +87,15 @@ func (s *Server) Run(req *taijiv1.RunRequest, stream taijiv1.TaijiAgent_RunServe
 		Session:    sess,
 		Providers:  s.rt.Providers,
 		Tools:      s.rt.Tools,
-		Skills:     s.rt.Skills,
-		Config:     s.rt.Config,
+		Skills:        s.rt.Skills,
+		SkillsCatalog: s.rt.SkillsCatalog,
+		Config:        s.rt.Config,
 		RAG:        s.rt.RAG,
-		MCP:        s.rt.MCP,
+		Memory:     s.rt.Memory,
+		MCP:              s.rt.MCP,
+		DecisionProfiles: s.rt.DecisionProfiles,
+		Hooks:            s.rt.Hooks,
+		Questions:        s.rt.Questions,
 		EventHandler: func(ev events.Event) {
 			_ = stream.Send(toProtoEvent(ev))
 		},

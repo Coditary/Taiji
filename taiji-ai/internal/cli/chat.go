@@ -17,8 +17,10 @@ import (
 	"github.com/coditary/taiji/internal/agent"
 	"github.com/coditary/taiji/internal/agentsdoc"
 	"github.com/coditary/taiji/internal/events"
+	"github.com/coditary/taiji/internal/question"
 	"github.com/coditary/taiji/internal/runtime"
 	"github.com/coditary/taiji/internal/session"
+	"github.com/coditary/taiji/internal/skills"
 )
 
 func newChatCmd(app *App) *cobra.Command {
@@ -43,7 +45,8 @@ Slash commands:
   /delete [id]     delete a session (current if omitted)
   /clear           start a new session
   /provider [id]   show or switch provider
-  /tools           list available tools`,
+  /tools           list available tools
+  /skills          list invokable skills`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !stdinIsTTY() {
 				return fmt.Errorf("chat requires an interactive terminal (stdin must be a TTY)")
@@ -91,6 +94,7 @@ func runChatREPL(parent context.Context, app *App, opts chatOptions) error {
 		return err
 	}
 	defer rt.Close()
+	rt.Questions.SetPrompter(question.CLIPrompter{In: os.Stdin, Out: os.Stderr})
 
 	workDir, err := os.Getwd()
 	if err != nil {
@@ -209,10 +213,15 @@ func runChatREPL(parent context.Context, app *App, opts chatOptions) error {
 			Session:    state.session,
 			Providers:  state.rt.Providers,
 			Tools:      state.rt.Tools,
-			Skills:     state.rt.Skills,
+			Skills:        state.rt.Skills,
+			SkillsCatalog: state.rt.SkillsCatalog,
 			Config:     state.app.Config,
 			RAG:        state.rt.RAG,
-			MCP:        state.rt.MCP,
+			Memory:     state.rt.Memory,
+			MCP:              state.rt.MCP,
+			DecisionProfiles: state.rt.DecisionProfiles,
+			Hooks:            state.rt.Hooks,
+			Questions:        state.rt.Questions,
 			WorkDir:    state.workDir,
 			EventHandler: func(ev events.Event) {
 				switch ev.Type {
@@ -392,6 +401,29 @@ func (s *chatState) handleSlashCommand(line string) (handled bool, exit bool, er
 			fmt.Fprintln(os.Stderr, "(no tools registered)")
 		}
 		return true, false, nil
+	case "/skills":
+		if s.rt.Skills == nil {
+			fmt.Fprintln(os.Stderr, "(skills not configured)")
+			return true, false, nil
+		}
+		all, err := s.rt.Skills.LoadAll()
+		if err != nil {
+			return true, false, err
+		}
+		invokable := skills.Invokable(all)
+		sort.Slice(invokable, func(i, j int) bool { return invokable[i].Name < invokable[j].Name })
+		for _, skill := range invokable {
+			desc := strings.TrimSpace(skill.Description)
+			if desc == "" {
+				fmt.Fprintf(os.Stderr, "- %s\n", skill.Name)
+				continue
+			}
+			fmt.Fprintf(os.Stderr, "- %s: %s\n", skill.Name, desc)
+		}
+		if len(invokable) == 0 {
+			fmt.Fprintln(os.Stderr, "(no invokable skills)")
+		}
+		return true, false, nil
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command %q (try /help)\n", fields[0])
 		return true, false, nil
@@ -481,6 +513,7 @@ func printChatHelp(w io.Writer) {
 	fmt.Fprintln(w, "  /clear           start a new session")
 	fmt.Fprintln(w, "  /provider [id]   show or switch provider")
 	fmt.Fprintln(w, "  /tools           list available tools")
+	fmt.Fprintln(w, "  /skills          list invokable skills")
 }
 
 func stdinIsTTY() bool {

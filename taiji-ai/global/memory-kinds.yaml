@@ -1,0 +1,142 @@
+# Memory kinds catalog for Taiji agents.
+#
+# The agent sees these descriptions in its system prompt and tool schemas.
+# Extend or override by copying to:
+#   ~/.taiji/memory-kinds.yaml          (user-global)
+#   .taiji/memory-kinds.yaml            (project — overrides by name)
+# Or add kinds inline in .taiji/config.yaml under memory.kinds.
+#
+# Fields:
+#   name                  — kind id used in memory_recall / memory_remember
+#   description           — short summary for the agent catalog
+#   store_when            — when to memory_remember this kind
+#   recall_when           — when to memory_recall this kind
+#   requires_verified_fix — default true except preference/persona/insight
+#   failure_kind          — include in automatic recall after tool/shell errors
+#   auto_fingerprint      — auto-generate fingerprint on remember (errors)
+#   enrich_name           — auto-add name-related keywords and recall_queries
+#   recall_hints          — user-message substrings → suggest this kind for recall
+#   store_hints           — user-message substrings → suggest this kind for remember
+
+kinds:
+  - name: error
+    description: Verified fix for a tool or shell failure
+    store_when: a tool/shell failure was fixed and verified
+    recall_when: a tool or shell command fails
+    requires_verified_fix: true
+    failure_kind: true
+    auto_fingerprint: true
+
+  - name: anti_pattern
+    description: An approach that did not work — avoid repeating it
+    store_when: an approach failed or made things worse
+    recall_when: before retrying a similar failed approach
+    requires_verified_fix: true
+    failure_kind: true
+
+  - name: pattern
+    description: Repository or project convention
+    store_when: a repo-specific convention was discovered
+    recall_when: user asks how things work in this project
+    requires_verified_fix: true
+    recall_hints:
+      - in this repo
+      - in diesem repo
+      - in this project
+      - convention
+      - pattern
+      - here we use
+      - bei uns
+
+  - name: workflow
+    description: Multi-step process that worked
+    store_when: a multi-step procedure succeeded end-to-end
+    recall_when: user asks how to run or do something
+    requires_verified_fix: true
+    recall_hints:
+      - how do i
+      - wie mache ich
+      - workflow
+      - schritt
+      - steps to
+      - how to run
+      - wie starte
+      - wie führe
+
+  - name: preference
+    description: Stable user preference or personal fact about the user
+    store_when: user states their name, likes, settings, or communication style
+    recall_when: user asks about their name, likes, settings, or style
+    requires_verified_fix: false
+    enrich_name: true
+    recall_hints:
+      - lieblings
+      - favorite
+      - favourite
+      - prefer
+      - bevorzug
+      - mag ich
+      - what do i like
+      - was mag ich
+      - meine farbe
+      - my color
+      - heiße
+      - heisse
+      - heißt
+      - name
+      - vorname
+      - wer bin ich
+      - who am i
+      - wie heiß
+      - my name
+      - mein name
+      - kennst du mich
+      - nennst du mich
+    store_hints:
+      - ich heiße
+      - ich heisse
+      - my name is
+      - merk dir meinen namen
+      - remember my name
+
+  - name: persona
+    description: Assistant identity — name, role, tone, or persona the user assigns
+    store_when: user names the assistant, assigns a role, or sets how it should introduce itself
+    recall_when: user asks what to call the assistant or what its name or role is
+    requires_verified_fix: false
+    enrich_name: true
+    recall_hints:
+      - wie heißt du
+      - what's your name
+      - wie ist dein name
+      - what are you called
+      - wer bist du
+      - dein name
+      - your name
+      - assistant name
+      - bot name
+      - ki name
+    store_hints:
+      - du heißt
+      - du heisse
+      - du bist
+      - nenn dich
+      - you are called
+      - from now on you are
+      - ab jetzt bist du
+      - ab jetzt heißt
+      - dein name ist
+
+  - name: insight
+    description: Non-obvious architecture or setup note
+    store_when: non-obvious architecture or setup detail was learned
+    recall_when: planning, debugging, or explaining project structure
+    requires_verified_fix: false
+    recall_hints:
+      - last time
+      - letztes mal
+      - wie damals
+      - remember when
+      - schon mal
+      - before we
+      - früher

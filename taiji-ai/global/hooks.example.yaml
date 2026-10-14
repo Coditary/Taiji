@@ -1,0 +1,20 @@
+version: 1
+hooks:
+  # Run gofmt after the agent writes Go files.
+  - id: gofmt-after-write
+    event: file.changed
+    conditions:
+      - matchesAnyPath: "*.go"
+    actions:
+      - bash: "gofmt -w {{files}}"
+
+  # Block .env reads (tool.before.read matcher).
+  - id: block-env-read
+    event: tool.before.read
+    conditions:
+      - matchesAnyPath: "**/.env*"
+    actions:
+      - plugin: block_sensitive_read
+
+  # Claude-compatible equivalent lives in .taiji/hooks.json:
+  # { "hooks": { "Stop": [{ "hooks": [{ "type": "command", "command": "./on-idle.sh" }] }] } }

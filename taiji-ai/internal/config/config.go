@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -18,8 +19,12 @@ type Config struct {
 	Agent           AgentConfig               `yaml:"agent"`
 	Providers       map[string]ProviderConfig `yaml:"providers"`
 	RAG             RAGConfig                 `yaml:"rag"`
+	Decisions       DecisionConfig            `yaml:"decisions"`
+	Memory          MemoryConfig              `yaml:"memory"`
 	MCP             MCPConfig                 `yaml:"mcp"`
 	Skills          SkillsConfig              `yaml:"skills"`
+	Hooks           HooksConfig               `yaml:"hooks"`
+	UI              UIConfig                  `yaml:"ui"`
 	Root            string                    `yaml:"-"`
 }
 
@@ -90,7 +95,8 @@ type MCPConfig struct {
 
 // SkillsConfig lists directories containing SKILL.md files.
 type SkillsConfig struct {
-	Dirs []string `yaml:"dirs"`
+	Dirs []string        `yaml:"dirs"`
+	RAG  SkillsRAGConfig `yaml:"rag"`
 }
 
 // LoadOptions controls how the Taiji project root is resolved.
@@ -98,6 +104,38 @@ type LoadOptions struct {
 	// Local uses the current working directory as root instead of walking up
 	// to a parent go.mod or .taiji/config.yaml.
 	Local bool
+}
+
+// LoadAt reads .taiji/config.yaml from an explicit project root.
+func LoadAt(root string) (*Config, error) {
+	root = strings.TrimSpace(root)
+	if root == "" {
+		return nil, fmt.Errorf("config root is not set")
+	}
+	path := filepath.Join(root, dirName, configFile)
+	cfg := defaultConfig(root)
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		applyGlobalMCPDefaults(cfg)
+		ensureDecisionProfileDirs(cfg)
+		ensureMemoryDirs(cfg)
+		normalizeConfig(cfg)
+		return cfg, nil
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read config: %w", err)
+	}
+	if err := yaml.Unmarshal(raw, cfg); err != nil {
+		return nil, fmt.Errorf("parse config: %w", err)
+	}
+	cfg.Root = root
+	sanitizeLegacyWujiPaths(cfg)
+	applyGlobalMCPDefaults(cfg)
+	ensureSkillsDirs(cfg)
+	ensureDecisionProfileDirs(cfg)
+	ensureMemoryDirs(cfg)
+	normalizeConfig(cfg)
+	return cfg, nil
 }
 
 // Load reads .taiji/config.yaml from the project root.
@@ -110,6 +148,9 @@ func Load(opts LoadOptions) (*Config, error) {
 	cfg := defaultConfig(root)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		applyGlobalMCPDefaults(cfg)
+		ensureDecisionProfileDirs(cfg)
+		ensureMemoryDirs(cfg)
+		normalizeConfig(cfg)
 		return cfg, nil
 	}
 	raw, err := os.ReadFile(path)
@@ -120,7 +161,12 @@ func Load(opts LoadOptions) (*Config, error) {
 		return nil, fmt.Errorf("parse config: %w", err)
 	}
 	cfg.Root = root
+	sanitizeLegacyWujiPaths(cfg)
 	applyGlobalMCPDefaults(cfg)
+	ensureSkillsDirs(cfg)
+	ensureDecisionProfileDirs(cfg)
+	ensureMemoryDirs(cfg)
+	normalizeConfig(cfg)
 	return cfg, nil
 }
 
@@ -131,7 +177,7 @@ func defaultConfig(root string) *Config {
 		Wuji: WujiConfig{
 			AutoSync: false,
 			Endpoint: "auto",
-			WujiRoot: "../wuji-ai/wuji-core",
+			WujiRoot: "",
 		},
 		Agent: AgentConfig{
 			MaxSteps:       25,
@@ -139,15 +185,27 @@ func defaultConfig(root string) *Config {
 		},
 		Providers: map[string]ProviderConfig{},
 		RAG:       DefaultRAGConfig(),
+		Decisions: func() DecisionConfig {
+			d := DefaultDecisionConfig()
+			d.Dirs = DefaultDecisionProfileDirs(root)
+			return d
+		}(),
+		Memory: DefaultMemoryConfig(),
 		MCP: MCPConfig{
 			ConfigPath: filepath.Join(root, ".wuji", "mcp.json"),
 		},
 		Skills: SkillsConfig{
-			Dirs: []string{
-				filepath.Join(root, dirName, "skills"),
-			},
+			Dirs: DefaultSkillsDirs(root),
 		},
+		UI: DefaultUIConfig(),
 	}
+}
+
+func normalizeConfig(cfg *Config) {
+	if cfg == nil {
+		return
+	}
+	cfg.UI.TurnMetrics.normalize()
 }
 
 // Root returns the Taiji project root. Search order:
@@ -165,6 +223,9 @@ func Root(opts LoadOptions) (string, error) {
 		return "", err
 	}
 	if opts.Local {
+		if root, ok := findTaijiConfigRoot(wd); ok {
+			return root, nil
+		}
 		return wd, nil
 	}
 	if root, ok := findProjectRoot(wd); ok {
@@ -176,6 +237,20 @@ func Root(opts LoadOptions) (string, error) {
 		}
 	}
 	return wd, nil
+}
+
+func findTaijiConfigRoot(start string) (string, bool) {
+	dir := start
+	for {
+		if hasTaijiConfig(dir) {
+			return dir, true
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", false
+		}
+		dir = parent
+	}
 }
 
 func findProjectRoot(start string) (string, bool) {
@@ -218,8 +293,11 @@ type fileConfig struct {
 	Agent           AgentConfig               `yaml:"agent,omitempty"`
 	Providers       map[string]ProviderConfig `yaml:"providers,omitempty"`
 	RAG             RAGConfig                 `yaml:"rag,omitempty"`
+	Decisions       DecisionConfig            `yaml:"decisions,omitempty"`
+	Memory          MemoryConfig              `yaml:"memory,omitempty"`
 	MCP             MCPConfig                 `yaml:"mcp,omitempty"`
 	Skills          SkillsConfig              `yaml:"skills,omitempty"`
+	UI              UIConfig                  `yaml:"ui,omitempty"`
 }
 
 // Save writes .taiji/config.yaml.
@@ -237,6 +315,8 @@ func (c *Config) Save() error {
 		Agent:           c.Agent,
 		Providers:       c.Providers,
 		RAG:             c.RAG,
+		Decisions:       c.Decisions,
+		Memory:          c.Memory,
 		MCP:             c.MCP,
 		Skills:          c.Skills,
 	}

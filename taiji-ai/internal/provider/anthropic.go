@@ -12,7 +12,7 @@ import (
 	"time"
 
 	taijicfg "github.com/coditary/taiji/internal/config"
-	"github.com/coditary/wuji/chatformat"
+	"github.com/coditary/wuji-core/chatformat"
 )
 
 type anthropicProvider struct {

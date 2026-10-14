@@ -8,10 +8,11 @@ import (
 
 // Skill is a loaded SKILL.md document.
 type Skill struct {
-	Name        string
-	Description string
-	Body        string
-	Path        string
+	Name                   string
+	Description            string
+	Body                   string
+	Path                   string
+	DisableModelInvocation bool
 }
 
 // Loader scans skill directories for SKILL.md files.
@@ -70,24 +71,67 @@ func LoadFile(path string) (Skill, error) {
 	}
 	content := string(raw)
 	name := filepath.Base(filepath.Dir(path))
-	desc := ""
-	body := content
-	if strings.HasPrefix(content, "---\n") {
-		parts := strings.SplitN(content, "\n---\n", 2)
-		if len(parts) == 2 {
-			body = parts[1]
-			for _, line := range strings.Split(parts[0], "\n") {
-				line = strings.TrimPrefix(line, "---")
-				if strings.HasPrefix(line, "name:") {
-					name = strings.TrimSpace(strings.TrimPrefix(line, "name:"))
-				}
-				if strings.HasPrefix(line, "description:") {
-					desc = strings.TrimSpace(strings.TrimPrefix(line, "description:"))
-				}
-			}
+	meta := parseFrontmatter(content)
+	if meta.name != "" {
+		name = meta.name
+	}
+	return Skill{
+		Name:                   name,
+		Description:            meta.description,
+		Body:                   strings.TrimSpace(meta.body),
+		Path:                   path,
+		DisableModelInvocation: meta.disableModelInvocation,
+	}, nil
+}
+
+type frontmatter struct {
+	name                   string
+	description            string
+	body                   string
+	disableModelInvocation bool
+}
+
+func parseFrontmatter(content string) frontmatter {
+	meta := frontmatter{body: content}
+	if !strings.HasPrefix(content, "---\n") {
+		return meta
+	}
+	parts := strings.SplitN(content, "\n---\n", 2)
+	if len(parts) != 2 {
+		return meta
+	}
+	meta.body = parts[1]
+	for _, line := range strings.Split(parts[0], "\n") {
+		line = strings.TrimPrefix(line, "---")
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "name:") {
+			meta.name = strings.TrimSpace(strings.TrimPrefix(line, "name:"))
+		}
+		if strings.HasPrefix(line, "description:") {
+			meta.description = strings.TrimSpace(strings.TrimPrefix(line, "description:"))
+		}
+		if _, val, ok := frontmatterBool(line, "disable-model-invocation"); ok {
+			meta.disableModelInvocation = val
+		} else if _, val, ok := frontmatterBool(line, "disable_model_invocation"); ok {
+			meta.disableModelInvocation = val
 		}
 	}
-	return Skill{Name: name, Description: desc, Body: strings.TrimSpace(body), Path: path}, nil
+	return meta
+}
+
+func frontmatterBool(line, key string) (string, bool, bool) {
+	if !strings.HasPrefix(line, key+":") {
+		return "", false, false
+	}
+	raw := strings.TrimSpace(strings.TrimPrefix(line, key+":"))
+	switch strings.ToLower(raw) {
+	case "true", "yes", "1":
+		return key, true, true
+	case "false", "no", "0", "":
+		return key, false, true
+	default:
+		return key, false, true
+	}
 }
 
 // BuildSystemAppendix returns skill text to append to the system prompt.

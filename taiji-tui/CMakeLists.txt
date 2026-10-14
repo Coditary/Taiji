@@ -19,6 +19,10 @@ set(TAIJI_EMBED_HEADER "${CMAKE_CURRENT_BINARY_DIR}/libtaiji.h")
 
 find_program(GO_EXECUTABLE go REQUIRED)
 
+file(GLOB_RECURSE TAIJI_GO_SOURCES CONFIGURE_DEPENDS
+    "${TAIJI_AI_DIR}/*.go"
+)
+
 add_custom_command(
     OUTPUT "${TAIJI_EMBED_ARCHIVE}" "${TAIJI_EMBED_HEADER}"
     COMMAND ${CMAKE_COMMAND} -E env CGO_ENABLED=1
@@ -27,7 +31,7 @@ add_custom_command(
             ./embed
     WORKING_DIRECTORY "${TAIJI_AI_DIR}"
     DEPENDS
-        "${TAIJI_EMBED_DIR}/embed.go"
+        ${TAIJI_GO_SOURCES}
         "${TAIJI_EMBED_DIR}/include/taiji_embed.h"
     COMMENT "Building static Taiji embed archive"
     VERBATIM
@@ -68,11 +72,16 @@ add_executable(taiji-tui
     src/assistant_markdown.cpp
     src/queue_status_bar.cpp
     src/left_label.cpp
+    src/session_sidebar.cpp
+    src/left_anchored_split.cpp
+    src/right_anchored_split.cpp
+    src/session_context_menu.cpp
     src/mcp_sidebar.cpp
     src/turn_metrics_note.cpp
     src/activity_log.cpp
     src/thinking_indicator.cpp
     src/chat_input.cpp
+    src/question_composer.cpp
     src/status_footer.cpp
 )
 

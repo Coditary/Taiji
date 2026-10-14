@@ -12,6 +12,7 @@ import (
 // WujiBackend implements Backend via the Wuji core RunRAG RPC.
 type WujiBackend struct {
 	endpoint string
+	wujiRoot string
 	driverID string
 	client   *provider.WujiCoreClient
 }
@@ -24,6 +25,7 @@ func newWujiBackend(cfg *taijicfg.Config) *WujiBackend {
 	}
 	return &WujiBackend{
 		endpoint: provider.ResolveTaijiWujiEndpoint(cfg.Root, cfg.Wuji.Endpoint, cfg.Wuji.WujiRoot),
+		wujiRoot: provider.ResolveWujiRoot(cfg),
 		driverID: driverID,
 	}
 }
@@ -91,7 +93,7 @@ func (b *WujiBackend) clientFor(ctx context.Context) (*provider.WujiCoreClient, 
 	if b.client != nil {
 		return b.client, nil
 	}
-	client, err := provider.DialWujiCore(ctx, b.endpoint)
+	client, err := provider.DialWujiCore(ctx, b.endpoint, b.wujiRoot)
 	if err != nil {
 		return nil, err
 	}

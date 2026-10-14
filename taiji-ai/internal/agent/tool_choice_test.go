@@ -6,6 +6,38 @@ import (
 	"github.com/coditary/taiji/internal/provider"
 )
 
+func TestGoalExpectsDecisions(t *testing.T) {
+	cases := []struct {
+		goal string
+		want bool
+	}{
+		{"Soll ich ein MacBook für 2800€ kaufen?", true},
+		{"Lohnt sich der Kauf einer GPU jetzt?", true},
+		{"Should I buy this laptop or wait?", true},
+		{"Help me decide whether to invest in a new monitor.", true},
+		{"Help! My payouts failed — which team should handle this?", true},
+		{"Should we deploy this hotfix tonight?", true},
+		{"Was ist ein Decision Tree?", false},
+		{"Erkläre mir Kaufentscheidungen.", false},
+		{"List files in the current directory", false},
+		{"Hello", false},
+	}
+	for _, tc := range cases {
+		if got := goalExpectsDecisions(tc.goal); got != tc.want {
+			t.Fatalf("goalExpectsDecisions(%q) = %v, want %v", tc.goal, got, tc.want)
+		}
+	}
+}
+
+func TestRespDescribesDecideUse(t *testing.T) {
+	if !respDescribesDecideUse("I will call decide with profile buy.") {
+		t.Fatal("expected decide prose to be detected")
+	}
+	if respDescribesDecideUse("The ball costs 5 cents.") {
+		t.Fatal("plain answer should not be flagged")
+	}
+}
+
 func TestGoalExpectsTools(t *testing.T) {
 	cases := []struct {
 		goal string
@@ -65,6 +97,9 @@ func TestResolveToolChoice(t *testing.T) {
 	if resolveToolChoice("list files", tools, nil, 1, false) != "required" {
 		t.Fatal("step 1 file goal should require tools")
 	}
+	if resolveToolChoice("Soll ich ein MacBook kaufen?", tools, nil, 1, false) != "required" {
+		t.Fatal("step 1 decision goal should require tools")
+	}
 	if resolveToolChoice("hello", tools, nil, 1, false) != "auto" {
 		t.Fatal("greeting should use auto tool choice")
 	}
@@ -72,7 +107,12 @@ func TestResolveToolChoice(t *testing.T) {
 		t.Fatal("nudged retry should require tools")
 	}
 	msgs := []provider.Message{{Role: provider.RoleTool, Name: "list_dir", Content: "a.go"}}
-	if resolveToolChoice("list files", tools, msgs, 2, false) != "none" {
-		t.Fatal("after tool observation tool choice should be none")
+	if resolveToolChoice("list files", tools, msgs, 2, false) != "auto" {
+		t.Fatal("after tool observation tool choice should stay auto for chaining")
+	}
+	msgs = []provider.Message{{Role: provider.RoleTool, Name: "invoke_skill", Content: "## Skill: review\n\nBody"}}
+	if resolveToolChoice("load two skills", tools, msgs, 2, false) != "auto" {
+		t.Fatal("after invoke_skill observation tools should stay available")
 	}
 }
+

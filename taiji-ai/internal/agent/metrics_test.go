@@ -7,6 +7,29 @@ import (
 	"github.com/coditary/taiji/internal/provider"
 )
 
+func TestRunMetricsCollectorWaitVsGeneration(t *testing.T) {
+	c := newRunMetricsCollector()
+
+	c.OnCompletionStart()
+	time.Sleep(40 * time.Millisecond)
+	c.OnAnswerDelta()
+	time.Sleep(25 * time.Millisecond)
+	c.OnAnswerDelta()
+	c.OnCompletionFinished()
+	c.AddUsage(provider.Usage{OutputTokens: 20})
+
+	m := c.Finalize("")
+	if m.WaitDurationMs < 30 {
+		t.Fatalf("WaitDurationMs = %d, want >= 30", m.WaitDurationMs)
+	}
+	if m.GenerationDurationMs < 20 {
+		t.Fatalf("GenerationDurationMs = %d, want >= 20", m.GenerationDurationMs)
+	}
+	if m.WaitDurationMs <= m.GenerationDurationMs {
+		t.Fatalf("wait=%d generation=%d, want wait > generation", m.WaitDurationMs, m.GenerationDurationMs)
+	}
+}
+
 func TestRunMetricsCollectorGenerationSpeedExcludesThinking(t *testing.T) {
 	c := newRunMetricsCollector()
 

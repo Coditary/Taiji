@@ -2,8 +2,52 @@ default_provider: ""
 wuji:
   auto_sync: false
   endpoint: auto
-  wuji_root: ../wuji-ai/wuji-core
+  wuji_root: ""
+hooks:
+  enabled: true
+decisions:
+  enabled: true
+  backend: wuji
+  driver: laya
+  # backend: http
+  # http_url: http://127.0.0.1:8100
 mcp:
   servers:
     - test-filesystem
     - context7
+# memory:
+#   kinds_file: /path/to/custom-memory-kinds.yaml
+#   kinds:
+#     - name: client
+#       description: Facts about a specific client account
+#       store_when: user mentions client-specific constraints
+#       recall_when: working on that client's project
+#       requires_verified_fix: false
+#       recall_hints: [client, kunde, account]
+# Bundled defaults live in taiji-ai/global/memory-kinds.yaml.
+# Override per project in .taiji/memory-kinds.yaml or inline under memory.kinds.
+# ui:
+#   tool_labels:
+#     locale: en          # en | de — preset labels; omit for legacy "Tool · name" fallback
+#     tools:              # per-tool overrides (invocation name stays the same)
+#       read_file: Read
+#       list_dir: List
+#   turn_metrics:
+#     enabled: true
+#     show_actions: true
+#     preset: dev          # minimal | tokens | dev | verbose
+#     max_fields_per_line: 4
+#     separator: " · "
+#     fields:
+#       - total
+#       - thought
+#       - generation
+#       - output_tokens
+#       - input_tokens
+#       - tokens_per_sec
+#       - tools
+#       - tool_time
+#       - cost
+#       - steps
+#       - context
+#       - context_pct

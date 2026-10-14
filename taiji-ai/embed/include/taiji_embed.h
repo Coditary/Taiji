@@ -18,11 +18,20 @@ typedef struct taiji_session_stats_t {
 
 typedef struct taiji_turn_metrics_t {
     int32_t total_duration_ms;
+    int32_t wait_duration_ms;
     int32_t thinking_duration_ms;
     int32_t output_tokens;
     int32_t generation_duration_ms;
     double tokens_per_sec;
     int32_t had_thinking;
+    int32_t input_tokens;
+    double estimated_cost_usd;
+    int32_t tool_calls;
+    int32_t tool_duration_ms;
+    int32_t steps;
+    int32_t context_tokens;
+    int32_t context_window;
+    double context_used_pct;
 } taiji_turn_metrics_t;
 
 typedef void (*taiji_delta_cb)(const char* delta, void* user_data);
@@ -46,9 +55,25 @@ char* taiji_work_dir(uint64_t handle);
 char* taiji_model_name(uint64_t handle);
 char* taiji_provider_label(uint64_t handle);
 char* taiji_mcp_status(uint64_t handle);
+char* taiji_mcp_servers(uint64_t handle);
+char* taiji_skills_list(uint64_t handle);
+char* taiji_decisions_list(uint64_t handle);
+char* taiji_active_skills(uint64_t handle);
 int taiji_session_stats(uint64_t handle, taiji_session_stats_t* out);
 int taiji_last_turn_metrics(uint64_t handle, taiji_turn_metrics_t* out);
+char* taiji_format_turn_metrics(uint64_t handle, taiji_turn_metrics_t* metrics, int32_t max_width);
+int taiji_turn_metrics_show_actions(uint64_t handle);
+char* taiji_tool_display_title(uint64_t handle, char* tool_name);
+char* taiji_tool_scope_label(uint64_t handle, char* scope);
+char* taiji_projects_list(uint64_t handle);
+char* taiji_session_turns(uint64_t handle);
+int taiji_session_switch(uint64_t handle, char* project_root, char* session_id, char** error_out);
+int taiji_session_new(uint64_t handle, char* project_root, char** error_out);
+int taiji_session_delete(uint64_t handle, char* project_root, char* session_id, char** error_out);
 char* taiji_init_error(void);
+
+int taiji_question_reply(uint64_t handle, char* request_id, char* answers_json);
+int taiji_question_reject(uint64_t handle, char* request_id);
 
 #ifdef __cplusplus
 }

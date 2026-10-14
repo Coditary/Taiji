@@ -45,6 +45,11 @@ func NewRegistry(ctx context.Context, cfg *taijicfg.Config) (*Registry, error) {
 	return &Registry{defaultID: defaultID, providers: providers}, nil
 }
 
+// NewStaticRegistry wires a fixed provider map for tests and tooling.
+func NewStaticRegistry(defaultID string, providers map[string]Provider) *Registry {
+	return &Registry{defaultID: defaultID, providers: providers}
+}
+
 func buildProvider(id string, pc taijicfg.ProviderConfig, cfg *taijicfg.Config) (Provider, error) {
 	typ := strings.ToLower(strings.TrimSpace(pc.Type))
 	switch typ {

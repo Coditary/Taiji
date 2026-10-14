@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	taijicfg "github.com/coditary/taiji/internal/config"
 	"github.com/coditary/taiji/internal/events"
@@ -97,6 +98,10 @@ func stripContinueTrigger(text, trigger string) string {
 	return strings.TrimRight(strings.Join(out, "\n"), "\n")
 }
 
+func isEmptyModelResponse(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "empty response from model")
+}
+
 func completeWithRetry(
 	ctx context.Context,
 	p provider.Provider,
@@ -107,24 +112,47 @@ func completeWithRetry(
 	toolNudged bool,
 	onDelta func(string) error,
 	onThink func(string) error,
+	metrics *runMetricsCollector,
 ) (*provider.CompletionResponse, error) {
 	compReq := buildCompletionRequest(req, p, working, toolDefs, step, toolNudged, onDelta, onThink)
-	resp, err := p.Complete(ctx, compReq)
-	if err == nil {
-		return resp, nil
-	}
-	if !strings.Contains(err.Error(), "empty response from model") {
-		return nil, err
-	}
-	if compReq.ToolChoice == "required" {
-		compReq.ToolChoice = "auto"
-		compReq.Tools = toolDefs
-		resp, err = p.Complete(ctx, compReq)
+	var lastErr error
+	for attempt := 0; attempt < 4; attempt++ {
+		reqCopy := compReq
+		switch attempt {
+		case 1:
+			if reqCopy.ToolChoice == "required" {
+				reqCopy.ToolChoice = "auto"
+				reqCopy.Tools = toolDefs
+			}
+		case 2:
+			reqCopy.ToolChoice = "auto"
+			reqCopy.Tools = toolDefs
+		case 3:
+			reqCopy.ToolChoice = "none"
+			reqCopy.Tools = nil
+		}
+		if attempt > 0 {
+			time.Sleep(time.Duration(attempt) * 400 * time.Millisecond)
+		}
+		if metrics != nil {
+			metrics.OnCompletionStart()
+		}
+		resp, err := p.Complete(ctx, reqCopy)
 		if err == nil {
+			if metrics != nil {
+				metrics.OnCompletionFinished()
+			}
 			return resp, nil
 		}
+		if metrics != nil {
+			metrics.OnCompletionFinished()
+		}
+		lastErr = err
+		if !isEmptyModelResponse(err) {
+			return nil, err
+		}
 	}
-	return p.Complete(ctx, compReq)
+	return nil, lastErr
 }
 
 func completeWithContinues(
@@ -232,12 +260,40 @@ func completeWithContinues(
 			return nil
 		}
 
-		onContentDelta := func(delta string) error {
-			streamed.WriteString(delta)
+		var streamFilter *embeddedToolStreamFilter
+		if req.StreamDelta != nil {
+			target := onAnswerDelta
+			if target == nil {
+				target = streamDelta
+			}
+			streamFilter = newEmbeddedToolStreamFilter(target)
+		}
+
+		stripDebris := shouldStripAnswerDebris(working)
+		var debrisBuf strings.Builder
+		emitContentDelta := func(delta string) error {
+			if streamFilter != nil {
+				return streamFilter.Write(delta)
+			}
 			if onAnswerDelta != nil {
 				return onAnswerDelta(delta)
 			}
 			return nil
+		}
+
+		onContentDelta := func(delta string) error {
+			streamed.WriteString(delta)
+			toEmit := delta
+			if stripDebris {
+				debrisBuf.WriteString(delta)
+				cleaned := stripLeadingToolDebris(debrisBuf.String())
+				if strings.TrimSpace(cleaned) == "" {
+					return nil
+				}
+				toEmit = cleaned
+				stripDebris = false
+			}
+			return emitContentDelta(toEmit)
 		}
 
 		var onDelta func(string) error
@@ -248,7 +304,7 @@ func completeWithContinues(
 		if req.StreamThinkDelta != nil {
 			onThink = onThinkDelta
 		}
-		resp, err := completeWithRetry(ctx, p, req, working, toolDefs, step, toolNudged, onDelta, onThink)
+		resp, err := completeWithRetry(ctx, p, req, working, toolDefs, step, toolNudged, onDelta, onThink, metrics)
 		if err != nil {
 			return working, nil, err
 		}
@@ -266,6 +322,32 @@ func completeWithContinues(
 
 		emitCompletedThinking(emit, step, resp, streamed.String(), thinkBuf.String(), useTagsThisPass, req)
 		last = resp
+
+		// Prefer streamed text for preamble extraction — providers often omit
+		// assistant prose from resp.Content when native tool_calls are present.
+		contentForTools := streamed.String()
+		if strings.TrimSpace(contentForTools) == "" {
+			contentForTools = resp.Content
+		}
+		if len(resp.ToolCalls) == 0 {
+			embedded := ParseEmbeddedToolCalls(contentForTools)
+			if len(embedded) > 0 {
+				resp.ToolCalls = embedded
+			}
+		}
+		if len(resp.ToolCalls) > 0 {
+			resp.Content = StreamPreambleBeforeToolCalls(streamed.String(), resp.Content)
+			if streamFilter != nil {
+				streamFilter.DiscardHeldSuffix()
+			}
+			if emit != nil && strings.TrimSpace(resp.Content) != "" {
+				emit(events.Event{Type: events.TypeStreamReset, Step: step, Text: resp.Content})
+			}
+		} else if streamFilter != nil {
+			if err := streamFilter.FlushRemaining(); err != nil {
+				return working, nil, err
+			}
+		}
 
 		if strings.TrimSpace(resp.Content) != "" && req.StreamDelta == nil {
 			emit(events.Event{Type: events.TypeMessage, Step: step, Text: extractAnswerText(resp, streamed.String(), useTagsThisPass)})
@@ -286,7 +368,7 @@ func completeWithContinues(
 		}
 
 		if len(toolDefs) > 0 && !toolNudged &&
-			(goalExpectsTools(req.Goal) || respDescribesToolUse(content)) {
+			(goalExpectsTools(req.Goal) || goalExpectsDecisions(req.Goal) || respDescribesToolUse(content) || respDescribesDecideUse(content)) {
 			toolNudged = true
 			working = append(working,
 				provider.Message{Role: provider.RoleAssistant, Content: content},

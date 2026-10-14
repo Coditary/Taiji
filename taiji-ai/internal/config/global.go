@@ -95,6 +95,7 @@ func applyGlobalMCPDefaults(cfg *Config) {
 			cfg.Wuji = global.Wuji
 		}
 		cfg.MCP.Servers = mergeUnique(global.MCP.Servers, cfg.MCP.Servers)
+		applyGlobalToolLabels(cfg, global.UI.ToolLabels)
 	} else {
 		cfg.MCP.Servers = mergeUnique(GlobalMCPServerNames(), cfg.MCP.Servers)
 	}
@@ -114,7 +115,7 @@ func applyGlobalMCPDefaults(cfg *Config) {
 func isDefaultWujiConfig(wuji WujiConfig) bool {
 	return !wuji.AutoSync &&
 		strings.TrimSpace(wuji.Endpoint) == "auto" &&
-		strings.TrimSpace(wuji.WujiRoot) == "../wuji-ai/wuji-core"
+		strings.TrimSpace(wuji.WujiRoot) == ""
 }
 
 func globalMCPConfigCandidates(globalDir string) []string {

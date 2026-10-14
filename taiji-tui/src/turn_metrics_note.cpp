@@ -7,12 +7,10 @@
 
 namespace {
 
-constexpr int kBarIndent = 0;
-constexpr int kMetricsIndent = 2;
+constexpr int kMetricsIndent = 0;
 constexpr int kActionGapCols = 2;
 constexpr int kVersionGapCols = 3;
 constexpr int kNavGapCols = 1;
-constexpr char kBarGlyph[] = "│";
 // Font Awesome PUA: redo (U+F01E), copy (U+F0C5)
 constexpr char kRedoGlyph[] = "\xEF\x80\x9E";
 constexpr char kCopyGlyph[] = "\xEF\x83\x85";
@@ -21,6 +19,23 @@ constexpr char kNextGlyph[] = ">";
 
 int glyph_width(const char* glyph) {
     return tuinator::text_display_width(glyph);
+}
+
+std::vector<std::string> split_lines(const std::string& text) {
+    std::vector<std::string> lines;
+    std::string current;
+    for (char ch : text) {
+        if (ch == '\n') {
+            lines.push_back(current);
+            current.clear();
+        } else {
+            current.push_back(ch);
+        }
+    }
+    if (!current.empty() || text.empty()) {
+        lines.push_back(current);
+    }
+    return lines;
 }
 
 } // namespace
@@ -72,6 +87,27 @@ void TurnMetricsNote::set_right_inset(int columns) {
     right_inset_ = columns;
     mark_layout_dirty();
     mark_dirty();
+}
+
+int TurnMetricsNote::reserved_right_width(bool actions_visible, std::size_t version_count) {
+    int width = 0;
+    if (actions_visible) {
+        width += glyph_width(kRedoGlyph) + kActionGapCols + glyph_width(kCopyGlyph);
+    }
+    if (version_count > 1) {
+        if (width > 0) {
+            width += kVersionGapCols;
+        }
+        width += glyph_width(kPrevGlyph) + kNavGapCols + 5 + kNavGapCols + glyph_width(kNextGlyph);
+    }
+    if (width > 0) {
+        width += kActionGapCols;
+    }
+    return width;
+}
+
+std::vector<std::string> TurnMetricsNote::metric_lines() const {
+    return split_lines(metrics_text_);
 }
 
 std::string TurnMetricsNote::version_label() const {
@@ -132,7 +168,7 @@ int TurnMetricsNote::prev_x() const {
 }
 
 int TurnMetricsNote::metrics_x() const {
-    return kBarIndent + glyph_width(kBarGlyph) + 1;
+    return kMetricsIndent;
 }
 
 int TurnMetricsNote::metrics_max_width() const {
@@ -141,11 +177,13 @@ int TurnMetricsNote::metrics_max_width() const {
 }
 
 tuinator::Size TurnMetricsNote::preferred_size() const {
-    if (!visible_ && metrics_text_.empty()) {
+    const auto lines = metric_lines();
+    if (!visible_ && lines.empty()) {
         return {0, 0};
     }
+    const int line_count = std::max(1, static_cast<int>(lines.empty() ? 1 : lines.size()));
     const int width = bounds_.width > 0 ? bounds_.width : (wrap_width_hint_ > 0 ? wrap_width_hint_ : 48);
-    return {std::max(16, width), 1};
+    return {std::max(16, width), line_count};
 }
 
 void TurnMetricsNote::layout(tuinator::Rect bounds) {
@@ -153,26 +191,23 @@ void TurnMetricsNote::layout(tuinator::Rect bounds) {
 }
 
 void TurnMetricsNote::paint(tuinator::PaintContext& ctx) const {
-    if ((!visible_ && metrics_text_.empty()) || bounds_.width <= 0 || bounds_.height <= 0) {
+    const auto lines = metric_lines();
+    if ((!visible_ && lines.empty()) || bounds_.width <= 0 || bounds_.height <= 0) {
         return;
     }
 
-    paint_bounds_background(ctx, style_);
+    tuinator::Style body_style = theme_.label;
+    body_style.bold = false;
+    body_style.dim = true;
 
-    tuinator::Style bar_style = style_;
-    bar_style.bold = true;
-    bar_style.foreground_rgb = tuinator::rgb(120, 110, 150);
-    ctx.canvas.draw_text({kBarIndent, 0}, kBarGlyph, bar_style);
-
-    if (!metrics_text_.empty()) {
-        tuinator::Style body_style = style_;
-        body_style.bold = false;
-        body_style.foreground_rgb = tuinator::rgb(170, 165, 185);
-
-        const int max_columns = metrics_max_width();
-        const std::size_t bytes = tuinator::text_byte_length_for_width(metrics_text_, max_columns);
+    const int max_columns = metrics_max_width();
+    for (std::size_t i = 0; i < lines.size() && static_cast<int>(i) < bounds_.height; ++i) {
+        if (lines[i].empty()) {
+            continue;
+        }
+        const std::size_t bytes = tuinator::text_byte_length_for_width(lines[i], max_columns);
         if (bytes > 0) {
-            ctx.canvas.draw_text({metrics_x(), 0}, metrics_text_.substr(0, bytes), body_style);
+            ctx.canvas.draw_text({metrics_x(), static_cast<int>(i)}, lines[i].substr(0, bytes), body_style);
         }
     }
 

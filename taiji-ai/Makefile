@@ -1,7 +1,7 @@
 .PHONY: build proto tidy test
 
 build:
-	go build -mod=mod -o bin/taiji ./cmd/taiji
+	go build -o bin/taiji ./cmd/taiji
 
 proto:
 	buf generate

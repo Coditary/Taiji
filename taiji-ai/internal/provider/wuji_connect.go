@@ -39,11 +39,7 @@ func FormatWujiConnectError(endpoint string, err error) error {
 		} else if _, statErr := os.Stat(sock); os.IsNotExist(statErr) {
 			extra = fmt.Sprintf(
 				"socket not found: %s\n"+
-					"Start Wuji: cd /path/to/wuji-ai/wuji-ai && ./bin/wuji serve\n"+
-					"Then point Taiji at it in .taiji/config.yaml:\n"+
-					"  wuji:\n"+
-					"    wuji_root: /path/to/wuji-ai/wuji-ai\n"+
-					"Or export WUJI_ROOT / WUJI_CORE_ADDR",
+					"Install wuji/wuji-core to PATH, or set WUJI_CORE_BIN / WUJI_ROOT / WUJI_CORE_ADDR",
 				sock,
 			)
 		}

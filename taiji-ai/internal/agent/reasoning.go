@@ -152,7 +152,7 @@ func runPlanPass(
 		_ = req.StreamThoughtStart(1)
 	}
 	if metrics != nil {
-		metrics.OnThinkingActivity()
+		metrics.OnCompletionStart()
 	}
 
 	var streamed strings.Builder
@@ -161,7 +161,7 @@ func runPlanPass(
 		OnDelta: func(delta string) error {
 			streamed.WriteString(delta)
 			if metrics != nil && strings.TrimSpace(delta) != "" {
-				metrics.OnThinkingActivity()
+				metrics.pauseWait()
 			}
 			if req.StreamThinkDelta != nil {
 				return req.StreamThinkDelta(delta)
@@ -169,6 +169,9 @@ func runPlanPass(
 			return nil
 		},
 	})
+	if metrics != nil {
+		metrics.OnCompletionFinished()
+	}
 	if err != nil {
 		return "", err
 	}
@@ -177,7 +180,6 @@ func runPlanPass(
 	}
 	if metrics != nil {
 		metrics.AddUsage(resp.Usage)
-		metrics.pauseThinking()
 	}
 
 	plan := strings.TrimSpace(resp.Content)

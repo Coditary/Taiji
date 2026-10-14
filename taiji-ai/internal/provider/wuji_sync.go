@@ -47,7 +47,8 @@ func RefreshProvidersFromWuji(ctx context.Context, cfg *taijicfg.Config) (SyncRe
 	endpoint := ResolveTaijiWujiEndpoint(cfg.Root, cfg.Wuji.Endpoint, cfg.Wuji.WujiRoot)
 	result.Endpoint = endpoint
 
-	client, err := DialWujiCore(ctx, endpoint)
+	root := resolveWujiRoot(cfg.Wuji.WujiRoot, cfg.Root)
+	client, err := DialWujiCore(ctx, endpoint, root)
 	if err != nil {
 		result.Message = fmt.Sprintf("wuji unavailable at %s: %v", endpoint, err)
 		return result, nil

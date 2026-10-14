@@ -1,6 +1,6 @@
 package provider
 
-import "github.com/coditary/wuji/chatformat"
+import "github.com/coditary/wuji-core/chatformat"
 
 func toChatformatMessages(msgs []Message) []chatformat.Message {
 	out := make([]chatformat.Message, 0, len(msgs))

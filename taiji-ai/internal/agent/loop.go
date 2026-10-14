@@ -5,13 +5,17 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/coditary/taiji/internal/agentsdoc"
 	taijicfg "github.com/coditary/taiji/internal/config"
+	"github.com/coditary/taiji/internal/decisions"
 	"github.com/coditary/taiji/internal/events"
+	"github.com/coditary/taiji/internal/hooks"
+	"github.com/coditary/taiji/internal/memory"
+	"github.com/coditary/taiji/internal/question"
 	"github.com/coditary/taiji/internal/provider"
 	"github.com/coditary/taiji/internal/rag"
+	"github.com/coditary/taiji/internal/router"
 	"github.com/coditary/taiji/internal/session"
 	"github.com/coditary/taiji/internal/skills"
 	"github.com/coditary/taiji/internal/tools"
@@ -27,9 +31,14 @@ type RunRequest struct {
 	Providers          *provider.Registry
 	Tools              *tools.Registry
 	Skills             *skills.Loader
+	SkillsCatalog      *skills.Catalog
 	Config             *taijicfg.Config
 	RAG                *rag.Service
+	Memory             *memory.Service
 	MCP                *mcp.Bridge
+	DecisionProfiles   *decisions.Loader
+	Hooks              *hooks.Runner
+	Questions          *question.Service
 	WorkDir            string
 	EventHandler       func(events.Event)
 	StreamDelta        func(delta string) error
@@ -99,27 +108,47 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 	if appendix := rag.SystemPromptAppendix(req.RAG); appendix != "" {
 		systemPrompt += "\n\n" + appendix
 	}
+	if appendix := memory.SystemPromptAppendix(req.Memory); appendix != "" {
+		systemPrompt += "\n\n" + appendix
+	}
+	systemPrompt += "\n\n" + router.SystemPromptAppendix()
 	if appendix := mcp.SystemPromptAppendix(req.MCP); appendix != "" {
 		systemPrompt += "\n\n" + appendix
 	}
-	if req.Skills != nil && len(req.SkillNames) > 0 {
-		all, err := req.Skills.LoadAll()
-		if err != nil {
+	if req.DecisionProfiles != nil {
+		if appendix, err := decisions.SystemPromptAppendix(req.DecisionProfiles); err != nil {
 			return nil, err
-		}
-		appendix := skills.BuildSystemAppendix(all, req.SkillNames)
-		if appendix != "" {
+		} else if appendix != "" {
 			systemPrompt += "\n\n" + appendix
 		}
 	}
+	if req.Skills != nil {
+		if appendix, err := skills.SystemPromptAppendix(req.Skills); err != nil {
+			return nil, err
+		} else if appendix != "" {
+			systemPrompt += "\n\n" + appendix
+		}
+		if len(req.SkillNames) > 0 {
+			all, err := req.Skills.LoadAll()
+			if err != nil {
+				return nil, err
+			}
+			appendix := skills.BuildSystemAppendix(all, req.SkillNames)
+			if appendix != "" {
+				systemPrompt += "\n\n" + appendix
+			}
+		}
+	}
+
+	goal := strings.TrimSpace(req.Goal)
 
 	messages := []provider.Message{{Role: provider.RoleSystem, Content: systemPrompt}}
 	if req.Session != nil && len(req.Session.State.Messages) > 0 {
 		messages = append(messages, req.Session.State.Messages...)
 	}
-	messages = append(messages, provider.Message{Role: provider.RoleUser, Content: req.Goal})
 
 	toolDefs := toProviderTools(req.Tools.Definitions())
+	memTracker := newMemoryRunTracker()
 	continueCfg := resolveContinueConfig(req.Config)
 	tagCoT := usesTaggedCoT(cotMode)
 
@@ -135,6 +164,76 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 		}
 	}
 
+	sessionID := ""
+	if req.Session != nil {
+		sessionID = req.Session.State.ID
+	}
+	if req.Questions != nil {
+		ctx = question.AttachRun(ctx, question.RunConfig{
+			SessionID: sessionID,
+			OnAsk: func(r question.Request) {
+				emit(events.Event{
+					Type:      events.TypeUserPrompt,
+					SessionID: sessionID,
+					IsAskUser: true,
+					Data: map[string]any{
+						"request_id": r.ID,
+						"questions":  r.Questions,
+					},
+				})
+			},
+		})
+	}
+
+	hookEnv := hookEnvFor(req, 0, goal)
+	if req.Hooks != nil {
+		if err := req.Hooks.RunSession(ctx, hooks.EventSessionStart, hooks.SessionData{Env: hookEnv, Answer: goal}); err != nil {
+			return nil, err
+		}
+		prompt, err := req.Hooks.RunPromptBefore(ctx, hooks.PromptData{Env: hookEnv, Text: goal})
+		if err != nil {
+			_ = req.Hooks.RunSession(ctx, hooks.EventSessionError, hooks.SessionData{Env: hookEnv, Error: err.Error()})
+			return nil, err
+		}
+		goal = strings.TrimSpace(prompt.Text)
+	}
+	routed := runTurnRouter(ctx, req, goal, emit)
+	if routed.plan.Action == router.ActionStop {
+		answer := routed.stopAnswer
+		emit(events.Event{Type: events.TypeDone, Step: 1, Text: answer})
+		if req.Session != nil {
+			messages = append(messages,
+				provider.Message{Role: provider.RoleUser, Content: goal},
+				provider.Message{Role: provider.RoleAssistant, Content: answer},
+			)
+			req.Session.State.Messages = messages
+			req.Session.State.Provider = providerID
+			_ = req.Session.Save()
+		}
+		runMetrics := metrics.Finalize(answer)
+		runMetrics.Steps = 1
+		emit(events.Event{Type: events.TypeTurnMetrics, Data: turnMetricsEventData(runMetrics)})
+		return &RunResult{Answer: answer, Steps: 1, Messages: messages, Metrics: runMetrics}, nil
+	}
+	planAppendix := router.PlanAppendix(routed.plan)
+	skillAppendix := skillPrefetchAppendix(routed.skillMatches)
+	if planAppendix != "" {
+		systemPrompt += "\n\n" + planAppendix
+	}
+	if skillAppendix != "" {
+		systemPrompt += "\n\n" + skillAppendix
+	}
+	if planAppendix != "" || skillAppendix != "" {
+		messages[0].Content = systemPrompt
+	}
+	if routed.prefetch.stored {
+		memTracker.rememberCalls++
+	}
+	if routed.prefetch.recalled {
+		memTracker.autoRecalls++
+	}
+	messages = append(messages, provider.Message{Role: provider.RoleUser, Content: routed.goal})
+
 	if shouldRunPlanPass(req.Goal, cotMode) {
 		plan, err := runPlanPass(ctx, p, messages, req, 1, emit, metrics)
 		if err != nil {
@@ -148,17 +247,31 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 
 	var finalAnswer string
 	var resp *provider.CompletionResponse
+	var lastStep int
 	for step := 1; step <= maxSteps; step++ {
+		lastStep = step
 		if !shouldRunPlanPass(req.Goal, cotMode) || step > 1 {
 			emit(events.Event{Type: events.TypeStep, Step: step, Text: fmt.Sprintf("step %d", step)})
 		}
 
-		messages, resp, err = completeWithContinues(ctx, p, messages, toolDefs, req, step, continueCfg, completeOptions{
+		stepMessages := messages
+		if req.Hooks != nil {
+			ctxData, hookErr := req.Hooks.RunContextBefore(ctx, hooks.ContextData{Env: hookEnvFor(req, step, goal)})
+			if hookErr != nil {
+				emit(events.Event{Type: events.TypeError, Step: step, Text: hookErr.Error()})
+				runSessionErrorHook(ctx, req, hookEnvFor(req, step, goal), hookErr)
+				return nil, hookErr
+			}
+			stepMessages = appendHookContext(messages, ctxData.AdditionalSystem)
+		}
+
+		messages, resp, err = completeWithContinues(ctx, p, stepMessages, toolDefs, req, step, continueCfg, completeOptions{
 			useTaggedCoT:  tagCoT,
 			allowContinue: shouldUseThoughtChain(req.Goal, cotMode),
 		}, emit, metrics)
 		if err != nil {
 			emit(events.Event{Type: events.TypeError, Step: step, Text: err.Error()})
+			runSessionErrorHook(ctx, req, hookEnvFor(req, step, goal), err)
 			return nil, err
 		}
 
@@ -171,55 +284,67 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 			break
 		}
 
-		if hasRecentToolObservation(messages) {
-			finalAnswer = extractAnswerText(resp, resp.Content, tagCoT)
-			if strings.TrimSpace(finalAnswer) == "" {
-				finalAnswer = lastToolObservation(messages)
-			}
-			if req.StreamEnd != nil {
-				_ = req.StreamEnd()
-			}
-			emit(events.Event{Type: events.TypeDone, Step: step, Text: finalAnswer})
-			break
-		}
-
-		for _, tc := range resp.ToolCalls {
-			if isDuplicateToolCall(messages, tc) {
-				finalAnswer = lastToolObservation(messages)
-				emit(events.Event{Type: events.TypeDone, Step: step, Text: finalAnswer})
-				goto finishRun
-			}
+		var skillObservations []string
+		outcomes := executeToolCalls(ctx, req.Hooks, req.Tools, hookEnvFor(req, step, goal), resp.ToolCalls, messages)
+		for i, tc := range resp.ToolCalls {
+			outcome := outcomes[i]
+			metrics.AddToolExecution(outcome.durationMs)
 			mcpServer, isMCP := mcpServerOf(req.Tools, tc.Name)
-			emit(events.Event{
-				Type:      events.TypeToolCall,
-				Step:      step,
-				ToolName:  tc.Name,
-				ToolID:    tc.ID,
-				Args:      tc.Args,
-				IsMCP:     isMCP,
-				MCPServer: mcpServer,
-			})
-			toolStart := time.Now()
-			result, err := req.Tools.Run(ctx, tc.Name, tc.Args)
-			toolDurationMs := time.Since(toolStart).Milliseconds()
-			out := result.Text
-			if err != nil {
-				out = "error: " + err.Error()
+			isSkill := tc.Name == skills.InvokeSkillToolName
+			out := outcome.text
+			if !outcome.duplicate {
+				out = outcome.result.Text
+				if outcome.err != nil {
+					out = "error: " + outcome.err.Error()
+				}
 			}
-			obs := events.Event{
-				Type:       events.TypeObservation,
-				Step:       step,
-				ToolName:   tc.Name,
-				ToolID:     tc.ID,
-				Text:       out,
-				DurationMs: toolDurationMs,
-				IsMCP:      isMCP,
-				MCPServer:  mcpServer,
+			hadError := outcome.err != nil
+			if !hadError && !isMemoryTool(tc.Name) {
+				lower := strings.ToLower(strings.TrimSpace(out))
+				hadError = strings.HasPrefix(lower, "error:") || strings.Contains(lower, "(error:")
 			}
-			if len(result.Data) > 0 && err == nil {
-				obs.Data = result.Data
+			autoRecall := false
+			if req.Memory != nil && shouldAutoRecallMemory(tc.Name, out, outcome.err) {
+				if hint, entryID := req.Memory.FormatErrorHintWithID(ctx, tc.Name, out); hint != "" {
+					out += "\n\n" + hint
+					autoRecall = true
+					memTracker.setRecalledID(entryID)
+					emit(events.Event{
+						Type:     events.TypeMemoryRecalled,
+						Step:     step,
+						ToolName: tc.Name,
+						Text:     hint,
+					})
+				}
 			}
-			emit(obs)
+			memTracker.recordToolCall(tc.Name, tc.Args, hadError, autoRecall)
+			if isSkill {
+				skillObservations = append(skillObservations, emitSkillToolActivity(emit, step, tc, outcome, mcpServer, isMCP)...)
+			} else if isDecisionTool(tc.Name) {
+				emitDecisionToolActivity(emit, step, tc, outcome)
+			} else if isAskUserTool(tc.Name) {
+				emitAskUserToolActivity(emit, step, sessionID, tc, outcome)
+			} else {
+				emit(events.Event{
+					Type:      events.TypeToolCall,
+					Step:      step,
+					ToolName:  tc.Name,
+					ToolID:    tc.ID,
+					Args:      tc.Args,
+					IsMCP:     isMCP,
+					MCPServer: mcpServer,
+				})
+				emit(events.Event{
+					Type:       events.TypeObservation,
+					Step:       step,
+					ToolName:   tc.Name,
+					ToolID:     tc.ID,
+					Text:       out,
+					DurationMs: outcome.durationMs,
+					IsMCP:      isMCP,
+					MCPServer:  mcpServer,
+				})
+			}
 			messages = append(messages, provider.Message{
 				Role:       provider.RoleTool,
 				Name:       tc.Name,
@@ -227,12 +352,21 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 				Content:    out,
 			})
 		}
+		if len(skillObservations) > 0 {
+			messages = appendSkillContinuation(messages)
+		}
 		if step == maxSteps {
 			return nil, fmt.Errorf("max steps (%d) reached", maxSteps)
 		}
 	}
 
-finishRun:
+	if req.Memory != nil {
+		runDeterministicMemoryRevision(ctx, req, memTracker, finalAnswer, emit)
+		if !memTracker.storedMemory() {
+			messages, _ = runMemoryReflectionPass(ctx, p, req, messages, toolDefs, memTracker, emit)
+		}
+	}
+
 	if req.Session != nil {
 		req.Session.State.Messages = messages
 		req.Session.State.Provider = providerID
@@ -241,11 +375,31 @@ finishRun:
 		}
 	}
 
+	if req.Hooks != nil {
+		_ = req.Hooks.RunSession(ctx, hooks.EventSessionIdle, hooks.SessionData{
+			Env:    hookEnvFor(req, 0, goal),
+			Answer: finalAnswer,
+		})
+	}
+
+	runMetrics := metrics.Finalize(finalAnswer)
+	runMetrics.Steps = lastStep
+	if req.Session != nil {
+		snap := req.Session.ContextSnapshot(req.Config, providerID)
+		runMetrics.ContextTokens = snap.ContextTokens
+		runMetrics.ContextWindow = snap.ContextWindow
+		runMetrics.ContextUsedPct = snap.ContextUsedPct
+	}
+	emit(events.Event{
+		Type: events.TypeTurnMetrics,
+		Data: turnMetricsEventData(runMetrics),
+	})
+
 	return &RunResult{
 		Answer:   finalAnswer,
 		Steps:    len(messages),
 		Messages: messages,
-		Metrics:  metrics.Finalize(finalAnswer),
+		Metrics:  runMetrics,
 	}, nil
 }
 
@@ -290,4 +444,19 @@ func loadAgentsAppendix(workDir string) (string, error) {
 		return "", err
 	}
 	return agentsdoc.SystemAppendix(content), nil
+}
+
+func shouldAutoRecallMemory(toolName, out string, toolErr error) bool {
+	if toolErr != nil {
+		return true
+	}
+	switch toolName {
+	case "memory_recall", "memory_remember", "memory_revise":
+		return false
+	}
+	lower := strings.ToLower(strings.TrimSpace(out))
+	if strings.HasPrefix(lower, "error:") {
+		return true
+	}
+	return strings.Contains(lower, "(error:") || strings.Contains(lower, "\n(error:")
 }

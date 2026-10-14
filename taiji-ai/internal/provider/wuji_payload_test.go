@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	wujidriver "github.com/coditary/wuji/internal/driver"
+	wujidriver "github.com/coditary/wuji-core/pkg/driver"
 )
 
 func TestWujiPayloadRoundTripTools(t *testing.T) {

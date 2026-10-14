@@ -1,0 +1,76 @@
+#pragma once
+
+#include <tuinator/tuinator.hpp>
+
+#include <cstdint>
+#include <functional>
+#include <string>
+#include <unordered_set>
+#include <vector>
+
+class SessionSidebar : public tuinator::Widget {
+  public:
+    struct SessionItem {
+        std::string project_root;
+        std::string session_id;
+        std::string name;
+        std::string created_at;
+        bool active = false;
+    };
+
+    struct ProjectGroup {
+        std::string root;
+        std::string name;
+        std::vector<SessionItem> sessions;
+    };
+
+    using SessionSelectHandler = std::function<void(const std::string& project_root, const std::string& session_id)>;
+    using NewSessionHandler = std::function<void(const std::string& project_root)>;
+    using SessionContextHandler = std::function<void(const std::string& project_root, const std::string& session_id,
+                                                     tuinator::Point position)>;
+
+    SessionSidebar(tuinator::Theme theme, SessionSelectHandler on_select, NewSessionHandler on_new,
+                   SessionContextHandler on_context);
+
+    void refresh(uint64_t taiji_handle);
+    void expand_project(const std::string& project_root);
+    void set_width_hint(int cols);
+
+    std::string_view widget_type_name() const override { return "SessionSidebar"; }
+
+    tuinator::Size preferred_size() const override;
+    void layout(tuinator::Rect bounds) override;
+    void paint(tuinator::PaintContext& ctx) const override;
+    bool handle_event(const tuinator::Event& event) override;
+    bool wants_hover() const override { return true; }
+
+  private:
+    struct Row {
+        enum class Kind { NewChat, ProjectHeader, Session } kind = Kind::Session;
+        std::string project_root;
+        std::string session_id;
+        std::string label;
+        std::string suffix;
+        bool active = false;
+    };
+
+    void rebuild_rows();
+    bool is_project_collapsed(const std::string& project_root) const;
+    void toggle_project_collapsed(const std::string& project_root);
+    std::string format_relative_time(const std::string& iso_time) const;
+    int row_at_y(int local_y) const;
+    std::string truncate_label(const std::string& text, int max_cols) const;
+    int project_new_button_x() const;
+    bool is_project_new_click(int local_x, int local_y) const;
+
+    tuinator::Theme theme_;
+    SessionSelectHandler on_select_;
+    NewSessionHandler on_new_;
+    SessionContextHandler on_context_;
+    std::vector<ProjectGroup> projects_;
+    std::vector<Row> rows_;
+    std::unordered_set<std::string> collapsed_projects_;
+    int width_hint_ = 26;
+    int scroll_offset_ = 0;
+    int hovered_row_ = -1;
+};

@@ -8,13 +8,15 @@ import (
 	"time"
 
 	taijicfg "github.com/coditary/taiji/internal/config"
-	"github.com/coditary/wuji/chatformat"
+	"github.com/coditary/taiji/internal/wujipath"
+	"github.com/coditary/wuji-core/chatformat"
 )
 
 type wujiProvider struct {
 	id          string
 	driverID    string
 	endpoint    string
+	wujiRoot    string
 	model       string
 	maxTokens   int
 	temperature float64
@@ -26,10 +28,19 @@ func newWujiProvider(id string, pc taijicfg.ProviderConfig, cfg *taijicfg.Config
 	if driverID == "" {
 		driverID = id
 	}
+	cfgRoot := ""
+	wujiRoot := strings.TrimSpace(pc.WujiRoot)
+	if cfg != nil {
+		cfgRoot = cfg.Root
+		if wujiRoot == "" {
+			wujiRoot = strings.TrimSpace(cfg.Wuji.WujiRoot)
+		}
+	}
 	return &wujiProvider{
 		id:          id,
 		driverID:    driverID,
 		endpoint:    resolveWujiEndpoint(pc, cfg),
+		wujiRoot:    resolveWujiRoot(wujiRoot, cfgRoot),
 		model:       strings.TrimSpace(pc.Model),
 		maxTokens:   pc.MaxTokens,
 		temperature: pc.Temperature,
@@ -40,7 +51,7 @@ func (p *wujiProvider) ensureClient(ctx context.Context) error {
 	if p.client != nil {
 		return nil
 	}
-	client, err := DialWujiCore(ctx, p.endpoint)
+	client, err := DialWujiCore(ctx, p.endpoint, p.wujiRoot)
 	if err != nil {
 		return fmt.Errorf("connect wuji core at %s: %w", p.endpoint, err)
 	}
@@ -73,6 +84,7 @@ func isTransientWujiErr(err error) bool {
 	}
 	msg := err.Error()
 	return strings.Contains(msg, "connection refused") ||
+		strings.Contains(msg, "connection is closing") ||
 		strings.Contains(msg, "Unavailable") ||
 		strings.Contains(msg, "transport:")
 }
@@ -121,6 +133,9 @@ func (p *wujiProvider) Complete(ctx context.Context, req CompletionRequest) (*Co
 			_ = p.client.Close()
 			p.client = nil
 		}
+		// wuji-core can keep a dead gRPC link to llama after idle driver shutdown;
+		// reconnecting only our client is not enough — restart the core daemon.
+		_ = wujipath.RestartCoreDaemon(ctx, p.wujiRoot, p.endpoint)
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()

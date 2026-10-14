@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <functional>
 #include <string>
+#include <vector>
 
 class TurnMetricsNote : public tuinator::Widget {
   public:
@@ -17,6 +18,7 @@ class TurnMetricsNote : public tuinator::Widget {
     void clear();
     void set_wrap_width(int width);
     void set_right_inset(int columns);
+    static int reserved_right_width(bool actions_visible, std::size_t version_count);
 
     std::string_view widget_type_name() const override { return "TurnMetricsNote"; }
 
@@ -27,6 +29,7 @@ class TurnMetricsNote : public tuinator::Widget {
     bool wants_hover() const override { return visible_; }
 
   private:
+    std::vector<std::string> metric_lines() const;
     int actions_cluster_width() const;
     int actions_cluster_start_x() const;
     int redo_x() const;
