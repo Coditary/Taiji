@@ -52,10 +52,12 @@ tuinator::Rgb ui_session_active_bg();
 tuinator::Rgb ui_session_active_bar();
 tuinator::Rgb ui_badge_bg();
 tuinator::Rgb ui_quick_action_pill_bg();
-bool ui_message_fill_background();
-void ui_apply_message_fill_background(bool enabled);
-/** Panel fill for framed chat bubbles (pill color or main chat bg when fill is off). */
-tuinator::Rgb ui_message_panel_bg();
+bool ui_user_message_fill_background();
+bool ui_assistant_message_fill_background();
+void ui_apply_message_fill_background(bool user, bool assistant);
+/** Panel fill for framed bubbles (pill color or main chat bg when fill is off). */
+tuinator::Rgb ui_user_message_panel_bg();
+tuinator::Rgb ui_assistant_message_panel_bg();
 tuinator::Rgb ui_quick_action_code();
 tuinator::Rgb ui_quick_action_test();
 tuinator::Rgb ui_quick_action_git();
@@ -156,6 +158,7 @@ void ui_paint_chat_bubble_panel(tuinator::PaintContext& ctx, tuinator::Rect rect
                                 tuinator::Rgb border);
 
 tuinator::Style ui_thinking_style();
+tuinator::Rgb ui_assistant_message_border_rgb();
 tuinator::Style ui_composer_input_style();
 tuinator::MarkdownStyleSet ui_chat_markdown_styles(const tuinator::Theme& theme);
 

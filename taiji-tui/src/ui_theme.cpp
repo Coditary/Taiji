@@ -41,7 +41,8 @@ UiChatRolePrefs g_ui_assistant_chat_prefs{
     .max_width_pct = 80,
     .for_assistant = true,
 };
-bool g_ui_message_fill_background = true;
+bool g_ui_user_message_fill_background = true;
+bool g_ui_assistant_message_fill_background = true;
 
 struct UiPalette {
     tuinator::Rgb main_bg{26, 27, 38};
@@ -394,12 +395,21 @@ tuinator::Rgb ui_session_active_bar() { return palette().session_active_bar; }
 tuinator::Rgb ui_badge_bg() { return palette().badge_bg; }
 tuinator::Rgb ui_quick_action_pill_bg() { return palette().quick_action_pill_bg; }
 
-bool ui_message_fill_background() { return g_ui_message_fill_background; }
+bool ui_user_message_fill_background() { return g_ui_user_message_fill_background; }
 
-void ui_apply_message_fill_background(bool enabled) { g_ui_message_fill_background = enabled; }
+bool ui_assistant_message_fill_background() { return g_ui_assistant_message_fill_background; }
 
-tuinator::Rgb ui_message_panel_bg() {
-    return g_ui_message_fill_background ? ui_quick_action_pill_bg() : ui_main_bg();
+void ui_apply_message_fill_background(bool user, bool assistant) {
+    g_ui_user_message_fill_background = user;
+    g_ui_assistant_message_fill_background = assistant;
+}
+
+tuinator::Rgb ui_user_message_panel_bg() {
+    return g_ui_user_message_fill_background ? ui_quick_action_pill_bg() : ui_main_bg();
+}
+
+tuinator::Rgb ui_assistant_message_panel_bg() {
+    return g_ui_assistant_message_fill_background ? ui_quick_action_pill_bg() : ui_main_bg();
 }
 tuinator::Rgb ui_quick_action_code() { return palette().quick_action_code; }
 tuinator::Rgb ui_quick_action_test() { return palette().quick_action_test; }
@@ -662,7 +672,7 @@ void ui_paint_user_bubble_panel(tuinator::PaintContext& ctx, tuinator::Rect rect
     if (rect.width <= 0 || rect.height <= 0) {
         return;
     }
-    const bool solid = ui_message_fill_background();
+    const bool solid = ui_user_message_fill_background();
     const tuinator::Rgb panel_bg = solid ? fill : ui_main_bg();
     tuinator::Style fill_style;
     fill_style.background_rgb = panel_bg;
@@ -690,7 +700,7 @@ void ui_paint_chat_bubble_panel(tuinator::PaintContext& ctx, tuinator::Rect rect
     if (rect.width <= 0 || rect.height <= 0) {
         return;
     }
-    const bool solid = ui_message_fill_background();
+    const bool solid = ui_assistant_message_fill_background();
     const tuinator::Rgb panel_bg = solid ? fill : ui_main_bg();
     tuinator::Style fill_style;
     fill_style.background_rgb = panel_bg;
@@ -721,6 +731,14 @@ tuinator::Style ui_thinking_style() {
         return g_active_sheet->resolve_theme_token("thinking-fg", fallback);
     }
     return fallback;
+}
+
+tuinator::Rgb ui_assistant_message_border_rgb() {
+    const tuinator::Style style = ui_thinking_style();
+    if (style.foreground_rgb.has_value()) {
+        return *style.foreground_rgb;
+    }
+    return tuinator::rgb(255, 140, 64);
 }
 
 tuinator::Style ui_composer_input_style() {
@@ -793,7 +811,7 @@ void ui_paint_vertical_scrollbar_track_column(tuinator::PaintContext& ctx, int x
 }
 
 tuinator::Style ui_resolve_chat_message_text(tuinator::Style style) {
-    return ui_resolve_panel_text(style, ui_message_panel_bg());
+    return ui_resolve_panel_text(style, ui_assistant_message_panel_bg());
 }
 
 tuinator::MarkdownStyleSet ui_chat_markdown_styles(const tuinator::Theme& theme) {
@@ -811,7 +829,7 @@ tuinator::MarkdownStyleSet ui_chat_markdown_styles(const tuinator::Theme& theme)
     styles.code.background_rgb = ui_badge_bg();
     styles.code.foreground_rgb = ui_quick_action_code();
 
-    const tuinator::Rgb block_bg = ui_message_panel_bg();
+    const tuinator::Rgb block_bg = ui_assistant_message_panel_bg();
     styles.code_block = ui_resolve_chat_message_text(styles.code_block);
     styles.code_block.background_rgb = block_bg;
     styles.code_block.foreground_rgb = ui_text();

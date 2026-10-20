@@ -388,9 +388,15 @@ bool settings_parse_draft(const std::string& json, SettingsModal::Draft& out) {
     if (json.find("\"sticky_user_message\":") == std::string::npos) {
         out.sticky_user_message = true;
     }
-    out.message_fill_background = json_extract_bool(json, "message_fill_background");
-    if (json.find("\"message_fill_background\":") == std::string::npos) {
-        out.message_fill_background = true;
+    const bool legacy_fill = json_extract_bool(json, "message_fill_background");
+    const bool has_legacy_fill = json.find("\"message_fill_background\":") != std::string::npos;
+    out.user_message_fill_background = json_extract_bool(json, "user_message_fill_background");
+    if (json.find("\"user_message_fill_background\":") == std::string::npos) {
+        out.user_message_fill_background = has_legacy_fill ? legacy_fill : true;
+    }
+    out.assistant_message_fill_background = json_extract_bool(json, "assistant_message_fill_background");
+    if (json.find("\"assistant_message_fill_background\":") == std::string::npos) {
+        out.assistant_message_fill_background = has_legacy_fill ? legacy_fill : true;
     }
     out.user_message_style = json_extract_string(json, "user_message_style");
     if (out.user_message_style.empty()) {
@@ -541,7 +547,9 @@ std::string SettingsModal::build_apply_json() const {
     body += ",\"message_time_clock\":";
     json_escape_append(body, draft_.message_time_clock == "12h" ? "12h" : "24h");
     body += std::string(",\"sticky_user_message\":") + (draft_.sticky_user_message ? "true" : "false");
-    body += std::string(",\"message_fill_background\":") + (draft_.message_fill_background ? "true" : "false");
+    body += std::string(",\"user_message_fill_background\":") + (draft_.user_message_fill_background ? "true" : "false");
+    body += std::string(",\"assistant_message_fill_background\":") +
+             (draft_.assistant_message_fill_background ? "true" : "false");
     body += ",\"user_message_style\":";
     json_escape_append(body, draft_.user_message_style);
     body += ",\"user_message_align\":";

@@ -676,6 +676,11 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             user_width.int_min = 40;
             user_width.int_max = 100;
             rows.push_back(user_width);
+            Row user_fill;
+            user_fill.label = "Background fill";
+            user_fill.kind = Row::Kind::BoolToggle;
+            user_fill.enum_key = "user_message_fill_background";
+            rows.push_back(user_fill);
             Row sec_asst;
             sec_asst.kind = Row::Kind::Section;
             sec_asst.label = "Assistant messages";
@@ -701,11 +706,11 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             asst_width.int_min = 40;
             asst_width.int_max = 100;
             rows.push_back(asst_width);
-            Row msg_fill;
-            msg_fill.label = "Message background";
-            msg_fill.kind = Row::Kind::BoolToggle;
-            msg_fill.enum_key = "message_fill_background";
-            rows.push_back(msg_fill);
+            Row asst_fill;
+            asst_fill.label = "Background fill";
+            asst_fill.kind = Row::Kind::BoolToggle;
+            asst_fill.enum_key = "assistant_message_fill_background";
+            rows.push_back(asst_fill);
             Row msg_ts;
             msg_ts.label = "Message timestamps";
             msg_ts.kind = Row::Kind::BoolToggle;
@@ -988,8 +993,11 @@ std::string SettingsModal::row_value_text(const Row& row) const {
             if (row.enum_key == "sticky_user_message") {
                 return draft_.sticky_user_message ? "on" : "off";
             }
-            if (row.enum_key == "message_fill_background") {
-                return draft_.message_fill_background ? "on" : "off";
+            if (row.enum_key == "user_message_fill_background") {
+                return draft_.user_message_fill_background ? "on" : "off";
+            }
+            if (row.enum_key == "assistant_message_fill_background") {
+                return draft_.assistant_message_fill_background ? "on" : "off";
             }
             if (row.enum_key == "reduce_motion") {
                 return draft_.reduce_motion ? "on" : "off";
@@ -1137,8 +1145,8 @@ std::string SettingsModal::row_hint_text(const Row& row) const {
     if (row.enum_key == "sticky_user_message") {
         return "Pin the top of your last scrolled prompt while reading long replies.";
     }
-    if (row.enum_key == "message_fill_background") {
-        return "On: solid fill inside message frames. Off: only the outline on the chat background.";
+    if (row.enum_key == "user_message_fill_background" || row.enum_key == "assistant_message_fill_background") {
+        return "On: solid fill behind your message frame (border included). Off: outline only on the chat background.";
     }
     if (row.enum_key == "user_message_style" || row.enum_key == "assistant_message_style") {
         return "Bubble chrome for this role (chat, cornered, block, header, …).";
@@ -1546,8 +1554,13 @@ void SettingsModal::activate_row(int row, int direction) {
                 if (on_preview_) {
                     on_preview_(draft_);
                 }
-            } else if (r.enum_key == "message_fill_background") {
-                draft_.message_fill_background = !draft_.message_fill_background;
+            } else if (r.enum_key == "user_message_fill_background") {
+                draft_.user_message_fill_background = !draft_.user_message_fill_background;
+                if (on_preview_) {
+                    on_preview_(draft_);
+                }
+            } else if (r.enum_key == "assistant_message_fill_background") {
+                draft_.assistant_message_fill_background = !draft_.assistant_message_fill_background;
                 if (on_preview_) {
                     on_preview_(draft_);
                 }

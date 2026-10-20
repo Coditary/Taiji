@@ -22,9 +22,12 @@ type UIConfig struct {
 	MessageTimeClock string `yaml:"message_time_clock,omitempty"`
 	// StickyUserMessage pins a preview of your prompt at the top while scrolling long replies.
 	StickyUserMessage *bool `yaml:"sticky_user_message,omitempty"`
-	// MessageFillBackground fills framed chat bubbles (user + assistant) with a solid panel color.
-	// When false, only the border/outline is drawn on the main chat background.
+	// MessageFillBackground is deprecated; use UserMessageFillBackground and AssistantMessageFillBackground.
 	MessageFillBackground *bool `yaml:"message_fill_background,omitempty"`
+	// UserMessageFillBackground fills the user's framed bubble (border included) with a solid panel color.
+	UserMessageFillBackground *bool `yaml:"user_message_fill_background,omitempty"`
+	// AssistantMessageFillBackground fills assistant framed bubbles (border included).
+	AssistantMessageFillBackground *bool `yaml:"assistant_message_fill_background,omitempty"`
 	// UserMessageStyle is how outbound user prompts render in the TUI: block, plain, messenger, header,
 	// terminal, log, card, section, or cornered.
 	UserMessageStyle string `yaml:"user_message_style,omitempty"`
@@ -68,6 +71,8 @@ func DefaultUIConfig() UIConfig {
 	messageTimestamps := true
 	stickyUserMessage := true
 	messageFillBackground := true
+	userMessageFillBackground := true
+	assistantMessageFillBackground := true
 	return UIConfig{
 		Theme:             "dark",
 		UserMessageStyle:            "messenger",
@@ -79,7 +84,9 @@ func DefaultUIConfig() UIConfig {
 		MessageTimestamps: &messageTimestamps,
 		MessageTimeClock:  "24h",
 		StickyUserMessage:           &stickyUserMessage,
-		MessageFillBackground:       &messageFillBackground,
+		MessageFillBackground:             &messageFillBackground,
+		UserMessageFillBackground:         &userMessageFillBackground,
+		AssistantMessageFillBackground:    &assistantMessageFillBackground,
 		Keybindings: UIKeyBindings{
 			OpenThemePicker: "Ctrl+T",
 		},
@@ -117,12 +124,26 @@ func (c UIConfig) StickyUserMessageOrDefault() bool {
 	return *c.StickyUserMessage
 }
 
-// MessageFillBackgroundOrDefault reports whether chat message panels use a solid fill.
+// MessageFillBackgroundOrDefault reports whether chat message panels use a solid fill (legacy).
 func (c UIConfig) MessageFillBackgroundOrDefault() bool {
 	if c.MessageFillBackground == nil {
 		return true
 	}
 	return *c.MessageFillBackground
+}
+
+func (c UIConfig) UserMessageFillBackgroundOrDefault() bool {
+	if c.UserMessageFillBackground != nil {
+		return *c.UserMessageFillBackground
+	}
+	return c.MessageFillBackgroundOrDefault()
+}
+
+func (c UIConfig) AssistantMessageFillBackgroundOrDefault() bool {
+	if c.AssistantMessageFillBackground != nil {
+		return *c.AssistantMessageFillBackground
+	}
+	return c.MessageFillBackgroundOrDefault()
 }
 
 // KeybindingsOrDefault returns UI shortcuts with built-in defaults filled in.

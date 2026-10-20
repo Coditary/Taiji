@@ -78,7 +78,8 @@ class SettingsModal : public tuinator::Widget {
         bool message_timestamps = true;
         std::string message_time_clock = "24h";
         bool sticky_user_message = true;
-        bool message_fill_background = true;
+        bool user_message_fill_background = true;
+        bool assistant_message_fill_background = true;
         std::string user_message_style = "messenger";
         std::string user_message_align = "auto";
         int user_message_max_width_pct = 80;

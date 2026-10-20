@@ -773,7 +773,7 @@ void ChatApp::set_root() {
         ui_apply_chat_message_prefs(draft.user_message_style, draft.user_message_align, draft.user_message_max_width_pct,
                                     draft.assistant_message_style, draft.assistant_message_align,
                                     draft.assistant_message_max_width_pct);
-        ui_apply_message_fill_background(draft.message_fill_background);
+        ui_apply_message_fill_background(draft.user_message_fill_background, draft.assistant_message_fill_background);
         if (input_ != nullptr) {
             input_->sync_frame_border_style();
         }
@@ -1544,11 +1544,17 @@ void ChatApp::refresh_appearance_prefs() {
         sticky_user = true;
     }
     apply_sticky_user_message_pref(sticky_user);
-    bool message_fill = json_extract_bool(json, "message_fill_background");
-    if (json.find("\"message_fill_background\":") == std::string::npos) {
-        message_fill = true;
+    const bool legacy_fill = json_extract_bool(json, "message_fill_background");
+    const bool has_legacy_fill = json.find("\"message_fill_background\":") != std::string::npos;
+    bool user_fill = json_extract_bool(json, "user_message_fill_background");
+    if (json.find("\"user_message_fill_background\":") == std::string::npos) {
+        user_fill = has_legacy_fill ? legacy_fill : true;
     }
-    ui_apply_message_fill_background(message_fill);
+    bool assistant_fill = json_extract_bool(json, "assistant_message_fill_background");
+    if (json.find("\"assistant_message_fill_background\":") == std::string::npos) {
+        assistant_fill = has_legacy_fill ? legacy_fill : true;
+    }
+    ui_apply_message_fill_background(user_fill, assistant_fill);
     std::string theme_picker_key = json_extract_string(json, "key_open_theme_picker");
     if (theme_picker_key.empty()) {
         theme_picker_key = ui_keybinding_default_open_theme_picker();

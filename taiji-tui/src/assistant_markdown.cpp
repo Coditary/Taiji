@@ -144,8 +144,14 @@ int AssistantMarkdown::markdown_inner_width() const {
     const int stream_w = stream_content_width();
     const ChatFrameLayout frame = chat_frame_layout(0, stream_w, 8, stream_w, prefs);
     if (prefs.style == UiUserMessageStyle::Messenger) {
-        const int pad_x = ui_message_fill_background() ? 0 : kBubblePadX;
+        if (ui_assistant_message_fill_background()) {
+            return std::max(8, frame.body_w);
+        }
+        const int pad_x = kBubblePadX;
         return std::max(8, frame.content_w - pad_x * 2);
+    }
+    if (prefs.style == UiUserMessageStyle::Card) {
+        return std::max(8, std::min(48, stream_w - 4));
     }
     return std::max(8, frame.body_w);
 }
@@ -154,14 +160,15 @@ void AssistantMarkdown::relayout_content() {
     const int inner_width = markdown_inner_width();
     const int height = std::max(1, view_.content_height());
 
-    cached_inner_width_ = 0;
     view_.layout({0, 0, inner_width, height});
     if (!view_.source().empty() && view_.content_height() <= 0) {
         view_.set_markdown(view_.source());
         view_.layout({0, 0, inner_width, std::max(1, view_.content_height())});
     }
+    cached_inner_width_ = inner_width;
     cached_height_ = std::max(1, view_.content_height());
     mark_layout_dirty();
+    mark_dirty();
 }
 
 void AssistantMarkdown::refresh_measure_cache(int inner_width) const {
@@ -192,11 +199,15 @@ tuinator::Size AssistantMarkdown::preferred_size() const {
         chat_stream_row_preferred_width(bounds_.width > 0 ? bounds_.width : (wrap_width_hint_ > 0 ? wrap_width_hint_ : 72));
     refresh_measure_cache(markdown_inner_width());
     int height = cached_height_;
-    if (prefs.style == UiUserMessageStyle::Messenger && !ui_message_fill_background()) {
-        height += kBubblePadY * 2;
-    }
-    if (prefs.style == UiUserMessageStyle::Messenger && !author_label_.empty()) {
-        height += 1;
+    if (prefs.style == UiUserMessageStyle::Messenger) {
+        if (ui_assistant_message_fill_background()) {
+            height += 1;
+        } else {
+            height += kBubblePadY * 2;
+            if (!author_label_.empty()) {
+                height += 1;
+            }
+        }
     }
     if (prefs.style == UiUserMessageStyle::Cornered) {
         height += 2;
@@ -208,6 +219,8 @@ tuinator::Size AssistantMarkdown::preferred_size() const {
         if (!ui_corners_flat()) {
             height += 1;
         }
+    } else if (prefs.style == UiUserMessageStyle::Card) {
+        height = std::max(3, cached_height_ + 2 + (author_label_.empty() ? 0 : 1));
     } else if (!author_label_.empty()) {
         height += 1;
     }
@@ -268,99 +281,109 @@ void AssistantMarkdown::paint(tuinator::PaintContext& ctx) const {
     const UiChatRolePrefs prefs = ui_assistant_chat_prefs();
     const std::string& title = author_label_;
     const int header_min = chat_header_strip_min_width(title, "");
-    const int body_text_w = std::max(markdown_inner_width(), header_min);
+    const int layout_inner = markdown_inner_width();
+    refresh_measure_cache(layout_inner);
+    const int body_text_w = std::max(cached_inner_width_, std::max(1, header_min - 4));
     const ChatFrameLayout frame = chat_frame_layout(box_x, box_w, header_min, body_text_w, prefs);
 
-    tuinator::Style accent = ui_thinking_style();
-    tuinator::Style body = ui_resolve_main_text(accent);
-    body.bold = false;
-    body.foreground_rgb = ui_text();
+    const ChatChromeStyles chrome = chat_chrome_styles(ChatMessageRole::Assistant);
+    const tuinator::Style& accent = chrome.accent;
+    const tuinator::Rgb panel_bg = ui_assistant_message_panel_bg();
+    const tuinator::Rgb border_rgb = ui_assistant_message_border_rgb();
+
+    const auto paint_markdown_body = [this, panel_bg](tuinator::PaintContext& body_ctx, const ChatFrameLayout& body_frame,
+                                                      int body_top, int rows, const ChatChromeStyles& /*styles*/) {
+        body_ctx.with_clip({body_frame.body_x, body_top, body_frame.body_w, rows},
+                           [&](tuinator::PaintContext& child_ctx) {
+                               view_.paint(child_ctx);
+                               paint_stream_glow(child_ctx, {0, 0, body_frame.body_w, rows}, panel_bg);
+                           });
+    };
 
     int y = 0;
-    const tuinator::Rgb panel_bg = ui_message_panel_bg();
 
     switch (prefs.style) {
         case UiUserMessageStyle::Messenger: {
-            if (!title.empty() && y < bounds_.height) {
-                ctx.canvas.draw_text({frame.frame_x, y}, title, accent);
-                ++y;
+            const int body_rows = std::max(1, view_.content_height());
+            if (ui_assistant_message_fill_background()) {
+                paint_chat_role_framed_message(ctx, y, bounds_.height, frame, UiUserMessageStyle::Header, title, "",
+                                               chrome, ChatMessageRole::Assistant, body_rows, paint_markdown_body);
+                return;
             }
-            const int bubble_h = std::max(1, bounds_.height - y);
-            const tuinator::Rect bubble{frame.frame_x, y, frame.content_w, bubble_h};
-            ui_paint_chat_bubble_panel(ctx, bubble, ui_quick_action_pill_bg(), ui_secondary_text());
-            const int pad_x = ui_message_fill_background() ? 0 : kBubblePadX;
-            const int pad_y = ui_message_fill_background() ? 0 : kBubblePadY;
-            const tuinator::Rect inner{bubble.x + pad_x, bubble.y + pad_y,
-                                       std::max(1, bubble.width - pad_x * 2),
-                                       std::max(1, bubble.height - pad_y * 2)};
-            if (ui_message_fill_background()) {
-                tuinator::Style inner_fill;
-                inner_fill.background_rgb = ui_message_panel_bg();
-                ctx.canvas.fill_rect(inner, ' ', inner_fill);
+            const int block_top = y;
+            const bool has_title = !title.empty() && y < bounds_.height;
+            if (has_title) {
+                ctx.canvas.draw_text({frame.frame_x, block_top}, title, accent);
             }
+            const int bubble_y = has_title ? block_top + 1 : block_top;
+            const int bubble_h = std::max(1, bounds_.height - bubble_y);
+            const tuinator::Rect bubble{frame.frame_x, bubble_y, frame.content_w, bubble_h};
+            ui_paint_chat_bubble_panel(ctx, bubble, ui_quick_action_pill_bg(), border_rgb);
+            const tuinator::Rect inner{bubble.x + kBubblePadX, bubble.y + kBubblePadY,
+                                       std::max(1, bubble.width - kBubblePadX * 2),
+                                       std::max(1, bubble.height - kBubblePadY * 2)};
             ctx.with_clip(inner, [&](tuinator::PaintContext& child_ctx) {
                 view_.paint(child_ctx);
-                paint_stream_glow(child_ctx, inner, ui_message_panel_bg());
+                paint_stream_glow(child_ctx, inner, panel_bg);
             });
             return;
         }
+        case UiUserMessageStyle::Header:
         case UiUserMessageStyle::Cornered: {
-            if (y < bounds_.height) {
-                paint_chat_header_strip(ctx, y, frame, title, "", accent, accent);
-                ++y;
-            }
-            const int body_top = y;
             const int body_rows = std::max(1, view_.content_height());
-            paint_chat_framed_body_fill(ctx, frame, body_top, body_rows);
-            ctx.with_clip({frame.body_x, body_top, frame.body_w, body_rows}, [&](tuinator::PaintContext& child_ctx) {
-                view_.paint(child_ctx);
-                paint_stream_glow(child_ctx, {0, 0, frame.body_w, body_rows}, panel_bg);
-            });
-            y = body_top + body_rows;
-            if (y < bounds_.height) {
-                paint_chat_cornered_bottom(ctx, y, frame, accent);
-            }
+            paint_chat_role_framed_message(ctx, y, bounds_.height, frame, prefs.style, title, "", chrome,
+                                           ChatMessageRole::Assistant, body_rows, paint_markdown_body);
             return;
         }
-        case UiUserMessageStyle::Header: {
-            if (y < bounds_.height) {
-                paint_chat_header_strip(ctx, y, frame, title, "", accent, accent);
-                ++y;
-            }
+        case UiUserMessageStyle::Card: {
             const int body_rows = std::max(1, view_.content_height());
-            paint_chat_framed_body_fill(ctx, frame, y, body_rows);
-            ctx.with_clip({frame.body_x, y, frame.body_w, body_rows}, [&](tuinator::PaintContext& child_ctx) {
-                view_.paint(child_ctx);
-                paint_stream_glow(child_ctx, {0, 0, frame.body_w, body_rows}, panel_bg);
-            });
+            const int title_rows = title.empty() ? 0 : 1;
+            const int card_h = std::max(3, body_rows + 2 + title_rows);
+            const tuinator::Rect card{frame.frame_x, 0, frame.content_w, std::min(card_h, bounds_.height)};
+            if (card.height <= 0) {
+                return;
+            }
+            ui_paint_chat_bubble_panel(ctx, card, ui_quick_action_pill_bg(), border_rgb);
+            int body_y = 1;
+            if (!title.empty() && body_y < card.height - 1) {
+                const tuinator::Style& title_style =
+                    ui_assistant_message_fill_background() ? chrome.accent_on_fill : accent;
+                ctx.canvas.draw_text({card.x + 2, body_y}, title, title_style);
+                ++body_y;
+            }
+            const int body_h = std::max(1, card.height - body_y - 1);
+            ctx.with_clip({card.x + 2, body_y, std::max(1, card.width - 4), body_h},
+                          [&](tuinator::PaintContext& child_ctx) {
+                              view_.paint(child_ctx);
+                              paint_stream_glow(child_ctx, {0, 0, card.width - 4, body_h}, panel_bg);
+                          });
             return;
         }
         case UiUserMessageStyle::Block: {
-            const UiUserBubbleInsets chrome = ui_user_bubble_insets();
+            const UiUserBubbleInsets insets = ui_user_bubble_insets();
             const int body_rows = std::max(1, view_.content_height());
-            const int panel_h = std::max(3, body_rows + chrome.bottom_inset + (title.empty() ? 0 : 1));
+            const int panel_h = std::max(3, body_rows + insets.bottom_inset + (title.empty() ? 0 : 1));
             const tuinator::Rect panel{frame.frame_x, y, frame.content_w, std::min(panel_h, bounds_.height - y)};
             if (panel.height <= 0) {
                 return;
             }
-            ui_paint_chat_bubble_panel(ctx, panel, ui_quick_action_pill_bg(), ui_secondary_text());
+            if (ui_assistant_message_fill_background()) {
+                paint_chat_framed_panel_fill(ctx, frame, panel.y, panel.height, ChatMessageRole::Assistant);
+                ui_paint_chat_bubble_panel(ctx, panel, ui_quick_action_pill_bg(), border_rgb);
+            } else {
+                ui_paint_chat_bubble_panel(ctx, panel, ui_quick_action_pill_bg(), border_rgb);
+            }
             int ty = panel.y + (ui_corners_flat() ? 0 : 1);
             if (!title.empty() && ty < panel.y + panel.height) {
-                ctx.canvas.draw_text({panel.x + chrome.pad_x, ty}, title, accent);
+                const tuinator::Style& title_style =
+                    ui_assistant_message_fill_background() ? chrome.accent_on_fill : accent;
+                ctx.canvas.draw_text({panel.x + insets.pad_x, ty}, title, title_style);
                 ++ty;
             }
             const int body_top = ty;
-            if (ui_message_fill_background()) {
-                tuinator::Style fill;
-                fill.background_rgb = panel_bg;
-                const int fill_h = std::max(0, panel.y + panel.height - chrome.bottom_inset - body_top);
-                if (fill_h > 0) {
-                    ctx.canvas.fill_rect({panel.x + 1, body_top, std::max(1, panel.width - 2), fill_h}, ' ', fill);
-                }
-            }
-            const tuinator::Rect inner{panel.x + chrome.body_pad_x, body_top,
-                                       std::max(1, panel.width - chrome.body_pad_x * 2),
-                                       std::max(1, panel.y + panel.height - chrome.bottom_inset - body_top)};
+            const tuinator::Rect inner{panel.x + insets.body_pad_x, body_top,
+                                       std::max(1, panel.width - insets.body_pad_x * 2),
+                                       std::max(1, panel.y + panel.height - insets.bottom_inset - body_top)};
             ctx.with_clip(inner, [&](tuinator::PaintContext& child_ctx) {
                 view_.paint(child_ctx);
                 paint_stream_glow(child_ctx, inner, panel_bg);
@@ -368,15 +391,9 @@ void AssistantMarkdown::paint(tuinator::PaintContext& ctx) const {
             return;
         }
         default: {
-            if (!title.empty() && y < bounds_.height) {
-                ctx.canvas.draw_text({frame.frame_x, y}, title, accent);
-                ++y;
-            }
             const int body_rows = std::max(1, view_.content_height());
-            ctx.with_clip({frame.body_x, y, frame.body_w, body_rows}, [&](tuinator::PaintContext& child_ctx) {
-                view_.paint(child_ctx);
-                paint_stream_glow(child_ctx, {0, 0, frame.body_w, body_rows}, panel_bg);
-            });
+            paint_chat_role_framed_message(ctx, y, bounds_.height, frame, UiUserMessageStyle::Header, title, "", chrome,
+                                           ChatMessageRole::Assistant, body_rows, paint_markdown_body);
             return;
         }
     }

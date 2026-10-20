@@ -53,7 +53,9 @@ type settingsPayload struct {
 	MessageTimestamps       bool   `json:"message_timestamps"`
 	MessageTimeClock        string `json:"message_time_clock"`
 	StickyUserMessage       bool   `json:"sticky_user_message"`
-	MessageFillBackground   bool   `json:"message_fill_background"`
+	MessageFillBackground            bool `json:"message_fill_background"`
+	UserMessageFillBackground        bool `json:"user_message_fill_background"`
+	AssistantMessageFillBackground   bool `json:"assistant_message_fill_background"`
 	UserMessageStyle          string `json:"user_message_style"`
 	UserMessageAlign          string `json:"user_message_align"`
 	UserMessageMaxWidthPct    int    `json:"user_message_max_width_pct"`
@@ -304,6 +306,8 @@ func fillAppearancePrefs(h *runtimeHandle, out *settingsPayload) {
 	out.MessageTimeClock = ui.MessageTimeClockOrDefault()
 	out.StickyUserMessage = ui.StickyUserMessageOrDefault()
 	out.MessageFillBackground = ui.MessageFillBackgroundOrDefault()
+	out.UserMessageFillBackground = ui.UserMessageFillBackgroundOrDefault()
+	out.AssistantMessageFillBackground = ui.AssistantMessageFillBackgroundOrDefault()
 	out.UserMessageStyle = ui.UserMessageStyleOrDefault()
 	out.UserMessageAlign = ui.UserMessageAlignOrDefault()
 	out.UserMessageMaxWidthPct = ui.UserMessageMaxWidthPctOrDefault()
@@ -362,6 +366,10 @@ func applyAppearancePrefs(cfg *taijicfg.Config, payload settingsPayload) {
 	cfg.UI.StickyUserMessage = &sticky
 	msgFill := payload.MessageFillBackground
 	cfg.UI.MessageFillBackground = &msgFill
+	userFill := payload.UserMessageFillBackground
+	cfg.UI.UserMessageFillBackground = &userFill
+	asstFill := payload.AssistantMessageFillBackground
+	cfg.UI.AssistantMessageFillBackground = &asstFill
 	cfg.UI.UserMessageStyle = taijicfg.NormalizeUserMessageStyle(payload.UserMessageStyle)
 	cfg.UI.UserMessageAlign = taijicfg.NormalizeMessageAlign(payload.UserMessageAlign)
 	cfg.UI.UserMessageMaxWidthPct = taijicfg.UIConfig{UserMessageMaxWidthPct: payload.UserMessageMaxWidthPct}.UserMessageMaxWidthPctOrDefault()

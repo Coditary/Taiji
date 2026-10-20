@@ -1345,9 +1345,16 @@ void ActivityLog::paint(tuinator::PaintContext& ctx) const {
         tuinator::Style branch = muted_style_;
         branch.background_rgb = ui_main_bg();
         paint_activity_tree_prefix(ctx, stream_x, y, "╭─", "", branch, branch, ui_main_bg());
+        const int title_x = stream_x + kTreeTextCol - 1;
+        const int title_fill_w = std::max(0, bounds_.width - title_x);
+        if (title_fill_w > 0) {
+            tuinator::Style row_fill = activity_on_panel(heading_style_);
+            row_fill.bold = true;
+            ctx.canvas.fill_rect({title_x, y, title_fill_w, 1}, ' ', row_fill);
+        }
         tuinator::Style title = activity_on_panel(heading_style_);
         title.bold = true;
-        paint_text_with_background(ctx, stream_x + kTreeTextCol - 1, y, pipeline_title_, title);
+        ctx.canvas.draw_text({title_x, y}, pipeline_title_, title);
         ++y;
     }
 
