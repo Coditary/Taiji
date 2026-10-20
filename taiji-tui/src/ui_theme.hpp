@@ -52,6 +52,10 @@ tuinator::Rgb ui_session_active_bg();
 tuinator::Rgb ui_session_active_bar();
 tuinator::Rgb ui_badge_bg();
 tuinator::Rgb ui_quick_action_pill_bg();
+bool ui_message_fill_background();
+void ui_apply_message_fill_background(bool enabled);
+/** Panel fill for framed chat bubbles (pill color or main chat bg when fill is off). */
+tuinator::Rgb ui_message_panel_bg();
 tuinator::Rgb ui_quick_action_code();
 tuinator::Rgb ui_quick_action_test();
 tuinator::Rgb ui_quick_action_git();
@@ -100,6 +104,41 @@ bool ui_corners_framed();
 tuinator::BorderStyle ui_frame_border_style();
 tuinator::BorderGlyphs ui_frame_border_glyphs();
 void ui_apply_corners_pref(const std::string& pref);
+
+enum class UiMessageAlign { Auto, Left, Right, Center };
+
+enum class UiUserMessageStyle {
+    Block,
+    Plain,
+    Messenger,
+    Header,
+    Terminal,
+    Log,
+    Card,
+    Section,
+    Cornered,
+};
+
+struct UiChatRolePrefs {
+    UiUserMessageStyle style = UiUserMessageStyle::Messenger;
+    UiMessageAlign align = UiMessageAlign::Auto;
+    int max_width_pct = 80;
+    bool for_assistant = false;
+};
+
+UiUserMessageStyle ui_user_message_style();
+void ui_apply_user_message_style_pref(const std::string& pref);
+
+UiChatRolePrefs ui_user_chat_prefs();
+UiChatRolePrefs ui_assistant_chat_prefs();
+void ui_apply_chat_message_prefs(const std::string& user_style, const std::string& user_align, int user_max_width_pct,
+                                 const std::string& assistant_style, const std::string& assistant_align,
+                                 int assistant_max_width_pct);
+UiMessageAlign ui_parse_message_align(const std::string& raw);
+UiMessageAlign ui_chat_resolved_align(const UiChatRolePrefs& prefs);
+int ui_chat_frame_max_cols(int stream_width_cols, const UiChatRolePrefs& prefs);
+int ui_chat_frame_origin(int box_x, int box_w, int content_w, const UiChatRolePrefs& prefs);
+UiUserMessageStyle ui_parse_message_style(const std::string& pref);
 struct UiUserBubbleInsets {
     int pad_x = 1;
     int body_pad_x = 2;
@@ -113,6 +152,8 @@ struct UiUserBubblePanelOptions {
 
 void ui_paint_user_bubble_panel(tuinator::PaintContext& ctx, tuinator::Rect rect, tuinator::Rgb fill,
                                UiUserBubblePanelOptions options = {});
+void ui_paint_chat_bubble_panel(tuinator::PaintContext& ctx, tuinator::Rect rect, tuinator::Rgb fill,
+                                tuinator::Rgb border);
 
 tuinator::Style ui_thinking_style();
 tuinator::Style ui_composer_input_style();

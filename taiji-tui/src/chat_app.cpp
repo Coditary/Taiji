@@ -14,6 +14,7 @@
 #include "ui_chat_column.hpp"
 #include "ui_panel_box.hpp"
 #include "ui_theme.hpp"
+#include "ui_keybindings.hpp"
 
 #include <tuinator/widgets/menu/menu_bar.hpp>
 
@@ -744,6 +745,9 @@ ChatApp::~ChatApp() {
     if (worker_.joinable()) {
         worker_.join();
     }
+    if (compact_thread_.joinable()) {
+        compact_thread_.join();
+    }
     if (stt_thread_.joinable()) {
         stt_thread_.join();
     }
@@ -766,6 +770,10 @@ void ChatApp::set_root() {
         apply_message_time_prefs(draft.message_timestamps, draft.message_time_clock);
         apply_sticky_user_message_pref(draft.sticky_user_message);
         ui_apply_corners_pref(draft.ui_corners);
+        ui_apply_chat_message_prefs(draft.user_message_style, draft.user_message_align, draft.user_message_max_width_pct,
+                                    draft.assistant_message_style, draft.assistant_message_align,
+                                    draft.assistant_message_max_width_pct);
+        ui_apply_message_fill_background(draft.message_fill_background);
         if (input_ != nullptr) {
             input_->sync_frame_border_style();
         }
@@ -859,9 +867,25 @@ void ChatApp::set_root() {
     });
     message_composer_->set_host_context([this]() { return build_message_composer_context(); });
     message_composer_->set_on_palette_open_changed([this](bool) {
+        if (message_composer_ != nullptr) {
+            message_composer_->mark_layout_dirty();
+        }
         request_chat_layout_refresh();
         app_.repaint_all();
         focus_input();
+    });
+    message_composer_->set_on_theme_preview([this](const std::string& theme_id) {
+        apply_ui_theme(theme_id);
+        app_.repaint_all();
+    });
+    message_composer_->set_on_theme_picked([this](const std::string& theme_id) {
+        apply_ui_theme(theme_id);
+        if (settings_modal_ != nullptr && taiji_handle_ != 0) {
+            settings_modal_->set_handle(taiji_handle_);
+            settings_modal_->persist_chat_ui_theme(theme_id);
+        }
+        refresh_status_footer();
+        app_.repaint_all();
     });
     message_composer_->set_on_submit([this](const std::string& value) {
         if (message_composer_ != nullptr) {
@@ -929,11 +953,31 @@ void ChatApp::set_root() {
     context_panel_->set_on_layout_changed([this]() { app_.repaint_all(); });
     shell->set_preprocess_event([this](const tuinator::Event& event) {
         const auto* key = std::get_if<tuinator::KeyPress>(&event);
-        if (key == nullptr || !key->alt || key->ctrl) {
+        if (key == nullptr) {
             return false;
         }
-        if (key->character == 'c' || key->character == 'C') {
-            toggle_context_usage_panel();
+        if (key->alt && !key->ctrl) {
+            if (key->character == 'c' || key->character == 'C') {
+                toggle_context_usage_panel();
+                return true;
+            }
+        }
+        if (settings_modal_ != nullptr && settings_modal_->is_open()) {
+            return false;
+        }
+        if (message_composer_ != nullptr && message_composer_->is_theme_picker_open()) {
+            return false;
+        }
+        if (ui_keybinding_matches(key_open_theme_picker_, *key)) {
+            if (message_composer_ != nullptr) {
+                message_composer_->open_theme_picker(current_ui_theme_);
+                message_composer_->mark_layout_dirty();
+                if (main_column_ != nullptr) {
+                    main_column_->mark_layout_dirty();
+                }
+                focus_input();
+                app_.repaint_all();
+            }
             return true;
         }
         return false;
@@ -1179,6 +1223,13 @@ void ChatApp::flush_chat_layout(bool scroll_to_bottom) {
 }
 
 void ChatApp::poll_updates() {
+    const bool settings_open = settings_modal_ != nullptr && settings_modal_->is_open();
+    if (settings_open) {
+        if (const std::optional<tuinator::Point> pointer = app_.pointer_position()) {
+            settings_modal_->sync_pointer_from_screen(*pointer);
+        }
+    }
+
     poll_background_init();
     poll_runtime_ready();
     poll_mcp_after_ready();
@@ -1203,7 +1254,7 @@ void ChatApp::poll_updates() {
 
     // Widget mark_dirty() alone does not always reach the terminal backend while
     // idle. Force frames for chat updates and for continuous UI animations (logo shimmer, etc.).
-    if (had_pending_updates || worker_busy_ || chat_layout_dirty_ || ui_needs_animation_frame()) {
+    if (had_pending_updates || worker_busy_ || chat_layout_dirty_ || ui_needs_animation_frame() || settings_open) {
         app_.invalidate();
     }
 
@@ -1298,6 +1349,7 @@ void ChatApp::request_chat_layout_refresh() {
 
 void ChatApp::apply_ui_theme(const std::string& theme_id) {
     const std::string id = theme_id.empty() ? "dark" : theme_id;
+    current_ui_theme_ = id;
     theme_ = ui_apply_stylesheet(app_, id);
     thinking_style_ = ui_thinking_style();
     input_style_ = ui_composer_input_style();
@@ -1366,7 +1418,7 @@ const ChatMessage* ChatApp::sticky_user_message_candidate() const {
     int sticky_user_top = -1;
 
     for (const TurnView& view : turn_views_) {
-        if (view.user == nullptr) {
+        if (view.user == nullptr || view.user->is_compact_summary()) {
             continue;
         }
         const int user_top = user_message_content_y(*view.user);
@@ -1411,6 +1463,26 @@ std::string ChatApp::user_time_label_for_turn(const ChatTurn& turn) const {
     return turn.user_time_label;
 }
 
+std::string ChatApp::assistant_author_label() const {
+    std::string label = std::string(kNfModel) + " Taiji";
+    if (!chat_model_label_.empty()) {
+        label += " (";
+        label += chat_model_label_;
+        label += ")";
+    }
+    return label;
+}
+
+void ChatApp::apply_assistant_author_labels(TurnView& view) const {
+    const std::string label = assistant_author_label();
+    if (view.assistant != nullptr) {
+        view.assistant->set_author_label(label);
+    }
+    if (view.assistant_lead != nullptr) {
+        view.assistant_lead->set_author_label(label);
+    }
+}
+
 void ChatApp::refresh_user_time_labels_on_screen() {
     std::size_t count = 0;
     {
@@ -1443,12 +1515,20 @@ void ChatApp::refresh_appearance_prefs() {
     const std::string theme = json_extract_string(json, "ui_theme");
     if (!theme.empty()) {
         apply_ui_theme(theme);
+    } else {
+        current_ui_theme_ = "dark";
     }
     std::string corners = json_extract_string(json, "ui_corners");
     if (corners.empty()) {
         corners = "square";
     }
     ui_apply_corners_pref(corners);
+    ui_apply_chat_message_prefs(json_extract_string(json, "user_message_style"),
+                                json_extract_string(json, "user_message_align"),
+                                static_cast<int>(json_extract_int(json, "user_message_max_width_pct", 80)),
+                                json_extract_string(json, "assistant_message_style"),
+                                json_extract_string(json, "assistant_message_align"),
+                                static_cast<int>(json_extract_int(json, "assistant_message_max_width_pct", 80)));
     if (input_ != nullptr) {
         input_->sync_frame_border_style();
     }
@@ -1464,15 +1544,34 @@ void ChatApp::refresh_appearance_prefs() {
         sticky_user = true;
     }
     apply_sticky_user_message_pref(sticky_user);
+    bool message_fill = json_extract_bool(json, "message_fill_background");
+    if (json.find("\"message_fill_background\":") == std::string::npos) {
+        message_fill = true;
+    }
+    ui_apply_message_fill_background(message_fill);
+    std::string theme_picker_key = json_extract_string(json, "key_open_theme_picker");
+    if (theme_picker_key.empty()) {
+        theme_picker_key = ui_keybinding_default_open_theme_picker();
+    }
+    key_open_theme_picker_ = std::move(theme_picker_key);
     refresh_user_time_labels_on_screen();
     refresh_user_message_chrome();
 }
 
 void ChatApp::refresh_user_message_chrome() {
+    const tuinator::MarkdownStyleSet markdown_styles = ui_chat_markdown_styles(theme_);
     for (const TurnView& view : turn_views_) {
         if (view.user != nullptr) {
             view.user->mark_dirty();
             view.user->mark_layout_dirty();
+        }
+        if (view.assistant != nullptr) {
+            view.assistant->set_markdown_styles(markdown_styles);
+            view.assistant->invalidate_for_user_style_change();
+        }
+        if (view.assistant_lead != nullptr) {
+            view.assistant_lead->set_markdown_styles(markdown_styles);
+            view.assistant_lead->invalidate_for_user_style_change();
         }
     }
     request_chat_layout_refresh();
@@ -1622,6 +1721,10 @@ void ChatApp::submit_message(const std::string& text) {
         input_->set_value("");
     }
 
+    if (trimmed == "/compact") {
+        handle_compact_command();
+        return;
+    }
     if (trimmed == "/skills") {
         handle_skills_command();
         return;
@@ -1655,6 +1758,37 @@ void ChatApp::handle_decisions_command() {
         std::free(raw);
     }
     append_local_reply("/decisions", reply);
+}
+
+void ChatApp::handle_compact_command() {
+    if (taiji_handle_ == 0) {
+        return;
+    }
+    if (worker_busy_) {
+        set_footer_status("Wait for the current reply before compacting.");
+        return;
+    }
+    if (compact_busy_) {
+        return;
+    }
+    compact_busy_ = true;
+    set_footer_status("Compacting conversation…");
+    if (compact_thread_.joinable()) {
+        compact_thread_.join();
+    }
+    const uint64_t handle = taiji_handle_;
+    compact_thread_ = std::thread([this, handle]() {
+        char* err_raw = nullptr;
+        const int ok = taiji_session_compact(handle, &err_raw);
+        std::string err = err_raw != nullptr ? std::string(err_raw) : "";
+        if (err_raw != nullptr) {
+            std::free(err_raw);
+        }
+        std::lock_guard<std::mutex> lock(state_mu_);
+        pending_compact_.ok = ok != 0;
+        pending_compact_.error = std::move(err);
+        has_pending_compact_ = true;
+    });
 }
 
 void ChatApp::append_local_reply(const std::string& user, const std::string& assistant) {
@@ -2242,9 +2376,12 @@ void ChatApp::sync_turn_view(std::size_t index, const ChatTurn& turn, bool worke
         return;
     }
 
-    const TurnView& view = turn_views_[index];
+    TurnView& view = turn_views_[index];
+    apply_assistant_author_labels(view);
 
     if (turn.status == TurnStatus::Cancelled) {
+        view.user->set_compact_summary(false);
+        view.user->set_author_label("");
         view.user->set_text(turn.user);
         tuinator::Style user_style;
         user_style.foreground_rgb = ui_user_bubble();
@@ -2267,11 +2404,14 @@ void ChatApp::sync_turn_view(std::size_t index, const ChatTurn& turn, bool worke
         // Queued prompts are shown only in QueueStatusBar (» preview) until they run.
         view.user->set_text("");
     } else {
+        const bool compact = turn.user_kind == "compact";
+        view.user->set_compact_summary(compact);
+        view.user->set_author_label(compact ? "summary" : "");
         view.user->set_text(turn.user);
         tuinator::Style user_style;
         user_style.foreground_rgb = ui_user_bubble();
         view.user->set_style(user_style);
-        view.user->set_time_label(user_time_label_for_turn(turn));
+        view.user->set_time_label(compact ? "" : user_time_label_for_turn(turn));
     }
 
     const bool is_active_turn =
@@ -2746,6 +2886,7 @@ void ChatApp::reload_turns_from_backend() {
         const std::string object = json.substr(start, end - start + 1);
         ChatTurn turn;
         turn.user = json_extract_string(object, "user");
+        turn.user_kind = json_extract_string(object, "user_kind");
         turn.assistant = json_extract_string(object, "assistant");
         turn.user_sent_at = json_extract_string(object, "user_sent_at");
         if (!turn.user_sent_at.empty()) {
@@ -3252,6 +3393,28 @@ bool ChatApp::apply_pending_updates() {
     if (has_question_prompt) {
         changed = true;
         show_question_prompt(question_prompt);
+    }
+
+    bool has_pending_compact = false;
+    PendingCompactUpdate compact_update{};
+    {
+        std::lock_guard<std::mutex> lock(state_mu_);
+        if (has_pending_compact_) {
+            has_pending_compact = true;
+            compact_update = pending_compact_;
+            has_pending_compact_ = false;
+        }
+    }
+    if (has_pending_compact) {
+        changed = true;
+        compact_busy_ = false;
+        if (compact_update.ok) {
+            reload_turns_from_backend();
+            refresh_context_sidebar();
+            set_footer_status("Conversation compacted.");
+        } else {
+            set_footer_status(compact_update.error.empty() ? "Compaction failed." : compact_update.error);
+        }
     }
 
     if (stream_reset && !stream_reset_text.empty()) {

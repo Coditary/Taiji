@@ -22,7 +22,7 @@ func DefaultSystemPrompt() string {
 - list_dir — list directory entries
 - read_file — read a file
 - glob_search — find files by glob pattern
-- grep — search text in files
+- grep — search text in files (uses rg when available)
 - shell — run a shell command
 - generate_image — text-to-image via Wuji (use invoke_skill generate-image for workflow)
 - ask_user — ask the human structured questions with selectable options and optional custom text (use when you need user preferences or clarifications; at most one ask_user call per turn)

@@ -53,6 +53,15 @@ type settingsPayload struct {
 	MessageTimestamps       bool   `json:"message_timestamps"`
 	MessageTimeClock        string `json:"message_time_clock"`
 	StickyUserMessage       bool   `json:"sticky_user_message"`
+	MessageFillBackground   bool   `json:"message_fill_background"`
+	UserMessageStyle          string `json:"user_message_style"`
+	UserMessageAlign          string `json:"user_message_align"`
+	UserMessageMaxWidthPct    int    `json:"user_message_max_width_pct"`
+	AssistantMessageStyle     string `json:"assistant_message_style"`
+	AssistantMessageAlign     string `json:"assistant_message_align"`
+	AssistantMessageMaxWidthPct int  `json:"assistant_message_max_width_pct"`
+	AutoCompactContextPct   int    `json:"auto_compact_context_pct"`
+	KeyOpenThemePicker      string `json:"key_open_theme_picker"`
 
 	MCPAvailable []string `json:"mcp_available"`
 	MCPEnabled   []string `json:"mcp_enabled"`
@@ -294,6 +303,16 @@ func fillAppearancePrefs(h *runtimeHandle, out *settingsPayload) {
 	out.MessageTimestamps = ui.MessageTimestampsOrDefault()
 	out.MessageTimeClock = ui.MessageTimeClockOrDefault()
 	out.StickyUserMessage = ui.StickyUserMessageOrDefault()
+	out.MessageFillBackground = ui.MessageFillBackgroundOrDefault()
+	out.UserMessageStyle = ui.UserMessageStyleOrDefault()
+	out.UserMessageAlign = ui.UserMessageAlignOrDefault()
+	out.UserMessageMaxWidthPct = ui.UserMessageMaxWidthPctOrDefault()
+	out.AssistantMessageStyle = ui.AssistantMessageStyleOrDefault()
+	out.AssistantMessageAlign = ui.AssistantMessageAlignOrDefault()
+	out.AssistantMessageMaxWidthPct = ui.AssistantMessageMaxWidthPctOrDefault()
+	out.AutoCompactContextPct = ui.AutoCompactContextPct
+	kb := ui.KeybindingsOrDefault()
+	out.KeyOpenThemePicker = kb.OpenThemePicker
 }
 
 func applyAppearancePrefs(cfg *taijicfg.Config, payload settingsPayload) {
@@ -341,6 +360,27 @@ func applyAppearancePrefs(cfg *taijicfg.Config, payload settingsPayload) {
 	cfg.UI.MessageTimeClock = taijicfg.UIConfig{MessageTimeClock: payload.MessageTimeClock}.MessageTimeClockOrDefault()
 	sticky := payload.StickyUserMessage
 	cfg.UI.StickyUserMessage = &sticky
+	msgFill := payload.MessageFillBackground
+	cfg.UI.MessageFillBackground = &msgFill
+	cfg.UI.UserMessageStyle = taijicfg.NormalizeUserMessageStyle(payload.UserMessageStyle)
+	cfg.UI.UserMessageAlign = taijicfg.NormalizeMessageAlign(payload.UserMessageAlign)
+	cfg.UI.UserMessageMaxWidthPct = taijicfg.UIConfig{UserMessageMaxWidthPct: payload.UserMessageMaxWidthPct}.UserMessageMaxWidthPctOrDefault()
+	cfg.UI.AssistantMessageStyle = taijicfg.NormalizeUserMessageStyle(payload.AssistantMessageStyle)
+	cfg.UI.AssistantMessageAlign = taijicfg.NormalizeMessageAlign(payload.AssistantMessageAlign)
+	cfg.UI.AssistantMessageMaxWidthPct =
+		taijicfg.UIConfig{AssistantMessageMaxWidthPct: payload.AssistantMessageMaxWidthPct}.AssistantMessageMaxWidthPctOrDefault()
+	if payload.AutoCompactContextPct < 0 {
+		cfg.UI.AutoCompactContextPct = 0
+	} else if payload.AutoCompactContextPct > 100 {
+		cfg.UI.AutoCompactContextPct = 100
+	} else {
+		cfg.UI.AutoCompactContextPct = payload.AutoCompactContextPct
+	}
+	kb := taijicfg.NormalizeUIShortcut(payload.KeyOpenThemePicker)
+	if kb == "" {
+		kb = "Ctrl+T"
+	}
+	cfg.UI.Keybindings.OpenThemePicker = kb
 }
 
 func fillModelCatalogHints(h *runtimeHandle, providerID, model, modelDefault string, out *settingsPayload) {

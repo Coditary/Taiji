@@ -388,6 +388,39 @@ bool settings_parse_draft(const std::string& json, SettingsModal::Draft& out) {
     if (json.find("\"sticky_user_message\":") == std::string::npos) {
         out.sticky_user_message = true;
     }
+    out.message_fill_background = json_extract_bool(json, "message_fill_background");
+    if (json.find("\"message_fill_background\":") == std::string::npos) {
+        out.message_fill_background = true;
+    }
+    out.user_message_style = json_extract_string(json, "user_message_style");
+    if (out.user_message_style.empty()) {
+        out.user_message_style = "messenger";
+    }
+    out.user_message_align = json_extract_string(json, "user_message_align");
+    if (out.user_message_align.empty()) {
+        out.user_message_align = "auto";
+    }
+    out.user_message_max_width_pct = static_cast<int>(json_extract_int(json, "user_message_max_width_pct", 80));
+    out.assistant_message_style = json_extract_string(json, "assistant_message_style");
+    if (out.assistant_message_style.empty()) {
+        out.assistant_message_style = "messenger";
+    }
+    out.assistant_message_align = json_extract_string(json, "assistant_message_align");
+    if (out.assistant_message_align.empty()) {
+        out.assistant_message_align = "auto";
+    }
+    out.assistant_message_max_width_pct =
+        static_cast<int>(json_extract_int(json, "assistant_message_max_width_pct", 80));
+    out.auto_compact_context_pct = static_cast<int>(json_extract_int(json, "auto_compact_context_pct", 0));
+    if (out.auto_compact_context_pct < 0) {
+        out.auto_compact_context_pct = 0;
+    } else if (out.auto_compact_context_pct > 100) {
+        out.auto_compact_context_pct = 100;
+    }
+    out.key_open_theme_picker = json_extract_string(json, "key_open_theme_picker");
+    if (out.key_open_theme_picker.empty()) {
+        out.key_open_theme_picker = "Ctrl+T";
+    }
     out.stt_enabled = json_extract_bool(json, "stt_enabled");
     if (json.find("\"stt_enabled\":") == std::string::npos) {
         out.stt_enabled = true;
@@ -508,6 +541,20 @@ std::string SettingsModal::build_apply_json() const {
     body += ",\"message_time_clock\":";
     json_escape_append(body, draft_.message_time_clock == "12h" ? "12h" : "24h");
     body += std::string(",\"sticky_user_message\":") + (draft_.sticky_user_message ? "true" : "false");
+    body += std::string(",\"message_fill_background\":") + (draft_.message_fill_background ? "true" : "false");
+    body += ",\"user_message_style\":";
+    json_escape_append(body, draft_.user_message_style);
+    body += ",\"user_message_align\":";
+    json_escape_append(body, draft_.user_message_align);
+    body += ",\"user_message_max_width_pct\":" + std::to_string(draft_.user_message_max_width_pct);
+    body += ",\"assistant_message_style\":";
+    json_escape_append(body, draft_.assistant_message_style);
+    body += ",\"assistant_message_align\":";
+    json_escape_append(body, draft_.assistant_message_align);
+    body += ",\"assistant_message_max_width_pct\":" + std::to_string(draft_.assistant_message_max_width_pct);
+    body += ",\"auto_compact_context_pct\":" + std::to_string(draft_.auto_compact_context_pct);
+    body += ",\"key_open_theme_picker\":";
+    json_escape_append(body, draft_.key_open_theme_picker);
     body += std::string(",\"decisions_enabled\":") + (draft_.decisions_enabled ? "true" : "false");
     body += std::string(",\"memory_enabled\":") + (draft_.memory_enabled ? "true" : "false");
     body += ",\"project_default_provider\":";

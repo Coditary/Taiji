@@ -1,5 +1,7 @@
 #include "ui_theme.hpp"
 
+#include "ui_chat_column.hpp"
+
 #include "ui_themes_bundled.hpp"
 
 #include <tuinator/render/stylesheet.hpp>
@@ -27,6 +29,19 @@ namespace {
 enum class UiCornerStyle { Square, Rounded, Flat };
 
 UiCornerStyle g_ui_corner_style = UiCornerStyle::Square;
+UiChatRolePrefs g_ui_user_chat_prefs{
+    .style = UiUserMessageStyle::Messenger,
+    .align = UiMessageAlign::Auto,
+    .max_width_pct = 80,
+    .for_assistant = false,
+};
+UiChatRolePrefs g_ui_assistant_chat_prefs{
+    .style = UiUserMessageStyle::Messenger,
+    .align = UiMessageAlign::Auto,
+    .max_width_pct = 80,
+    .for_assistant = true,
+};
+bool g_ui_message_fill_background = true;
 
 struct UiPalette {
     tuinator::Rgb main_bg{26, 27, 38};
@@ -378,6 +393,14 @@ tuinator::Rgb ui_session_active_bg() { return palette().session_active_bg; }
 tuinator::Rgb ui_session_active_bar() { return palette().session_active_bar; }
 tuinator::Rgb ui_badge_bg() { return palette().badge_bg; }
 tuinator::Rgb ui_quick_action_pill_bg() { return palette().quick_action_pill_bg; }
+
+bool ui_message_fill_background() { return g_ui_message_fill_background; }
+
+void ui_apply_message_fill_background(bool enabled) { g_ui_message_fill_background = enabled; }
+
+tuinator::Rgb ui_message_panel_bg() {
+    return g_ui_message_fill_background ? ui_quick_action_pill_bg() : ui_main_bg();
+}
 tuinator::Rgb ui_quick_action_code() { return palette().quick_action_code; }
 tuinator::Rgb ui_quick_action_test() { return palette().quick_action_test; }
 tuinator::Rgb ui_quick_action_git() { return palette().quick_action_git; }
@@ -481,6 +504,134 @@ tuinator::BorderGlyphs ui_frame_border_glyphs() {
     return tuinator::border_glyphs_for(ui_frame_border_style());
 }
 
+UiUserMessageStyle ui_user_message_style() { return g_ui_user_chat_prefs.style; }
+
+UiChatRolePrefs ui_user_chat_prefs() { return g_ui_user_chat_prefs; }
+
+UiChatRolePrefs ui_assistant_chat_prefs() { return g_ui_assistant_chat_prefs; }
+
+UiMessageAlign ui_parse_message_align(const std::string& raw) {
+    std::string lower;
+    lower.reserve(raw.size());
+    for (char ch : raw) {
+        lower.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(ch))));
+    }
+    if (lower == "left" || lower == "l") {
+        return UiMessageAlign::Left;
+    }
+    if (lower == "right" || lower == "r") {
+        return UiMessageAlign::Right;
+    }
+    if (lower == "center" || lower == "centre" || lower == "middle" || lower == "c") {
+        return UiMessageAlign::Center;
+    }
+    return UiMessageAlign::Auto;
+}
+
+UiUserMessageStyle ui_parse_message_style(const std::string& pref) {
+    std::string lower;
+    lower.reserve(pref.size());
+    for (char ch : pref) {
+        lower.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(ch))));
+    }
+    if (lower == "plain" || lower == "inline" || lower == "text") {
+        return UiUserMessageStyle::Plain;
+    }
+    if (lower == "messenger" || lower == "bubble" || lower == "chat") {
+        return UiUserMessageStyle::Messenger;
+    }
+    if (lower == "header" || lower == "header_strip" || lower == "title") {
+        return UiUserMessageStyle::Header;
+    }
+    if (lower == "terminal" || lower == "prompt" || lower == "cli") {
+        return UiUserMessageStyle::Terminal;
+    }
+    if (lower == "log") {
+        return UiUserMessageStyle::Log;
+    }
+    if (lower == "card" || lower == "pill" || lower == "chip") {
+        return UiUserMessageStyle::Card;
+    }
+    if (lower == "section" || lower == "divider" || lower == "rule") {
+        return UiUserMessageStyle::Section;
+    }
+    if (lower == "cornered" || lower == "corners" || lower == "corner_box") {
+        return UiUserMessageStyle::Cornered;
+    }
+    if (lower == "block" || lower == "framed" || lower == "card_block") {
+        return UiUserMessageStyle::Block;
+    }
+    return UiUserMessageStyle::Messenger;
+}
+
+int ui_clamp_message_width_pct(int pct) {
+    if (pct <= 0) {
+        return 80;
+    }
+    if (pct < 40) {
+        return 40;
+    }
+    if (pct > 100) {
+        return 100;
+    }
+    return pct;
+}
+
+UiMessageAlign ui_chat_resolved_align(const UiChatRolePrefs& prefs) {
+    if (prefs.align != UiMessageAlign::Auto) {
+        return prefs.align;
+    }
+    switch (prefs.style) {
+        case UiUserMessageStyle::Section:
+            return UiMessageAlign::Center;
+        case UiUserMessageStyle::Messenger:
+        case UiUserMessageStyle::Card:
+        case UiUserMessageStyle::Cornered:
+            return prefs.for_assistant ? UiMessageAlign::Left : UiMessageAlign::Right;
+        default:
+            return UiMessageAlign::Left;
+    }
+}
+
+int ui_chat_frame_max_cols(int stream_width_cols, const UiChatRolePrefs& prefs) {
+    return chat_bubble_max_cols(stream_width_cols, prefs.max_width_pct);
+}
+
+int ui_chat_frame_origin(int box_x, int box_w, int content_w, const UiChatRolePrefs& prefs) {
+    if (content_w <= 0 || box_w <= 0) {
+        return box_x;
+    }
+    content_w = std::min(content_w, box_w);
+    switch (ui_chat_resolved_align(prefs)) {
+        case UiMessageAlign::Right:
+            return box_x + std::max(0, box_w - content_w);
+        case UiMessageAlign::Center:
+            return box_x + std::max(0, (box_w - content_w) / 2);
+        case UiMessageAlign::Left:
+        case UiMessageAlign::Auto:
+        default:
+            return box_x;
+    }
+}
+
+void ui_apply_user_message_style_pref(const std::string& pref) {
+    g_ui_user_chat_prefs.style = ui_parse_message_style(pref);
+}
+
+void ui_apply_chat_message_prefs(const std::string& user_style, const std::string& user_align, int user_max_width_pct,
+                                 const std::string& assistant_style, const std::string& assistant_align,
+                                 int assistant_max_width_pct) {
+    g_ui_user_chat_prefs.style = ui_parse_message_style(user_style);
+    g_ui_user_chat_prefs.align = ui_parse_message_align(user_align);
+    g_ui_user_chat_prefs.max_width_pct = ui_clamp_message_width_pct(user_max_width_pct);
+    g_ui_user_chat_prefs.for_assistant = false;
+
+    g_ui_assistant_chat_prefs.style = ui_parse_message_style(assistant_style.empty() ? user_style : assistant_style);
+    g_ui_assistant_chat_prefs.align = ui_parse_message_align(assistant_align);
+    g_ui_assistant_chat_prefs.max_width_pct = ui_clamp_message_width_pct(assistant_max_width_pct);
+    g_ui_assistant_chat_prefs.for_assistant = true;
+}
+
 void ui_apply_corners_pref(const std::string& pref) {
     std::string normalized;
     normalized.reserve(pref.size());
@@ -511,20 +662,53 @@ void ui_paint_user_bubble_panel(tuinator::PaintContext& ctx, tuinator::Rect rect
     if (rect.width <= 0 || rect.height <= 0) {
         return;
     }
+    const bool solid = ui_message_fill_background();
+    const tuinator::Rgb panel_bg = solid ? fill : ui_main_bg();
     tuinator::Style fill_style;
-    fill_style.background_rgb = fill;
+    fill_style.background_rgb = panel_bg;
     if (ui_corners_flat() || rect.width < 3 || rect.height < 3) {
-        ctx.canvas.fill_rect(rect, ' ', fill_style);
+        if (solid) {
+            ctx.canvas.fill_rect(rect, ' ', fill_style);
+        }
         return;
     }
 
     const tuinator::BorderGlyphs glyphs = ui_frame_border_glyphs();
 
-    tuinator::Style border_style = fill_style;
+    tuinator::Style border_style;
+    border_style.background_rgb = panel_bg;
     border_style.foreground_rgb = ui_user_bubble();
 
-    if (rect.width > 2 && rect.height > 2) {
-        ctx.canvas.fill_rect({rect.x + 1, rect.y + 1, rect.width - 2, rect.height - 2}, ' ', fill_style);
+    if (solid) {
+        ctx.canvas.fill_rect(rect, ' ', fill_style);
+    }
+    ctx.canvas.draw_box(rect, border_style, glyphs);
+}
+
+void ui_paint_chat_bubble_panel(tuinator::PaintContext& ctx, tuinator::Rect rect, tuinator::Rgb fill,
+                                tuinator::Rgb border) {
+    if (rect.width <= 0 || rect.height <= 0) {
+        return;
+    }
+    const bool solid = ui_message_fill_background();
+    const tuinator::Rgb panel_bg = solid ? fill : ui_main_bg();
+    tuinator::Style fill_style;
+    fill_style.background_rgb = panel_bg;
+    if (ui_corners_flat() || rect.width < 3 || rect.height < 3) {
+        if (solid) {
+            ctx.canvas.fill_rect(rect, ' ', fill_style);
+        }
+        return;
+    }
+
+    const tuinator::BorderGlyphs glyphs = ui_frame_border_glyphs();
+
+    tuinator::Style border_style;
+    border_style.background_rgb = panel_bg;
+    border_style.foreground_rgb = border;
+
+    if (solid) {
+        ctx.canvas.fill_rect(rect, ' ', fill_style);
     }
     ctx.canvas.draw_box(rect, border_style, glyphs);
 }
@@ -608,25 +792,30 @@ void ui_paint_vertical_scrollbar_track_column(tuinator::PaintContext& ctx, int x
     }
 }
 
+tuinator::Style ui_resolve_chat_message_text(tuinator::Style style) {
+    return ui_resolve_panel_text(style, ui_message_panel_bg());
+}
+
 tuinator::MarkdownStyleSet ui_chat_markdown_styles(const tuinator::Theme& theme) {
     tuinator::MarkdownStyleSet styles = tuinator::markdown_styles_from_theme(theme);
-    styles.text = ui_resolve_main_text(styles.text);
-    styles.heading = ui_resolve_main_text(styles.heading);
-    styles.heading_sub = ui_resolve_main_text(styles.heading_sub);
-    styles.quote_text = ui_resolve_main_text(styles.quote_text);
-    styles.link = ui_resolve_main_text(styles.link);
-    styles.list_marker = ui_resolve_main_text(styles.list_marker);
-    styles.thematic_break = ui_resolve_main_text(styles.thematic_break);
-    styles.quote_bar = ui_resolve_main_text(styles.quote_bar);
+    styles.text = ui_resolve_chat_message_text(styles.text);
+    styles.heading = ui_resolve_chat_message_text(styles.heading);
+    styles.heading_sub = ui_resolve_chat_message_text(styles.heading_sub);
+    styles.quote_text = ui_resolve_chat_message_text(styles.quote_text);
+    styles.link = ui_resolve_chat_message_text(styles.link);
+    styles.list_marker = ui_resolve_chat_message_text(styles.list_marker);
+    styles.thematic_break = ui_resolve_chat_message_text(styles.thematic_break);
+    styles.quote_bar = ui_resolve_chat_message_text(styles.quote_bar);
 
-    styles.code = ui_resolve_main_text(styles.code);
+    styles.code = ui_resolve_chat_message_text(styles.code);
     styles.code.background_rgb = ui_badge_bg();
     styles.code.foreground_rgb = ui_quick_action_code();
 
-    styles.code_block = ui_resolve_main_text(styles.code_block);
-    styles.code_block.background_rgb = ui_quick_action_pill_bg();
+    const tuinator::Rgb block_bg = ui_message_panel_bg();
+    styles.code_block = ui_resolve_chat_message_text(styles.code_block);
+    styles.code_block.background_rgb = block_bg;
     styles.code_block.foreground_rgb = ui_text();
-    styles.code_block_fill.background_rgb = ui_quick_action_pill_bg();
+    styles.code_block_fill.background_rgb = block_bg;
     return styles;
 }
 

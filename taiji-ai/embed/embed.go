@@ -369,6 +369,8 @@ func taiji_chat(handle C.uint64_t, goal *C.char, provider *C.char, onDelta C.tai
 		return 0
 	}
 
+	maybeAutoCompactSession(ctx, h, providerID, rt)
+
 	result, err := agent.Run(ctx, agent.RunRequest{
 		Goal:       goalText,
 		ProviderID: providerID,
@@ -1065,6 +1067,56 @@ func taiji_session_turns(handle C.uint64_t) *C.char {
 		return C.CString("[]")
 	}
 	return C.CString(raw)
+}
+
+func maybeAutoCompactSession(ctx context.Context, h *runtimeHandle, providerID string, rt *runtime.Runtime) {
+	if h == nil || h.cfg == nil || h.session == nil || rt == nil {
+		return
+	}
+	threshold := h.cfg.UI.AutoCompactContextPct
+	if threshold <= 0 {
+		return
+	}
+	snap := h.session.ContextSnapshot(h.cfg, providerID)
+	if snap.ContextUsedPct < float64(threshold) {
+		return
+	}
+	_, _ = session.CompactSession(ctx, h.session, rt.Providers, providerID, session.DefaultCompactOptions())
+}
+
+//export taiji_session_compact
+func taiji_session_compact(handle C.uint64_t, errorOut **C.char) C.int {
+	handlesMu.Lock()
+	h, ok := handles[uint64(handle)]
+	handlesMu.Unlock()
+	if !ok || h == nil || h.session == nil {
+		if errorOut != nil {
+			*errorOut = C.CString("invalid taiji handle")
+		}
+		return 0
+	}
+
+	rt, rtErr := h.getRuntime()
+	if rtErr != nil {
+		if errorOut != nil {
+			*errorOut = C.CString(rtErr.Error())
+		}
+		return 0
+	}
+
+	providerID := strings.TrimSpace(h.cfg.DefaultProvider)
+	if providerID == "" {
+		providerID = h.session.ResolveProviderID(h.cfg)
+	}
+
+	_, err := session.CompactSession(context.Background(), h.session, rt.Providers, providerID, session.DefaultCompactOptions())
+	if err != nil {
+		if errorOut != nil {
+			*errorOut = C.CString(err.Error())
+		}
+		return 0
+	}
+	return 1
 }
 
 //export taiji_session_switch

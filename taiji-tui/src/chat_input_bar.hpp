@@ -22,6 +22,7 @@ class ChatInputBar : public tuinator::Widget {
     bool handle_event(const tuinator::Event& event) override;
     tuinator::Widget* hit_test(tuinator::Point point) override;
     tuinator::Widget* hit_test_focusable(tuinator::Point point) override;
+    void set_on_layout(std::function<void()> callback) override;
 
   private:
     std::unique_ptr<CenteredChatColumn> column_;

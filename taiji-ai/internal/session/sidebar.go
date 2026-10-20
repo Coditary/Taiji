@@ -37,6 +37,7 @@ type TurnMetrics struct {
 type ChatTurn struct {
 	User       string         `json:"user"`
 	Assistant  string         `json:"assistant"`
+	UserKind   string         `json:"user_kind,omitempty"`
 	UserSentAt time.Time      `json:"user_sent_at,omitempty"`
 	Activity   []events.Event `json:"activity,omitempty"`
 	Metrics    *TurnMetrics   `json:"metrics,omitempty"`
@@ -83,6 +84,15 @@ func TurnsFromMessages(messages []provider.Message) []ChatTurn {
 		case provider.RoleUser:
 			content := strings.TrimSpace(msg.Content)
 			if skills.IsContinuationUserMessage(content) || IsHiddenUserMessage(content) {
+				continue
+			}
+			if IsCompactUserMessage(content) {
+				summary, _ := ParseCompactUserMessage(content)
+				if pendingUser != "" {
+					turns = append(turns, ChatTurn{User: pendingUser})
+					pendingUser = ""
+				}
+				turns = append(turns, ChatTurn{User: summary, UserKind: "compact"})
 				continue
 			}
 			if pendingUser != "" {

@@ -1,5 +1,7 @@
 #include "session_context_menu.hpp"
 
+#include "ui_theme.hpp"
+
 #include <algorithm>
 
 namespace {
@@ -104,17 +106,15 @@ void SessionContextMenu::paint(tuinator::PaintContext& ctx) const {
     tuinator::Canvas& canvas = ctx.canvas;
     const tuinator::Rect box{panel.x, panel.y, panel.width, panel.height};
 
-    tuinator::Style panel_bg{};
-    panel_bg.background = tuinator::Color::Black;
-    panel_bg.foreground = tuinator::Color::White;
+    const tuinator::Style panel_bg = ui_overlay_panel_style();
 
-    tuinator::Style border_style = theme_.border;
-    border_style.foreground = tuinator::Color::Cyan;
+    tuinator::Style border_style = panel_bg;
+    border_style.foreground_rgb = ui_border_chrome();
 
     canvas.with_clip(box, [&](tuinator::Canvas& clipped) {
         const tuinator::Rect inner{0, 0, panel.width, panel.height};
         clipped.fill_rect(inner, ' ', panel_bg);
-        clipped.draw_box(inner, border_style, theme_.glyphs);
+        clipped.draw_box(inner, border_style, ui_frame_border_glyphs());
 
         const int inner_width = std::max(0, panel.width - 2);
         for (int row = 0; row < static_cast<int>(items_.size()); ++row) {
@@ -122,7 +122,10 @@ void SessionContextMenu::paint(tuinator::PaintContext& ctx) const {
             const int y = 1 + row;
             const bool selected = row == active_item_;
 
-            tuinator::Style row_style = selected ? theme_.button_focused : panel_bg;
+            tuinator::Style row_style = ui_list_selection_style(selected);
+            if (item.label == "Delete") {
+                row_style.foreground_rgb = ui_danger();
+            }
             if (inner_width > 0) {
                 clipped.fill_rect({1, y, inner_width, 1}, ' ', row_style);
             }

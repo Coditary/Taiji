@@ -5,6 +5,7 @@
 #include <memory>
 
 constexpr int kChatStreamMaxCols = 88;
+constexpr int kChatBubbleMaxWidthPercent = 80;
 constexpr int kChatStreamPadX = 2;
 constexpr int kChatStreamPadTop = 1;
 
@@ -26,6 +27,9 @@ ChatStreamLayout chat_stream_layout_in_widget(int widget_width);
 
 /// Preferred row width for chat log children (matches scroll viewport / prompt bar).
 int chat_stream_row_preferred_width(int widget_bounds_width);
+
+/// Max bubble width in terminal columns (fraction of the chat stream).
+int chat_bubble_max_cols(int stream_width_cols, int max_width_pct = kChatBubbleMaxWidthPercent);
 
 /// Full-width host; lays out its child in a centered max-width column (chat + input share the same inset).
 class CenteredChatColumn : public tuinator::Widget {
@@ -49,6 +53,8 @@ class CenteredChatColumn : public tuinator::Widget {
     tuinator::Widget* hit_test(tuinator::Point point) override;
     tuinator::Widget* hit_test_focusable(tuinator::Point point) override;
     void collect_focusable(std::vector<tuinator::Widget*>& out) override;
+    void set_on_layout(std::function<void()> callback) override;
+    void set_on_dirty(std::function<void(tuinator::Rect)> callback) override;
 
   private:
     std::unique_ptr<tuinator::Widget> content_;

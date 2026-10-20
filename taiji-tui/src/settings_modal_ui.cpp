@@ -5,6 +5,7 @@
 #include <libtaiji.h>
 
 #include <algorithm>
+#include <vector>
 #include <cmath>
 #include <iomanip>
 #include <sstream>
@@ -42,6 +43,35 @@ std::string cot_label(const std::string& mode) {
         return "native";
     }
     return mode.empty() ? "off" : mode;
+}
+
+struct PercentBarLayout {
+    int bar_x = 0;
+    int bar_w = 0;
+    int pct_x = 0;
+};
+
+PercentBarLayout percent_bar_layout(int value_x, int value_w, int pct) {
+    PercentBarLayout out;
+    const std::string pct_text = std::to_string(pct) + "%";
+    const int pct_w = tuinator::text_display_width(pct_text);
+    const int gap = 1;
+    out.bar_x = value_x;
+    out.bar_w = std::max(12, value_w - pct_w - gap);
+    out.pct_x = value_x + out.bar_w + gap;
+    return out;
+}
+
+int percent_bar_value_from_x(int click_x, const PercentBarLayout& layout, int int_min, int int_max) {
+    if (layout.bar_w <= 0) {
+        return int_min;
+    }
+    const int rel = std::clamp(click_x - layout.bar_x, 0, layout.bar_w - 1);
+    const int span = std::max(1, int_max - int_min);
+    const int raw = int_min + rel * span / std::max(1, layout.bar_w - 1);
+    const int step = 5;
+    const int snapped = int_min + ((raw - int_min + step / 2) / step) * step;
+    return std::clamp(snapped, int_min, int_max);
 }
 
 std::string normalize_metrics(const std::string& preset) {
@@ -93,17 +123,41 @@ void SettingsModal::reload_from_backend() {
     rebuild_rows();
 }
 
+void SettingsModal::apply_draft_to_backend() {
+    if (handle_ == 0) {
+        return;
+    }
+    const std::string json = build_apply_json();
+    std::vector<char> buf(json.begin(), json.end());
+    buf.push_back('\0');
+    taiji_settings_apply(handle_, buf.data());
+    capture_saved_snapshot();
+}
+
+void SettingsModal::persist_chat_ui_theme(const std::string& theme_id) {
+    if (handle_ == 0 || theme_id.empty()) {
+        return;
+    }
+    reload_from_backend();
+    draft_.ui_theme = theme_id;
+    apply_draft_to_backend();
+}
+
 void SettingsModal::open() {
     open_ = true;
     chat_only_ = false;
     focus_nav_ = true;
     selected_row_ = 0;
     content_scroll_ = 0;
+    percent_bar_drag_row_ = -1;
+    hover_row_ = -1;
+    pointer_valid_ = false;
     editing_text_ = false;
     category_ = Category::General;
     reload_from_backend();
     rebuild_rows();
     selected_row_ = first_interactive_row();
+    sync_content_scroll();
     capture_saved_snapshot();
     mark_layout_dirty();
 }
@@ -113,6 +167,10 @@ void SettingsModal::close(bool applied) {
         return;
     }
     open_ = false;
+    percent_bar_drag_row_ = -1;
+    hover_row_ = -1;
+    pointer_valid_ = false;
+    fuzzy_open_ = false;
     editing_text_ = false;
     dirty_ = false;
     if (on_closed_) {
@@ -125,9 +183,11 @@ void SettingsModal::set_category(Category cat) {
     category_ = cat;
     selected_row_ = 0;
     content_scroll_ = 0;
+    hover_row_ = -1;
     editing_text_ = false;
     rebuild_rows();
     selected_row_ = first_interactive_row();
+    sync_content_scroll();
     note_dirty();
 }
 
@@ -145,6 +205,8 @@ std::string SettingsModal::category_title(Category cat, bool short_nav) const {
             return short_nav ? "Audio" : "Audio & Speech";
         case Category::Appearance:
             return "Appearance";
+        case Category::Shortcuts:
+            return short_nav ? "Keys" : "Keyboard Shortcuts";
         default:
             return "";
     }
@@ -160,6 +222,7 @@ void SettingsModal::rebuild_rows() {
     if (selected_row_ >= static_cast<int>(rows_.size())) {
         selected_row_ = std::max(0, static_cast<int>(rows_.size()) - 1);
     }
+    sync_content_scroll();
 }
 
 bool SettingsModal::row_is_interactive(int row) const {
@@ -179,6 +242,93 @@ int SettingsModal::first_interactive_row() const {
     return 0;
 }
 
+int SettingsModal::content_visible_row_count() const {
+    const PanelRect panel = panel_rect();
+    const int sep_y = footer_sep_y(panel);
+    const int hint_reserve = 1;
+    return std::max(0, sep_y - content_row_start_y() - hint_reserve);
+}
+
+void SettingsModal::sync_content_scroll() {
+    const int visible = content_visible_row_count();
+    if (visible <= 0) {
+        content_scroll_ = 0;
+        return;
+    }
+    const int total = static_cast<int>(rows_.size());
+    const int max_scroll = std::max(0, total - visible);
+    if (selected_row_ < content_scroll_) {
+        content_scroll_ = selected_row_;
+    }
+    if (selected_row_ >= content_scroll_ + visible) {
+        content_scroll_ = selected_row_ - visible + 1;
+    }
+    if (content_scroll_ > max_scroll) {
+        content_scroll_ = max_scroll;
+    }
+    if (content_scroll_ < 0) {
+        content_scroll_ = 0;
+    }
+}
+
+void SettingsModal::sync_pointer_from_screen(tuinator::Point root_point) {
+    if (!open_) {
+        return;
+    }
+    const tuinator::Point local{root_point.x - bounds_.x, root_point.y - bounds_.y};
+    const bool moved =
+        !pointer_valid_ || pointer_local_.x != local.x || pointer_local_.y != local.y;
+    pointer_local_ = local;
+    pointer_valid_ = true;
+    int row = -1;
+    const int next_hover = hit_content_row_for_hint(local, row) ? row : -1;
+    if (moved || next_hover != hover_row_) {
+        hover_row_ = next_hover;
+        mark_dirty();
+    }
+}
+
+void SettingsModal::update_percent_bar_from_local(tuinator::Point local, int row) {
+    if (row < 0 || row >= static_cast<int>(rows_.size())) {
+        return;
+    }
+    const Row& r = rows_[static_cast<std::size_t>(row)];
+    if (r.kind != Row::Kind::PercentBar) {
+        return;
+    }
+    const PanelRect panel = panel_rect();
+    const int value_x = nav_width() + 2 + key_col_width();
+    const int value_w = std::max(0, panel.w - value_x - 2);
+    int pct = 80;
+    if (r.enum_key == "user_message_max_width_pct") {
+        pct = draft_.user_message_max_width_pct;
+    } else if (r.enum_key == "assistant_message_max_width_pct") {
+        pct = draft_.assistant_message_max_width_pct;
+    }
+    const PercentBarLayout layout = percent_bar_layout(value_x, value_w, pct);
+    const int click_x = local.x - panel.x;
+    const int next = percent_bar_value_from_x(click_x, layout, r.int_min, r.int_max);
+    if (r.enum_key == "user_message_max_width_pct") {
+        if (draft_.user_message_max_width_pct == next) {
+            note_dirty();
+            return;
+        }
+        draft_.user_message_max_width_pct = next;
+    } else if (r.enum_key == "assistant_message_max_width_pct") {
+        if (draft_.assistant_message_max_width_pct == next) {
+            note_dirty();
+            return;
+        }
+        draft_.assistant_message_max_width_pct = next;
+    } else {
+        return;
+    }
+    if (on_preview_) {
+        on_preview_(draft_);
+    }
+    note_dirty();
+}
+
 void SettingsModal::move_selected_row(int delta) {
     if (rows_.empty()) {
         return;
@@ -194,6 +344,7 @@ void SettingsModal::move_selected_row(int delta) {
         }
         if (row_is_interactive(row)) {
             selected_row_ = row;
+            sync_content_scroll();
             return;
         }
     }
@@ -500,6 +651,61 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             presentation.enum_key = "presentation";
             presentation.enum_values = {"markdown", "whatsapp", "story", "minimal", "bubbles"};
             rows.push_back(presentation);
+            Row sec_you;
+            sec_you.kind = Row::Kind::Section;
+            sec_you.label = "Your messages";
+            rows.push_back(sec_you);
+            Row user_msg_style;
+            user_msg_style.label = "Style";
+            user_msg_style.kind = Row::Kind::EnumCycle;
+            user_msg_style.enum_key = "user_message_style";
+            user_msg_style.enum_values = {"chat",      "cornered", "block",   "plain",
+                                          "header",    "terminal", "log",     "card",
+                                          "section"};
+            rows.push_back(user_msg_style);
+            Row user_align;
+            user_align.label = "Alignment";
+            user_align.kind = Row::Kind::EnumCycle;
+            user_align.enum_key = "user_message_align";
+            user_align.enum_values = {"auto", "left", "right", "center"};
+            rows.push_back(user_align);
+            Row user_width;
+            user_width.label = "Max width";
+            user_width.kind = Row::Kind::PercentBar;
+            user_width.enum_key = "user_message_max_width_pct";
+            user_width.int_min = 40;
+            user_width.int_max = 100;
+            rows.push_back(user_width);
+            Row sec_asst;
+            sec_asst.kind = Row::Kind::Section;
+            sec_asst.label = "Assistant messages";
+            rows.push_back(sec_asst);
+            Row asst_style;
+            asst_style.label = "Style";
+            asst_style.kind = Row::Kind::EnumCycle;
+            asst_style.enum_key = "assistant_message_style";
+            asst_style.enum_values = {"chat",      "cornered", "block",   "plain",
+                                      "header",    "terminal", "log",     "card",
+                                      "section"};
+            rows.push_back(asst_style);
+            Row asst_align;
+            asst_align.label = "Alignment";
+            asst_align.kind = Row::Kind::EnumCycle;
+            asst_align.enum_key = "assistant_message_align";
+            asst_align.enum_values = {"auto", "left", "right", "center"};
+            rows.push_back(asst_align);
+            Row asst_width;
+            asst_width.label = "Max width";
+            asst_width.kind = Row::Kind::PercentBar;
+            asst_width.enum_key = "assistant_message_max_width_pct";
+            asst_width.int_min = 40;
+            asst_width.int_max = 100;
+            rows.push_back(asst_width);
+            Row msg_fill;
+            msg_fill.label = "Message background";
+            msg_fill.kind = Row::Kind::BoolToggle;
+            msg_fill.enum_key = "message_fill_background";
+            rows.push_back(msg_fill);
             Row msg_ts;
             msg_ts.label = "Message timestamps";
             msg_ts.kind = Row::Kind::BoolToggle;
@@ -510,6 +716,12 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             sticky_user.kind = Row::Kind::BoolToggle;
             sticky_user.enum_key = "sticky_user_message";
             rows.push_back(sticky_user);
+            Row auto_compact;
+            auto_compact.label = "Auto-compact context";
+            auto_compact.kind = Row::Kind::EnumCycle;
+            auto_compact.enum_key = "auto_compact_context_pct";
+            auto_compact.enum_values = {"off", "75", "80", "85", "90"};
+            rows.push_back(auto_compact);
             if (draft_.message_timestamps) {
                 Row msg_clock;
                 msg_clock.label = "Time format";
@@ -548,6 +760,18 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             motion.kind = Row::Kind::BoolToggle;
             motion.enum_key = "reduce_motion";
             rows.push_back(motion);
+            break;
+        }
+        case Category::Shortcuts: {
+            Row sec;
+            sec.kind = Row::Kind::Section;
+            sec.label = "Global";
+            rows.push_back(sec);
+            Row theme_key;
+            theme_key.label = "Open theme picker";
+            theme_key.kind = Row::Kind::Text;
+            theme_key.enum_key = "key_open_theme_picker";
+            rows.push_back(theme_key);
             break;
         }
         default:
@@ -594,6 +818,9 @@ std::string SettingsModal::row_value_text(const Row& row) const {
             }
             if (row.enum_key == "stt_capture_device") {
                 return draft_.stt_capture_device.empty() ? "default" : draft_.stt_capture_device;
+            }
+            if (row.enum_key == "key_open_theme_picker") {
+                return draft_.key_open_theme_picker.empty() ? "Ctrl+T" : draft_.key_open_theme_picker;
             }
             if (row.enum_key == "system_prompt_extra") {
                 if (draft_.system_prompt_extra.empty()) {
@@ -658,6 +885,14 @@ std::string SettingsModal::row_value_text(const Row& row) const {
                 return std::to_string(draft_.thought_max_chars);
             }
             return "";
+        case Row::Kind::PercentBar:
+            if (row.enum_key == "user_message_max_width_pct") {
+                return std::to_string(draft_.user_message_max_width_pct) + "%";
+            }
+            if (row.enum_key == "assistant_message_max_width_pct") {
+                return std::to_string(draft_.assistant_message_max_width_pct) + "%";
+            }
+            return "";
         case Row::Kind::FloatValue:
             if (editing_text_ && text_edit_target_ == row.enum_key) {
                 return text_edit_buffer_ + "|";
@@ -697,6 +932,30 @@ std::string SettingsModal::row_value_text(const Row& row) const {
             if (row.enum_key == "presentation") {
                 return draft_.presentation;
             }
+            if (row.enum_key == "user_message_style") {
+                if (draft_.user_message_style == "messenger") {
+                    return "chat";
+                }
+                return draft_.user_message_style;
+            }
+            if (row.enum_key == "assistant_message_style") {
+                if (draft_.assistant_message_style == "messenger") {
+                    return "chat";
+                }
+                return draft_.assistant_message_style;
+            }
+            if (row.enum_key == "user_message_align") {
+                return draft_.user_message_align.empty() ? "auto" : draft_.user_message_align;
+            }
+            if (row.enum_key == "assistant_message_align") {
+                return draft_.assistant_message_align.empty() ? "auto" : draft_.assistant_message_align;
+            }
+            if (row.enum_key == "auto_compact_context_pct") {
+                if (draft_.auto_compact_context_pct <= 0) {
+                    return "off";
+                }
+                return std::to_string(draft_.auto_compact_context_pct) + "%";
+            }
             if (row.enum_key == "chat_width") {
                 return draft_.chat_width;
             }
@@ -728,6 +987,9 @@ std::string SettingsModal::row_value_text(const Row& row) const {
             }
             if (row.enum_key == "sticky_user_message") {
                 return draft_.sticky_user_message ? "on" : "off";
+            }
+            if (row.enum_key == "message_fill_background") {
+                return draft_.message_fill_background ? "on" : "off";
             }
             if (row.enum_key == "reduce_motion") {
                 return draft_.reduce_motion ? "on" : "off";
@@ -800,6 +1062,27 @@ std::string SettingsModal::row_hint_text(const Row& row) const {
     if (row.enum_key == "stt_enabled") {
         return "Microphone button in the chat input (|O|).";
     }
+    if (row.enum_key == "stt_model") {
+        return "Model id passed to the STT driver (empty = driver default).";
+    }
+    if (row.enum_key == "stt_language") {
+        return "Hint language for transcription; auto lets the model detect.";
+    }
+    if (row.enum_key == "stt_quality") {
+        return "Speed vs accuracy preset for transcription (driver-dependent).";
+    }
+    if (row.enum_key == "stt_trim_silence") {
+        return "Drop leading/trailing silence from recorded audio before STT.";
+    }
+    if (row.enum_key == "stt_silence_level") {
+        return "Volume threshold for silence detection when trim is on.";
+    }
+    if (row.enum_key == "stt_capture_device") {
+        return "Audio input device name or path (empty = system default).";
+    }
+    if (row.enum_key == "stt_sample_rate") {
+        return "Capture sample rate in Hz (8000–48000).";
+    }
     if (row.enum_key == "max_steps") {
         return "Maximum autonomous tool-call steps per request.";
     }
@@ -854,6 +1137,21 @@ std::string SettingsModal::row_hint_text(const Row& row) const {
     if (row.enum_key == "sticky_user_message") {
         return "Pin the top of your last scrolled prompt while reading long replies.";
     }
+    if (row.enum_key == "message_fill_background") {
+        return "On: solid fill inside message frames. Off: only the outline on the chat background.";
+    }
+    if (row.enum_key == "user_message_style" || row.enum_key == "assistant_message_style") {
+        return "Bubble chrome for this role (chat, cornered, block, header, …).";
+    }
+    if (row.enum_key == "user_message_align" || row.enum_key == "assistant_message_align") {
+        return "Horizontal placement; auto follows the role (you: right, assistant: left).";
+    }
+    if (row.enum_key == "auto_compact_context_pct") {
+        return "When context fills this % of the window, summarize older turns automatically.";
+    }
+    if (row.enum_key == "user_message_max_width_pct" || row.enum_key == "assistant_message_max_width_pct") {
+        return "←/→ or click the bar to set max bubble width (40–100%).";
+    }
     if (row.enum_key == "message_time_clock") {
         return "24-hour clock or 12-hour with AM/PM.";
     }
@@ -862,6 +1160,9 @@ std::string SettingsModal::row_hint_text(const Row& row) const {
     }
     if (row.kind == Row::Kind::SkillAllowToggle) {
         return "Restrict skills to an allowlist, or allow all.";
+    }
+    if (row.enum_key == "key_open_theme_picker") {
+        return "Global shortcut to open the color theme picker (e.g. Ctrl+T).";
     }
     return "";
 }
@@ -953,6 +1254,11 @@ void SettingsModal::commit_text_edit() {
     }
     if (target == "stt_capture_device") {
         draft_.stt_capture_device = buf.empty() ? "default" : buf;
+        note_dirty();
+        return;
+    }
+    if (target == "key_open_theme_picker") {
+        draft_.key_open_theme_picker = buf.empty() ? "Ctrl+T" : buf;
         note_dirty();
         return;
     }
@@ -1070,6 +1376,8 @@ void SettingsModal::activate_row(int row, int direction) {
                 text_edit_buffer_ = draft_.stt_model;
             } else if (text_edit_target_ == "stt_capture_device") {
                 text_edit_buffer_ = draft_.stt_capture_device;
+            } else if (text_edit_target_ == "key_open_theme_picker") {
+                text_edit_buffer_ = draft_.key_open_theme_picker;
             } else {
                 text_edit_buffer_.clear();
             }
@@ -1131,6 +1439,35 @@ void SettingsModal::activate_row(int row, int direction) {
             } else if (r.enum_key == "presentation") {
                 field = &draft_.presentation;
                 current = draft_.presentation;
+            } else if (r.enum_key == "user_message_style") {
+                field = &draft_.user_message_style;
+                current = draft_.user_message_style.empty() ? "messenger" : draft_.user_message_style;
+                if (current == "messenger") {
+                    current = "chat";
+                }
+            } else if (r.enum_key == "assistant_message_style") {
+                field = &draft_.assistant_message_style;
+                current = draft_.assistant_message_style.empty() ? "messenger" : draft_.assistant_message_style;
+                if (current == "messenger") {
+                    current = "chat";
+                }
+            } else if (r.enum_key == "user_message_align") {
+                field = &draft_.user_message_align;
+                current = draft_.user_message_align.empty() ? "auto" : draft_.user_message_align;
+            } else if (r.enum_key == "assistant_message_align") {
+                field = &draft_.assistant_message_align;
+                current = draft_.assistant_message_align.empty() ? "auto" : draft_.assistant_message_align;
+            } else if (r.enum_key == "auto_compact_context_pct") {
+                static const int kAutoCompactLevels[] = {0, 75, 80, 85, 90};
+                std::size_t idx = 0;
+                for (std::size_t i = 0; i < 5; ++i) {
+                    if (draft_.auto_compact_context_pct == kAutoCompactLevels[i]) {
+                        idx = i;
+                        break;
+                    }
+                }
+                draft_.auto_compact_context_pct = kAutoCompactLevels[(idx + 1) % 5];
+                break;
             } else if (r.enum_key == "chat_width") {
                 field = &draft_.chat_width;
                 current = draft_.chat_width;
@@ -1158,14 +1495,31 @@ void SettingsModal::activate_row(int row, int direction) {
                 const int n = static_cast<int>(r.enum_values.size());
                 const int next = (static_cast<int>(idx) + dir + n) % n;
                 *field = r.enum_values[static_cast<std::size_t>(next)];
+                if ((r.enum_key == "user_message_style" || r.enum_key == "assistant_message_style") && *field == "chat") {
+                    *field = "messenger";
+                }
                 if ((r.enum_key == "chat_width" || r.enum_key == "message_time_clock" || r.enum_key == "ui_corners" ||
-                     r.enum_key == "ui_theme") &&
+                     r.enum_key == "ui_theme" || r.enum_key == "user_message_style" ||
+                     r.enum_key == "assistant_message_style" || r.enum_key == "user_message_align" ||
+                     r.enum_key == "assistant_message_align") &&
                     on_preview_) {
                     on_preview_(draft_);
                 }
             }
             break;
         }
+        case Row::Kind::PercentBar:
+            if (r.enum_key == "user_message_max_width_pct") {
+                draft_.user_message_max_width_pct =
+                    std::clamp(draft_.user_message_max_width_pct + dir * 5, r.int_min, r.int_max);
+            } else if (r.enum_key == "assistant_message_max_width_pct") {
+                draft_.assistant_message_max_width_pct =
+                    std::clamp(draft_.assistant_message_max_width_pct + dir * 5, r.int_min, r.int_max);
+            }
+            if (on_preview_) {
+                on_preview_(draft_);
+            }
+            break;
         case Row::Kind::BoolToggle:
             if (r.enum_key == "decisions_enabled") {
                 draft_.decisions_enabled = !draft_.decisions_enabled;
@@ -1189,6 +1543,11 @@ void SettingsModal::activate_row(int row, int direction) {
                 }
             } else if (r.enum_key == "sticky_user_message") {
                 draft_.sticky_user_message = !draft_.sticky_user_message;
+                if (on_preview_) {
+                    on_preview_(draft_);
+                }
+            } else if (r.enum_key == "message_fill_background") {
+                draft_.message_fill_background = !draft_.message_fill_background;
                 if (on_preview_) {
                     on_preview_(draft_);
                 }
@@ -1415,6 +1774,53 @@ void SettingsModal::paint_content_row(tuinator::Canvas& clipped, const Row& row,
         return;
     }
 
+    if (row.kind == Row::Kind::PercentBar) {
+        int pct = 80;
+        try {
+            if (!value.empty() && value.back() == '%') {
+                pct = std::stoi(value.substr(0, value.size() - 1));
+            }
+        } catch (...) {
+        }
+        pct = std::clamp(pct, row.int_min, row.int_max);
+        const PercentBarLayout layout = percent_bar_layout(value_x, value_w, pct);
+        const int span = std::max(1, row.int_max - row.int_min);
+        int filled = std::clamp((pct - row.int_min) * layout.bar_w / span, 0, layout.bar_w);
+        if (filled == 0 && layout.bar_w > 0 && pct == row.int_min) {
+            filled = 1;
+        }
+
+        tuinator::Style track = value_style;
+        track.dim = false;
+        if (!selected) {
+            const tuinator::Style panel_bg = ui_overlay_panel_style();
+            track.background_rgb = panel_bg.background_rgb;
+            track.foreground_rgb = panel_bg.foreground_rgb;
+        }
+        clipped.fill_rect({layout.bar_x, y, layout.bar_w, 1}, ' ', track);
+
+        if (filled > 0) {
+            tuinator::Style fill = value_style;
+            fill.dim = false;
+            fill.foreground_rgb = selected ? ui_accent() : ui_emphasis();
+            fill.background_rgb = fill.foreground_rgb;
+            clipped.fill_rect({layout.bar_x, y, filled, 1}, ' ', fill);
+            if (selected) {
+                tuinator::Style thumb = fill;
+                thumb.bold = true;
+                thumb.background_rgb = sel_bg.background_rgb;
+                const int thumb_x = std::min(layout.bar_x + filled, layout.bar_x + layout.bar_w - 1);
+                clipped.draw_text({thumb_x, y}, "▮", thumb);
+            }
+        }
+
+        tuinator::Style pct_style = value_style;
+        pct_style.dim = !selected;
+        pct_style.foreground_rgb = selected ? ui_text() : ui_secondary_text();
+        clipped.draw_text({layout.pct_x, y}, std::to_string(pct) + "%", pct_style);
+        return;
+    }
+
     if (row.kind == Row::Kind::Text || row.kind == Row::Kind::IntValue || row.kind == Row::Kind::FloatValue) {
         if (row.enum_key == "model") {
             rendered = "[ " + value + " ]";
@@ -1500,19 +1906,48 @@ void SettingsModal::paint(tuinator::PaintContext& ctx) const {
         }
 
         const int row_start_y = content_row_start_y();
-        const int visible_rows = std::max(0, sep_y - row_start_y);
+        const int visible_rows = content_visible_row_count();
         for (int vis = 0; vis < visible_rows; ++vis) {
             const int row = content_scroll_ + vis;
             if (row >= static_cast<int>(rows_.size())) {
                 break;
             }
+            int pointer_row = -1;
+            if (pointer_valid_) {
+                hit_content_row_for_hint(pointer_local_, pointer_row);
+            }
             const bool selected = !focus_nav_ && row == selected_row_;
-            paint_content_row(clipped, rows_[row], row_start_y + vis, content_x, value_x, value_w, selected);
+            const bool hovered = row == pointer_row || row == hover_row_;
+            paint_content_row(clipped, rows_[row], row_start_y + vis, content_x, value_x, value_w,
+                              selected || hovered);
+        }
+
+        if (static_cast<int>(rows_.size()) > visible_rows && visible_rows > 0) {
+            tuinator::Style scroll_mark = theme.muted;
+            scroll_mark.dim = true;
+            const int mark_x = panel.w - 2;
+            if (content_scroll_ > 0) {
+                clipped.draw_text({mark_x, row_start_y}, "▲", scroll_mark);
+            }
+            if (content_scroll_ + visible_rows < static_cast<int>(rows_.size())) {
+                clipped.draw_text({mark_x, sep_y - 2}, "▼", scroll_mark);
+            }
         }
 
         std::string hint;
-        if (!focus_nav_ && selected_row_ >= 0 && selected_row_ < static_cast<int>(rows_.size())) {
-            hint = row_hint_text(rows_[static_cast<std::size_t>(selected_row_)]);
+        int hint_row = -1;
+        if (pointer_valid_) {
+            hit_content_row_for_hint(pointer_local_, hint_row);
+        }
+        if (hint_row < 0) {
+            hint_row = hover_row_;
+        }
+        if (hint_row < 0 && !focus_nav_ && selected_row_ >= 0 && selected_row_ < static_cast<int>(rows_.size()) &&
+            row_is_interactive(selected_row_)) {
+            hint_row = selected_row_;
+        }
+        if (hint_row >= 0 && hint_row < static_cast<int>(rows_.size())) {
+            hint = row_hint_text(rows_[static_cast<std::size_t>(hint_row)]);
         }
         if (!hint.empty() && sep_y > row_start_y + 1) {
             tuinator::Style hint_style = theme.muted;
@@ -1556,18 +1991,34 @@ bool SettingsModal::content_row_click_on_value(tuinator::Point local) const {
 }
 
 bool SettingsModal::hit_content_row(tuinator::Point local, int& row) const {
+    row = -1;
     const PanelRect panel = panel_rect();
-    const int content_x = panel.x + nav_width() + 1;
+    const int content_x = panel.x + nav_width() + 2;
     if (local.x < content_x || local.x >= panel.x + panel.w - 1) {
         return false;
     }
     const int row_start_y = panel.y + content_row_start_y();
     const int rel = local.y - row_start_y;
-    if (rel < 0) {
+    if (rel < 0 || rel >= content_visible_row_count()) {
         return false;
     }
     row = content_scroll_ + rel;
     return row >= 0 && row < static_cast<int>(rows_.size());
+}
+
+bool SettingsModal::hit_content_row_for_hint(tuinator::Point local, int& row) const {
+    if (!hit_content_row(local, row)) {
+        return false;
+    }
+    if (!row_is_interactive(row)) {
+        row = -1;
+        return false;
+    }
+    if (row >= 0 && row < static_cast<int>(rows_.size()) && row_hint_text(rows_[row]).empty()) {
+        row = -1;
+        return false;
+    }
+    return true;
 }
 
 bool SettingsModal::hit_footer(tuinator::Point local, bool& apply) const {
@@ -1608,16 +2059,7 @@ bool SettingsModal::handle_event(const tuinator::Event& event) {
         return handle_fuzzy_event(event);
     }
 
-    const auto apply_settings = [this]() {
-        if (handle_ == 0) {
-            return;
-        }
-        const std::string json = build_apply_json();
-        std::vector<char> buf(json.begin(), json.end());
-        buf.push_back('\0');
-        taiji_settings_apply(handle_, buf.data());
-        capture_saved_snapshot();
-    };
+    const auto apply_settings = [this]() { apply_draft_to_backend(); };
 
     if (editing_text_) {
         if (const auto* key = std::get_if<tuinator::KeyPress>(&event)) {
@@ -1703,6 +2145,7 @@ bool SettingsModal::handle_event(const tuinator::Event& event) {
             if (key->key == tuinator::Key::Right || key->key == tuinator::Key::Enter) {
                 focus_nav_ = false;
                 selected_row_ = first_interactive_row();
+                sync_content_scroll();
                 note_dirty();
                 return true;
             }
@@ -1723,8 +2166,10 @@ bool SettingsModal::handle_event(const tuinator::Event& event) {
                      rows_[selected_row_].kind == Row::Kind::ProviderCycle ||
                      rows_[selected_row_].kind == Row::Kind::PresetCombo ||
                      rows_[selected_row_].kind == Row::Kind::IntValue ||
-                     rows_[selected_row_].kind == Row::Kind::FloatValue)) {
+                     rows_[selected_row_].kind == Row::Kind::FloatValue ||
+                     rows_[selected_row_].kind == Row::Kind::PercentBar)) {
                     cycle_row_value(selected_row_, -1);
+                    note_dirty();
                     return true;
                 }
                 focus_nav_ = true;
@@ -1734,6 +2179,7 @@ bool SettingsModal::handle_event(const tuinator::Event& event) {
             if (key->key == tuinator::Key::Right || key->character == 'l') {
                 if (row_is_interactive(selected_row_)) {
                     cycle_row_value(selected_row_, 1);
+                    note_dirty();
                 }
                 return true;
             }
@@ -1768,8 +2214,68 @@ bool SettingsModal::handle_event(const tuinator::Event& event) {
     }
 
     if (const auto* mouse = std::get_if<tuinator::MouseEvent>(&event)) {
-        if (mouse->action == tuinator::MouseAction::Click || mouse->action == tuinator::MouseAction::Release) {
+        const tuinator::Point local = to_local(mouse->position);
+        pointer_local_ = local;
+        pointer_valid_ = true;
+        if (mouse->action == tuinator::MouseAction::Move && percent_bar_drag_row_ < 0) {
+            int row = -1;
+            const int next_hover = hit_content_row_for_hint(local, row) ? row : -1;
+            if (next_hover != hover_row_) {
+                hover_row_ = next_hover;
+                note_dirty();
+            }
+            return true;
+        }
+        if (percent_bar_drag_row_ >= 0) {
+            if (mouse->action == tuinator::MouseAction::Move) {
+                update_percent_bar_from_local(local, percent_bar_drag_row_);
+                return true;
+            }
+            if (mouse->action == tuinator::MouseAction::Release && mouse->button == tuinator::MouseButton::Left) {
+                update_percent_bar_from_local(local, percent_bar_drag_row_);
+                percent_bar_drag_row_ = -1;
+                return true;
+            }
+        }
+        if (mouse->action == tuinator::MouseAction::Move && mouse->left_pressed && percent_bar_drag_row_ < 0) {
+            int row = 0;
+            if (hit_content_row(local, row) && row_is_interactive(row) &&
+                rows_[static_cast<std::size_t>(row)].kind == Row::Kind::PercentBar && content_row_click_on_value(local)) {
+                focus_nav_ = false;
+                selected_row_ = row;
+                percent_bar_drag_row_ = row;
+                update_percent_bar_from_local(local, row);
+                return true;
+            }
+        }
+        if (mouse->action == tuinator::MouseAction::WheelUp || mouse->action == tuinator::MouseAction::WheelDown) {
+            const PanelRect panel = panel_rect();
             const tuinator::Point local = to_local(mouse->position);
+            const int content_left = panel.x + nav_width();
+            const int content_top = panel.y + content_row_start_y();
+            const int content_bottom = panel.y + footer_sep_y(panel);
+            if (local.x >= content_left && local.y >= content_top && local.y < content_bottom) {
+                const int delta = mouse->action == tuinator::MouseAction::WheelUp ? -1 : 1;
+                const int max_scroll =
+                    std::max(0, static_cast<int>(rows_.size()) - content_visible_row_count());
+                content_scroll_ = std::clamp(content_scroll_ + delta, 0, max_scroll);
+                note_dirty();
+                return true;
+            }
+        }
+        if ((mouse->action == tuinator::MouseAction::Press || mouse->action == tuinator::MouseAction::Click) &&
+            mouse->button == tuinator::MouseButton::Left) {
+            int row = 0;
+            if (hit_content_row(local, row) && row_is_interactive(row) && content_row_click_on_value(local) &&
+                rows_[static_cast<std::size_t>(row)].kind == Row::Kind::PercentBar) {
+                focus_nav_ = false;
+                selected_row_ = row;
+                percent_bar_drag_row_ = row;
+                update_percent_bar_from_local(local, row);
+                return true;
+            }
+        }
+        if (mouse->action == tuinator::MouseAction::Click || mouse->action == tuinator::MouseAction::Release) {
             bool apply = false;
             if (hit_footer(local, apply) && apply) {
                 apply_settings();
@@ -1810,6 +2316,9 @@ bool SettingsModal::handle_event(const tuinator::Event& event) {
                             begin_value_edit(row);
                         } else if (r.kind == Row::Kind::Text) {
                             begin_value_edit(row);
+                        } else if (r.kind == Row::Kind::PercentBar) {
+                            update_percent_bar_from_local(local, row);
+                            percent_bar_drag_row_ = -1;
                         } else {
                             activate_row(row, 1);
                         }

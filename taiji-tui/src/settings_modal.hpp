@@ -16,6 +16,7 @@ class SettingsModal : public tuinator::Widget {
         ToolsSkills,
         Audio,
         Appearance,
+        Shortcuts,
         Count
     };
 
@@ -77,6 +78,15 @@ class SettingsModal : public tuinator::Widget {
         bool message_timestamps = true;
         std::string message_time_clock = "24h";
         bool sticky_user_message = true;
+        bool message_fill_background = true;
+        std::string user_message_style = "messenger";
+        std::string user_message_align = "auto";
+        int user_message_max_width_pct = 80;
+        std::string assistant_message_style = "messenger";
+        std::string assistant_message_align = "auto";
+        int assistant_message_max_width_pct = 80;
+        int auto_compact_context_pct = 0;
+        std::string key_open_theme_picker = "Ctrl+T";
         bool stt_enabled = true;
         std::string stt_driver;
         std::vector<std::string> stt_driver_options;
@@ -100,6 +110,8 @@ class SettingsModal : public tuinator::Widget {
     void open();
     void close(bool applied);
     bool is_open() const { return open_; }
+    void persist_chat_ui_theme(const std::string& theme_id);
+    void sync_pointer_from_screen(tuinator::Point root_point);
 
     std::string_view widget_type_name() const override { return "SettingsModal"; }
     bool wants_full_screen() const override { return true; }
@@ -157,6 +169,7 @@ class SettingsModal : public tuinator::Widget {
             SkillAllowToggle,
             PresetCombo,
             FixedValue,
+            PercentBar,
             Action
         } kind = Kind::Text;
         std::string enum_key;
@@ -187,6 +200,9 @@ class SettingsModal : public tuinator::Widget {
     void cancel_text_edit();
     bool row_is_interactive(int row) const;
     void move_selected_row(int delta);
+    int content_visible_row_count() const;
+    void sync_content_scroll();
+    void update_percent_bar_from_local(tuinator::Point local, int row);
     int first_interactive_row() const;
     std::string category_title(Category cat, bool short_nav) const;
     std::string category_subtitle() const;
@@ -204,6 +220,7 @@ class SettingsModal : public tuinator::Widget {
     void open_model_fuzzy();
     void open_provider_fuzzy(bool project_scope);
     void open_theme_fuzzy();
+    void apply_draft_to_backend();
     void preview_theme_fuzzy_selection();
     void cycle_provider_row(int row, int direction);
     void rebuild_fuzzy_filter();
@@ -219,6 +236,7 @@ class SettingsModal : public tuinator::Widget {
     void paint_frame(tuinator::Canvas& clipped, const PanelRect& panel) const;
     bool hit_nav(tuinator::Point local, Category& cat) const;
     bool hit_content_row(tuinator::Point local, int& row) const;
+    bool hit_content_row_for_hint(tuinator::Point local, int& row) const;
     bool content_row_click_on_value(tuinator::Point local) const;
     bool hit_footer(tuinator::Point local, bool& apply) const;
     void json_escape_append(std::string& out, const std::string& value) const;
@@ -278,6 +296,10 @@ class SettingsModal : public tuinator::Widget {
     bool model_detail_open_ = false;
     std::vector<std::string> model_detail_lines_;
     int model_detail_scroll_ = 0;
+    int percent_bar_drag_row_ = -1;
+    int hover_row_ = -1;
+    bool pointer_valid_ = false;
+    tuinator::Point pointer_local_{0, 0};
 };
 
 bool settings_parse_draft(const std::string& json, SettingsModal::Draft& out);

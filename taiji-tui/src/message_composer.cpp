@@ -24,16 +24,33 @@ void replace_agent_mode_chip(std::vector<ComposerChip>& chips, ComposerChip chip
 
 MessageComposer::MessageComposer(tuinator::TextInputOptions input_options, tuinator::Style style,
                                  tuinator::Style focused_style, tuinator::Theme theme)
-    : palette_(theme), theme_(std::move(theme)) {
+    : palette_(theme), theme_picker_(theme), theme_(std::move(theme)) {
+    default_input_placeholder_ = input_options.placeholder;
     input_options.prompt = "  ";
     input_ = std::make_unique<ChatTextInput>(input_options, style, focused_style);
     input_->set_on_submit([this](const std::string& value) {
+        if (theme_picker_.is_open()) {
+            theme_picker_.commit_selection();
+            close_theme_picker(true);
+            return;
+        }
         if (palette_.is_open()) {
             return;
         }
         const std::string composed = composer_build_outgoing_message(value, chips_);
         if (on_submit_ && !composed.empty()) {
             on_submit_(composed);
+        }
+    });
+
+    theme_picker_.set_on_preview([this](const std::string& theme_id) {
+        if (on_theme_preview_) {
+            on_theme_preview_(theme_id);
+        }
+    });
+    theme_picker_.set_on_commit([this](const std::string& theme_id) {
+        if (on_theme_picked_) {
+            on_theme_picked_(theme_id);
         }
     });
 
@@ -44,6 +61,9 @@ MessageComposer::MessageComposer(tuinator::TextInputOptions input_options, tuina
         }
         mark_layout_dirty();
     });
+    if (input_ != nullptr) {
+        layout_input_height_ = input_->preferred_size().height;
+    }
 }
 
 void MessageComposer::set_on_submit(SubmitHandler handler) {
@@ -58,6 +78,14 @@ void MessageComposer::set_on_palette_open_changed(std::function<void(bool)> hand
     on_palette_open_changed_ = std::move(handler);
 }
 
+void MessageComposer::set_on_theme_preview(std::function<void(const std::string& theme_id)> handler) {
+    on_theme_preview_ = std::move(handler);
+}
+
+void MessageComposer::set_on_theme_picked(std::function<void(const std::string& theme_id)> handler) {
+    on_theme_picked_ = std::move(handler);
+}
+
 void MessageComposer::sync_field_styles(tuinator::Style normal, tuinator::Style focused) {
     if (input_ != nullptr) {
         input_->sync_field_styles(std::move(normal), std::move(focused));
@@ -65,8 +93,20 @@ void MessageComposer::sync_field_styles(tuinator::Style normal, tuinator::Style 
     }
 }
 
-void MessageComposer::notify_input_changed(const std::string& /*value*/) {
+void MessageComposer::notify_input_changed(const std::string& value) {
+    if (theme_picker_.is_open()) {
+        theme_picker_.set_filter(value);
+        mark_dirty();
+        return;
+    }
     sync_trigger_from_input();
+    if (input_ != nullptr) {
+        const int h = input_->preferred_size().height;
+        if (h != layout_input_height_) {
+            layout_input_height_ = h;
+            mark_layout_dirty();
+        }
+    }
     mark_dirty();
 }
 
@@ -76,6 +116,11 @@ void MessageComposer::clear_after_send() {
     pending_mcp_enabled_.clear();
     if (input_ != nullptr) {
         input_->set_value("");
+        const int h = input_->preferred_size().height;
+        if (h != layout_input_height_) {
+            layout_input_height_ = h;
+            mark_layout_dirty();
+        }
     }
     mark_dirty();
 }
@@ -93,42 +138,63 @@ tuinator::Size MessageComposer::preferred_size() const {
     if (!chips_.empty()) {
         h += 1;
     }
-    if (palette_.is_open()) {
+    if (theme_picker_.is_open()) {
+        h += theme_picker_.preferred_size(42).height;
+    } else if (palette_.is_open()) {
         h += palette_.preferred_size().height;
     }
     return {0, h};
 }
 
 tuinator::Rect MessageComposer::stream_bounds(const tuinator::Rect& bounds) const {
-    const int panel_w = ui_chat_stream_panel_width() > 0 ? ui_chat_stream_panel_width() : bounds.width;
-    const ChatStreamLayout column = chat_stream_layout_for_panel(panel_w);
-    if (bounds.width <= column.content_width + 4) {
-        return bounds;
-    }
+    const ChatStreamLayout column = chat_stream_layout_in_widget(bounds.width);
     return {bounds.x + column.offset_x, bounds.y, column.content_width, bounds.height};
 }
 
 void MessageComposer::layout(tuinator::Rect bounds) {
     bounds_ = bounds;
     const tuinator::Rect stream = stream_bounds(bounds);
-    int y = stream.y;
-    if (palette_.is_open()) {
-        const tuinator::Size pal = palette_.preferred_size();
-        palette_.layout({stream.x, y, stream.width, pal.height});
-        y += pal.height;
+
+    const int chips_h = chips_.empty() ? 0 : 1;
+    const int input_h = input_ != nullptr ? std::max(3, input_->preferred_size().height) : 3;
+    if (input_h > bounds.height) {
+        mark_layout_dirty();
+    }
+    const int input_y = bounds.y + std::max(0, bounds.height - input_h);
+
+    int overlay_h = 0;
+    if (theme_picker_.is_open()) {
+        overlay_h = theme_picker_.preferred_size(stream.width).height;
+    } else if (palette_.is_open()) {
+        overlay_h = palette_.preferred_size().height;
+    }
+    int overlay_y = input_y - chips_h - overlay_h;
+    if (overlay_y < bounds.y) {
+        overlay_h = std::max(0, input_y - chips_h - bounds.y);
+        overlay_y = bounds.y;
+    }
+
+    theme_picker_bounds_ = {};
+    if (theme_picker_.is_open() && overlay_h > 0) {
+        theme_picker_bounds_ = {stream.x, overlay_y, stream.width, overlay_h};
+        theme_picker_.layout(theme_picker_bounds_);
+    } else {
+        theme_picker_.layout({0, 0, 0, 0});
+    }
+    if (palette_.is_open() && overlay_h > 0) {
+        palette_.layout({stream.x, overlay_y, stream.width, overlay_h});
     } else {
         palette_.layout({0, 0, 0, 0});
     }
 
     chips_bounds_ = {};
     if (!chips_.empty()) {
-        chips_bounds_ = {stream.x, y, stream.width, 1};
-        y += 1;
+        chips_bounds_ = {stream.x, input_y - chips_h, stream.width, chips_h};
     }
 
-    const int input_h = std::max(3, bounds.height - (y - bounds.y));
-    input_bounds_ = {stream.x, y, stream.width, input_h};
-    if (input_ != nullptr) {
+    const int visible_input_h = std::min(input_h, std::max(0, bounds.y + bounds.height - input_y));
+    input_bounds_ = {stream.x, input_y, stream.width, visible_input_h};
+    if (input_ != nullptr && visible_input_h > 0) {
         input_->layout(input_bounds_);
     }
 }
@@ -164,9 +230,9 @@ void MessageComposer::paint_chips(tuinator::PaintContext& ctx, tuinator::Rect ar
     }
     tuinator::Style bg;
     bg.background_rgb = ui_main_bg();
-    ctx.canvas.fill_rect(area, ' ', bg);
+    ctx.canvas.fill_rect({0, 0, area.width, area.height}, ' ', bg);
 
-    int x = area.x + 1;
+    int x = 1;
     for (std::size_t i = 0; i < chips_.size(); ++i) {
         const ComposerChip& chip = chips_[i];
         tuinator::Style pill = ui_resolve_main_text(theme_.label);
@@ -174,33 +240,79 @@ void MessageComposer::paint_chips(tuinator::PaintContext& ctx, tuinator::Rect ar
         pill.foreground_rgb = chip.color;
         std::string text = " " + chip.label + " × ";
         const int w = tuinator::text_display_width(text);
-        if (x + w > area.x + area.width) {
+        if (x + w > area.width) {
             break;
         }
-        ctx.canvas.draw_text({x, area.y}, text, pill);
+        ctx.canvas.draw_text({x, 0}, text, pill);
         x += w;
     }
 }
 
 void MessageComposer::paint(tuinator::PaintContext& ctx) const {
+    const tuinator::Rect stream = stream_bounds(bounds_);
+    const tuinator::Rect host{bounds_.x, bounds_.y, bounds_.width, bounds_.height};
+    const auto paint_in_bounds = [&](tuinator::Rect area, const auto& draw) {
+        const int x0 = std::max(area.x, host.x);
+        const int y0 = std::max(area.y, host.y);
+        const int x1 = std::min(area.x + area.width, host.x + host.width);
+        const int y1 = std::min(area.y + area.height, host.y + host.height);
+        if (x1 <= x0 || y1 <= y0) {
+            return;
+        }
+        area = {x0, y0, x1 - x0, y1 - y0};
+        const tuinator::Rect local{area.x - stream.x, area.y - bounds_.y, area.width, area.height};
+        ctx.with_clip(local, [&](tuinator::PaintContext& child_ctx) { draw(child_ctx); });
+    };
+
+    if (theme_picker_.is_open()) {
+        paint_in_bounds(theme_picker_bounds_, [&](tuinator::PaintContext& child_ctx) { theme_picker_.paint(child_ctx); });
+    }
     if (palette_.is_open()) {
-        palette_.paint(ctx);
+        paint_in_bounds(palette_.bounds(), [&](tuinator::PaintContext& child_ctx) { palette_.paint(child_ctx); });
     }
     if (chips_bounds_.height > 0) {
-        paint_chips(ctx, chips_bounds_);
+        paint_in_bounds(chips_bounds_,
+                        [&](tuinator::PaintContext& child_ctx) { paint_chips(child_ctx, chips_bounds_); });
     }
     if (input_bounds_.width > 0 && input_bounds_.height > 0) {
-        tuinator::Style chrome_fill;
-        chrome_fill.background_rgb = ui_input_chrome_fill();
-        ctx.canvas.fill_rect(input_bounds_, ' ', chrome_fill);
-    }
-    if (input_ != nullptr) {
-        input_->paint(ctx);
-        paint_plus_button(ctx, plus_bounds());
+        paint_in_bounds(input_bounds_, [&](tuinator::PaintContext& child_ctx) {
+            if (input_ != nullptr) {
+                input_->paint(child_ctx);
+            }
+            paint_plus_button(child_ctx, {1, 1, 3, 1});
+        });
     }
 }
 
 bool MessageComposer::handle_event(const tuinator::Event& event) {
+    if (theme_picker_.is_open()) {
+        if (const auto* mouse = std::get_if<tuinator::MouseEvent>(&event)) {
+            const tuinator::Point local{mouse->position.x - bounds_.x, mouse->position.y - bounds_.y};
+            if (mouse->button == tuinator::MouseButton::Left && mouse->action == tuinator::MouseAction::Release) {
+                int visible_row = -1;
+                const tuinator::Point picker_local{mouse->position.x - theme_picker_bounds_.x,
+                                                   mouse->position.y - theme_picker_bounds_.y};
+                if (theme_picker_.hit_test_row(picker_local, visible_row)) {
+                    theme_picker_.select_visible_row(visible_row);
+                    theme_picker_.commit_selection();
+                    close_theme_picker(true);
+                    return true;
+                }
+            }
+            if (mouse->action == tuinator::MouseAction::WheelUp || mouse->action == tuinator::MouseAction::WheelDown) {
+                const tuinator::Point picker_local{mouse->position.x - theme_picker_bounds_.x,
+                                                   mouse->position.y - theme_picker_bounds_.y};
+                if (picker_local.x >= 0 && picker_local.y >= 0 && picker_local.x < theme_picker_bounds_.width &&
+                    picker_local.y < theme_picker_bounds_.height) {
+                    const int delta = mouse->action == tuinator::MouseAction::WheelUp ? -1 : 1;
+                    theme_picker_.move_selection(delta);
+                    mark_dirty();
+                    return true;
+                }
+            }
+        }
+    }
+
     if (palette_.is_open() && palette_.handle_event(event)) {
         mark_dirty();
         return true;
@@ -254,7 +366,7 @@ tuinator::Widget* MessageComposer::hit_test(tuinator::Point point) {
 }
 
 tuinator::Widget* MessageComposer::hit_test_focusable(tuinator::Point point) {
-    if (palette_.is_open()) {
+    if (palette_.is_open() || theme_picker_.is_open()) {
         return this;
     }
     if (input_ != nullptr) {
@@ -288,6 +400,9 @@ void MessageComposer::sync_trigger_from_input() {
 }
 
 void MessageComposer::open_palette_with_trigger(const std::string& filter) {
+    if (theme_picker_.is_open()) {
+        return;
+    }
     if (host_context_) {
         ctx_cache_ = host_context_();
     }
@@ -474,6 +589,85 @@ void MessageComposer::remove_chip_at(std::size_t index) {
     }
     mark_layout_dirty();
     mark_dirty();
+}
+
+void MessageComposer::open_theme_picker(const std::string& active_theme_id) {
+    if (theme_picker_.is_open() || palette_.is_open() || input_ == nullptr) {
+        return;
+    }
+    theme_revert_id_ = active_theme_id;
+    stashed_input_ = input_->value();
+    input_->set_value("");
+    if (stashed_input_.empty()) {
+        input_->set_placeholder("Search color themes…");
+    } else {
+        input_->set_placeholder("Search themes… (draft saved)");
+    }
+    input_->set_composer_intercept_key([this](const tuinator::KeyPress& key) { return handle_theme_picker_key(key); });
+    theme_picker_.open(active_theme_id, !stashed_input_.empty());
+    if (on_palette_open_changed_) {
+        on_palette_open_changed_(true);
+    }
+    mark_layout_dirty();
+    mark_dirty();
+}
+
+void MessageComposer::close_theme_picker(bool commit) {
+    if (!theme_picker_.is_open()) {
+        return;
+    }
+    if (!commit && on_theme_preview_ && !theme_revert_id_.empty()) {
+        on_theme_preview_(theme_revert_id_);
+    }
+    theme_picker_.close();
+    restore_stashed_input();
+    theme_revert_id_.clear();
+    if (on_palette_open_changed_) {
+        on_palette_open_changed_(false);
+    }
+    mark_layout_dirty();
+    mark_dirty();
+}
+
+void MessageComposer::restore_stashed_input() {
+    if (input_ == nullptr) {
+        return;
+    }
+    input_->set_composer_intercept_key(nullptr);
+    input_->set_placeholder(default_input_placeholder_);
+    input_->set_value(stashed_input_);
+    stashed_input_.clear();
+}
+
+bool MessageComposer::handle_theme_picker_key(const tuinator::KeyPress& key) {
+    if (!theme_picker_.is_open()) {
+        return false;
+    }
+    if (key.key == tuinator::Key::Escape) {
+        close_theme_picker(false);
+        return true;
+    }
+    if (key.key == tuinator::Key::Up) {
+        theme_picker_.move_selection(-1);
+        mark_dirty();
+        return true;
+    }
+    if (key.key == tuinator::Key::Down) {
+        theme_picker_.move_selection(1);
+        mark_dirty();
+        return true;
+    }
+    if (key.key == tuinator::Key::PageUp) {
+        theme_picker_.move_page(-5);
+        mark_dirty();
+        return true;
+    }
+    if (key.key == tuinator::Key::PageDown) {
+        theme_picker_.move_page(5);
+        mark_dirty();
+        return true;
+    }
+    return false;
 }
 
 std::string MessageComposer::read_file_snippet(const std::string& rel_path) const {

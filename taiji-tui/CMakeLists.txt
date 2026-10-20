@@ -140,6 +140,7 @@ add_executable(taiji-tui
     src/main.cpp
     src/chat_app.cpp
     src/chat_message.cpp
+    src/chat_message_chrome.cpp
     src/assistant_markdown.cpp
     src/queue_status_bar.cpp
     src/left_label.cpp
@@ -160,6 +161,8 @@ add_executable(taiji-tui
     src/status_footer.cpp
     src/ui_layout.cpp
     src/ui_theme.cpp
+    src/ui_keybindings.cpp
+    src/composer_theme_picker.cpp
     src/ui_themes_bundled_lookup.cpp
     "${TAIJI_UI_THEMES_EMBED_CPP}"
     src/ui_message_time.cpp

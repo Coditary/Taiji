@@ -46,7 +46,8 @@ Slash commands:
   /clear           start a new session
   /provider [id]   show or switch provider
   /tools           list available tools
-  /skills          list invokable skills`,
+  /skills          list invokable skills
+  /compact         summarize older turns to save context`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !stdinIsTTY() {
 				return fmt.Errorf("chat requires an interactive terminal (stdin must be a TTY)")
@@ -401,6 +402,17 @@ func (s *chatState) handleSlashCommand(line string) (handled bool, exit bool, er
 			fmt.Fprintln(os.Stderr, "(no tools registered)")
 		}
 		return true, false, nil
+	case "/compact":
+		summary, err := session.CompactSession(context.Background(), s.session, s.rt.Providers, s.providerID, session.DefaultCompactOptions())
+		if err != nil {
+			return true, false, err
+		}
+		preview := strings.TrimSpace(summary)
+		if len(preview) > 200 {
+			preview = preview[:200] + "…"
+		}
+		fmt.Fprintf(os.Stderr, "compacted session %q\n%s\n", s.session.Label(), preview)
+		return true, false, nil
 	case "/skills":
 		if s.rt.Skills == nil {
 			fmt.Fprintln(os.Stderr, "(skills not configured)")
@@ -514,6 +526,7 @@ func printChatHelp(w io.Writer) {
 	fmt.Fprintln(w, "  /provider [id]   show or switch provider")
 	fmt.Fprintln(w, "  /tools           list available tools")
 	fmt.Fprintln(w, "  /skills          list invokable skills")
+	fmt.Fprintln(w, "  /compact         summarize older turns to save context")
 }
 
 func stdinIsTTY() bool {

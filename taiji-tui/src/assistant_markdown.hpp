@@ -18,6 +18,8 @@ class AssistantMarkdown : public tuinator::Widget {
     void sync_from(const std::string& text, bool clear_first);
     void tick_stream_glow(int dt_ms);
     void set_markdown_styles(tuinator::MarkdownStyleSet styles);
+    void set_author_label(std::string label);
+    void invalidate_for_user_style_change();
     bool has_stream_animation() const { return stream_glow_ms_ > 0; }
 
     std::string_view widget_type_name() const override { return "AssistantMarkdown"; }
@@ -27,13 +29,18 @@ class AssistantMarkdown : public tuinator::Widget {
     void paint(tuinator::PaintContext& ctx) const override;
 
   private:
+    int stream_content_width() const;
+    int markdown_inner_width() const;
     void relayout_content();
-    void refresh_measure_cache(int width) const;
+    void refresh_measure_cache(int inner_width) const;
+    void paint_stream_glow(tuinator::PaintContext& ctx, const tuinator::Rect& inner, tuinator::Rgb bg) const;
 
     tuinator::MarkdownView view_;
     int wrap_width_hint_ = 0;
-    int content_indent_ = 2;
-    mutable int cached_width_ = 0;
+    mutable int cached_inner_width_ = 0;
     mutable int cached_height_ = 1;
     int stream_glow_ms_ = 0;
+    std::string author_label_;
+    static constexpr int kBubblePadX = 2;
+    static constexpr int kBubblePadY = 1;
 };

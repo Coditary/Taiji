@@ -3,6 +3,7 @@ package builtin
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -68,6 +69,30 @@ func TestGrepBuiltin(t *testing.T) {
 	}
 	if !strings.Contains(out, "HelloWorld") {
 		t.Fatalf("expected match: %q", out)
+	}
+}
+
+func TestGrepFilesWithMatches(t *testing.T) {
+	if _, err := exec.LookPath("rg"); err != nil {
+		t.Skip("rg not on PATH")
+	}
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "hit.go"), []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "miss.txt"), []byte("other\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, err := (Grep{}).Run(context.Background(), map[string]any{
+		"path":        root,
+		"pattern":     "package",
+		"output_mode": "files_with_matches",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "hit.go") || strings.Contains(out, "miss.txt") {
+		t.Fatalf("unexpected output: %q", out)
 	}
 }
 

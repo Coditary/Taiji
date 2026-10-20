@@ -73,6 +73,7 @@ class ChatApp {
 
     struct ChatTurn {
         std::string user;
+        std::string user_kind;
         std::string user_sent_at;
         std::string user_time_label;
         std::string assistant_preamble;
@@ -126,6 +127,7 @@ class ChatApp {
     void append_local_reply(const std::string& user, const std::string& assistant);
     void handle_skills_command();
     void handle_decisions_command();
+    void handle_compact_command();
     void enqueue_message(const std::string& text);
     void pump_worker();
     void run_job(std::size_t turn_index, const std::string& goal);
@@ -189,6 +191,8 @@ class ChatApp {
     const ChatMessage* sticky_user_message_candidate() const;
     int user_message_content_y(const ChatMessage& user) const;
     std::string user_time_label_for_turn(const ChatTurn& turn) const;
+    std::string assistant_author_label() const;
+    void apply_assistant_author_labels(TurnView& view) const;
     void refresh_user_time_labels_on_screen();
     void refresh_user_message_chrome();
     void refresh_speech_input_prefs();
@@ -212,6 +216,8 @@ class ChatApp {
     int chat_max_width_cols_ = 0;
     bool message_timestamps_enabled_ = true;
     bool sticky_user_message_enabled_ = true;
+    std::string key_open_theme_picker_ = "Ctrl+T";
+    std::string current_ui_theme_ = "dark";
     int last_chat_scroll_y_ = -1;
     MessageTimeClock message_time_clock_ = MessageTimeClock::Hour24;
     tuinator::Style thinking_style_;
@@ -258,6 +264,8 @@ class ChatApp {
     bool runtime_ready_applied_ = false;
     std::chrono::steady_clock::time_point runtime_ready_at_{};
     std::thread worker_;
+    std::thread compact_thread_;
+    std::atomic<bool> compact_busy_{false};
     std::thread stt_thread_;
     std::atomic<bool> stt_busy_{false};
     std::atomic<bool> worker_busy_{false};
@@ -302,4 +310,11 @@ class ChatApp {
     std::string stt_input_base_;
     bool has_pending_stt_partial_ = false;
     std::string pending_stt_partial_;
+
+    struct PendingCompactUpdate {
+        bool ok = false;
+        std::string error;
+    };
+    bool has_pending_compact_ = false;
+    PendingCompactUpdate pending_compact_{};
 };

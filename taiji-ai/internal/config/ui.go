@@ -22,6 +22,31 @@ type UIConfig struct {
 	MessageTimeClock string `yaml:"message_time_clock,omitempty"`
 	// StickyUserMessage pins a preview of your prompt at the top while scrolling long replies.
 	StickyUserMessage *bool `yaml:"sticky_user_message,omitempty"`
+	// MessageFillBackground fills framed chat bubbles (user + assistant) with a solid panel color.
+	// When false, only the border/outline is drawn on the main chat background.
+	MessageFillBackground *bool `yaml:"message_fill_background,omitempty"`
+	// UserMessageStyle is how outbound user prompts render in the TUI: block, plain, messenger, header,
+	// terminal, log, card, section, or cornered.
+	UserMessageStyle string `yaml:"user_message_style,omitempty"`
+	// UserMessageAlign is auto, left, right, or center for outbound prompts in the TUI.
+	UserMessageAlign string `yaml:"user_message_align,omitempty"`
+	// UserMessageMaxWidthPct caps framed message width as a percent of the chat column (40–100).
+	UserMessageMaxWidthPct int `yaml:"user_message_max_width_pct,omitempty"`
+	// AssistantMessageStyle is how assistant replies render in the TUI (same ids as user_message_style).
+	AssistantMessageStyle string `yaml:"assistant_message_style,omitempty"`
+	AssistantMessageAlign string `yaml:"assistant_message_align,omitempty"`
+	AssistantMessageMaxWidthPct int `yaml:"assistant_message_max_width_pct,omitempty"`
+	// AutoCompactContextPct triggers compaction before a chat run when context usage is at or above this
+	// percent (0 = disabled).
+	AutoCompactContextPct int `yaml:"auto_compact_context_pct,omitempty"`
+	// Keybindings configures global TUI shortcuts (e.g. Ctrl+T).
+	Keybindings UIKeyBindings `yaml:"keybindings,omitempty"`
+}
+
+// UIKeyBindings holds configurable keyboard shortcuts for the TUI.
+type UIKeyBindings struct {
+	// OpenThemePicker opens the fuzzy color-theme picker (default Ctrl+T).
+	OpenThemePicker string `yaml:"open_theme_picker,omitempty"`
 }
 
 // TurnMetricsUIConfig selects which per-turn timing fields appear under assistant replies.
@@ -42,11 +67,22 @@ func DefaultUIConfig() UIConfig {
 	showActions := true
 	messageTimestamps := true
 	stickyUserMessage := true
+	messageFillBackground := true
 	return UIConfig{
-		Theme:               "dark",
-		MessageTimestamps:   &messageTimestamps,
-		MessageTimeClock:    "24h",
-		StickyUserMessage:   &stickyUserMessage,
+		Theme:             "dark",
+		UserMessageStyle:            "messenger",
+		UserMessageAlign:            "auto",
+		UserMessageMaxWidthPct:      80,
+		AssistantMessageStyle:       "messenger",
+		AssistantMessageAlign:       "auto",
+		AssistantMessageMaxWidthPct: 80,
+		MessageTimestamps: &messageTimestamps,
+		MessageTimeClock:  "24h",
+		StickyUserMessage:           &stickyUserMessage,
+		MessageFillBackground:       &messageFillBackground,
+		Keybindings: UIKeyBindings{
+			OpenThemePicker: "Ctrl+T",
+		},
 		TurnMetrics: TurnMetricsUIConfig{
 			Enabled:          &enabled,
 			ShowActions:      &showActions,
@@ -81,9 +117,147 @@ func (c UIConfig) StickyUserMessageOrDefault() bool {
 	return *c.StickyUserMessage
 }
 
+// MessageFillBackgroundOrDefault reports whether chat message panels use a solid fill.
+func (c UIConfig) MessageFillBackgroundOrDefault() bool {
+	if c.MessageFillBackground == nil {
+		return true
+	}
+	return *c.MessageFillBackground
+}
+
+// KeybindingsOrDefault returns UI shortcuts with built-in defaults filled in.
+func (c UIConfig) KeybindingsOrDefault() UIKeyBindings {
+	kb := c.Keybindings
+	if strings.TrimSpace(kb.OpenThemePicker) == "" {
+		kb.OpenThemePicker = "Ctrl+T"
+	}
+	return kb
+}
+
+// NormalizeUIShortcut canonicalizes a shortcut like "ctrl+t" to "Ctrl+T".
+func NormalizeUIShortcut(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	parts := strings.Split(raw, "+")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		switch strings.ToLower(part) {
+		case "ctrl", "control":
+			out = append(out, "Ctrl")
+		case "alt", "option":
+			out = append(out, "Alt")
+		case "shift":
+			out = append(out, "Shift")
+		case "meta", "cmd", "command", "super":
+			out = append(out, "Meta")
+		default:
+			if len(part) == 1 {
+				out = append(out, strings.ToUpper(part))
+			} else {
+				out = append(out, part)
+			}
+		}
+	}
+	return strings.Join(out, "+")
+}
+
 // CornersRoundedOrDefault reports whether framed UI chrome uses rounded box corners.
 func (c UIConfig) CornersRoundedOrDefault() bool {
 	return strings.EqualFold(strings.TrimSpace(c.CornerStyle), "rounded")
+}
+
+// UserMessageStyleOrDefault returns the normalized user message chrome id.
+func (c UIConfig) UserMessageStyleOrDefault() string {
+	return NormalizeUserMessageStyle(c.UserMessageStyle)
+}
+
+// UserMessageAlignOrDefault returns auto, left, right, or center.
+func (c UIConfig) UserMessageAlignOrDefault() string {
+	return NormalizeMessageAlign(c.UserMessageAlign)
+}
+
+// UserMessageMaxWidthPctOrDefault returns 40–100 (default 80).
+func (c UIConfig) UserMessageMaxWidthPctOrDefault() int {
+	return clampMessageWidthPct(c.UserMessageMaxWidthPct)
+}
+
+// AssistantMessageStyleOrDefault returns the normalized assistant message chrome id.
+func (c UIConfig) AssistantMessageStyleOrDefault() string {
+	if strings.TrimSpace(c.AssistantMessageStyle) == "" {
+		return "messenger"
+	}
+	return NormalizeUserMessageStyle(c.AssistantMessageStyle)
+}
+
+// AssistantMessageAlignOrDefault returns auto, left, right, or center.
+func (c UIConfig) AssistantMessageAlignOrDefault() string {
+	return NormalizeMessageAlign(c.AssistantMessageAlign)
+}
+
+// AssistantMessageMaxWidthPctOrDefault returns 40–100 (default 80).
+func (c UIConfig) AssistantMessageMaxWidthPctOrDefault() int {
+	return clampMessageWidthPct(c.AssistantMessageMaxWidthPct)
+}
+
+// NormalizeMessageAlign maps settings values to a supported alignment id.
+func NormalizeMessageAlign(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "left", "l":
+		return "left"
+	case "right", "r":
+		return "right"
+	case "center", "centre", "middle", "c":
+		return "center"
+	default:
+		return "auto"
+	}
+}
+
+func clampMessageWidthPct(pct int) int {
+	if pct <= 0 {
+		return 80
+	}
+	if pct < 40 {
+		return 40
+	}
+	if pct > 100 {
+		return 100
+	}
+	return pct
+}
+
+// NormalizeUserMessageStyle maps settings values to a supported user message style id.
+func NormalizeUserMessageStyle(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "plain", "inline", "text":
+		return "plain"
+	case "messenger", "bubble", "chat":
+		return "messenger"
+	case "header", "header_strip", "title":
+		return "header"
+	case "terminal", "prompt", "cli":
+		return "terminal"
+	case "log":
+		return "log"
+	case "card", "pill", "chip":
+		return "card"
+	case "section", "divider", "rule":
+		return "section"
+	case "cornered", "corners", "corner_box":
+		return "cornered"
+	case "block", "framed", "card_block":
+		return "block"
+	case "":
+		return "messenger"
+	default:
+		return "messenger"
+	}
 }
 
 // MessageTimeClockOrDefault returns "24h" or "12h".

@@ -56,6 +56,10 @@ void ChatTextInput::set_quick_key_handler(QuickKeyHandler handler) {
     quick_key_handler_ = std::move(handler);
 }
 
+void ChatTextInput::set_composer_intercept_key(QuickKeyHandler handler) {
+    composer_intercept_key_ = std::move(handler);
+}
+
 void ChatTextInput::set_chrome_busy(bool busy) {
     if (chrome_busy_ == busy) {
         return;
@@ -102,6 +106,14 @@ void ChatTextInput::layout(tuinator::Rect bounds) {
 }
 
 bool ChatTextInput::handle_event(const tuinator::Event& event) {
+    if (composer_intercept_key_) {
+        if (const auto* key = std::get_if<tuinator::KeyPress>(&event)) {
+            if (is_focused() && composer_intercept_key_(*key)) {
+                note_caret_activity();
+                return true;
+            }
+        }
+    }
     if (quick_key_handler_) {
         if (const auto* key = std::get_if<tuinator::KeyPress>(&event)) {
             if (value().empty() && !is_focused() && quick_key_handler_(*key)) {

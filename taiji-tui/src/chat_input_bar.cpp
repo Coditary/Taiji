@@ -8,13 +8,13 @@
 namespace {
 
 tuinator::Rect mic_local_bounds(const tuinator::Rect& inner_bounds, const tuinator::Size& mic_size) {
-    const int local_x = std::max(1, inner_bounds.width - mic_size.width - 2);
+    const int local_x = std::max(1, inner_bounds.width - mic_size.width - 3);
     const int local_y = std::max(1, inner_bounds.height - 2);
     return {inner_bounds.x + local_x, inner_bounds.y + local_y, mic_size.width, 1};
 }
 
 tuinator::Rect chat_stream_inner_abs(const tuinator::Rect& host_bounds) {
-    const ChatStreamLayout column = chat_stream_layout_for_panel(host_bounds.width);
+    const ChatStreamLayout column = chat_stream_layout_in_widget(host_bounds.width);
     return {host_bounds.x + column.offset_x, host_bounds.y, column.content_width, host_bounds.height};
 }
 
@@ -24,6 +24,16 @@ void ChatInputBar::set_composer(std::unique_ptr<tuinator::Widget> composer) {
     auto column = std::make_unique<CenteredChatColumn>(std::move(composer));
     column->set_apply_top_pad(false);
     column_ = std::move(column);
+    if (on_layout_ && column_ != nullptr) {
+        column_->set_on_layout(on_layout_);
+    }
+}
+
+void ChatInputBar::set_on_layout(std::function<void()> callback) {
+    Widget::set_on_layout(std::move(callback));
+    if (column_ != nullptr) {
+        column_->set_on_layout(on_layout_);
+    }
 }
 
 void ChatInputBar::set_mic(std::unique_ptr<SpeechMicButton> mic) {

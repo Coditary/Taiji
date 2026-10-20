@@ -61,6 +61,22 @@ ChatStreamLayout chat_stream_layout_in_widget(int widget_width) {
     return column;
 }
 
+int chat_bubble_max_cols(int stream_width_cols, int max_width_pct) {
+    if (max_width_pct <= 0) {
+        max_width_pct = kChatBubbleMaxWidthPercent;
+    }
+    if (max_width_pct < 40) {
+        max_width_pct = 40;
+    }
+    if (max_width_pct > 100) {
+        max_width_pct = 100;
+    }
+    if (stream_width_cols <= 0) {
+        return std::max(12, kChatStreamMaxCols * max_width_pct / 100);
+    }
+    return std::max(12, stream_width_cols * max_width_pct / 100);
+}
+
 int chat_stream_row_preferred_width(int widget_bounds_width) {
     if (g_chat_stream_panel_width > 0) {
         return g_chat_stream_panel_width;
@@ -74,6 +90,26 @@ int chat_stream_row_preferred_width(int widget_bounds_width) {
 CenteredChatColumn::CenteredChatColumn(std::unique_ptr<tuinator::Widget> content) : content_(std::move(content)) {
     if (content_ != nullptr) {
         attach_child_widget(content_.get());
+        if (on_layout_) {
+            content_->set_on_layout(on_layout_);
+        }
+        if (on_dirty_) {
+            content_->set_on_dirty(on_dirty_);
+        }
+    }
+}
+
+void CenteredChatColumn::set_on_layout(std::function<void()> callback) {
+    Widget::set_on_layout(std::move(callback));
+    if (content_ != nullptr) {
+        content_->set_on_layout(on_layout_);
+    }
+}
+
+void CenteredChatColumn::set_on_dirty(std::function<void(tuinator::Rect)> callback) {
+    Widget::set_on_dirty(std::move(callback));
+    if (content_ != nullptr) {
+        content_->set_on_dirty(on_dirty_);
     }
 }
 
@@ -88,11 +124,12 @@ void CenteredChatColumn::set_max_content_width(int cols) {
 
 tuinator::Size CenteredChatColumn::preferred_size() const {
     const int panel_w = last_panel_width_ > 0 ? last_panel_width_ : kChatStreamMaxCols;
+    const int top_pad = apply_top_pad_ ? kChatStreamPadTop : 0;
     if (content_ == nullptr) {
-        return {panel_w, 1 + kChatStreamPadTop};
+        return {panel_w, 1 + top_pad};
     }
     const tuinator::Size child = content_->preferred_size();
-    return {panel_w, child.height + kChatStreamPadTop};
+    return {panel_w, child.height + top_pad};
 }
 
 void CenteredChatColumn::layout(tuinator::Rect bounds) {
@@ -116,7 +153,7 @@ void CenteredChatColumn::paint(tuinator::PaintContext& ctx) const {
     if (content_ == nullptr) {
         return;
     }
-    const ChatStreamLayout column = chat_stream_layout_for_panel(bounds_.width);
+    const ChatStreamLayout column = chat_stream_layout_in_widget(bounds_.width);
     const tuinator::Rect local{column.offset_x, 0, column.content_width, bounds_.height};
     ctx.with_clip(local, [&](tuinator::PaintContext& child_ctx) { content_->paint(child_ctx); });
 }
