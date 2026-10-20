@@ -1,0 +1,51 @@
+# Taiji TUI — Rosé Pine
+
+@theme {
+  glyph-set: unicode;
+
+  main-bg: #191724;
+  sidebar-bg: #1f1d2e;
+  secondary-text: #6e6a86;
+  section-heading: #e0def4;
+  session-active-bg: #26233a;
+  session-active-bar: #c4a7e7;
+  badge-bg: #26233a;
+  quick-action-pill-bg: #21202e;
+  quick-action-code: #9ccfd8;
+  quick-action-test: #31748f;
+  quick-action-git: #f6c177;
+  logo-shadow: #403d52;
+  logo-top: #c4a7e7;
+  logo-mid: #ebbcba;
+  logo-bottom: #907aa9;
+  status-ok: #31748f;
+  status-warn: #f6c177;
+  status-idle: #6e6a86;
+  git-branch-accent: #9ccfd8;
+  input-chrome-fill: #21202e;
+
+  text: #e0def4;
+  heading: #e0def4;
+  muted: #6e6a86;
+  accent: #c4a7e7;
+  label: #e0def4;
+  button: white;
+  button-focused-fg: black bold;
+  button-focused-bg: #c4a7e7;
+  border: dim #907aa9;
+  input-fg: #e0def4;
+  input-bg: #21202e;
+  thinking-fg: #f6c177 bold;
+  user-bubble: #c4a7e7;
+  scrollbar-track: #26233a;
+  scrollbar-thumb-fg: #c4a7e7;
+  scrollbar-thumb-bg: #403d52;
+}
+
+* { color: $text; }
+Label { color: $label; }
+TextInput { color: $input-fg; background: $input-bg; }
+TextInput:focused { color: $input-fg; background: $input-bg; }
+Button:focused { color: $button-focused-fg; background: $button-focused-bg; }
+Panel { border-color: $border; }
+SplitPane { divider-color: dim #6e6a86; }

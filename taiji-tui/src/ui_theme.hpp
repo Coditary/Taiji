@@ -1,5 +1,6 @@
 #pragma once
 
+#include <tuinator/core/application.hpp>
 #include <tuinator/render/border_style.hpp>
 #include <tuinator/render/glyphs.hpp>
 #include <tuinator/render/paint_context.hpp>
@@ -8,29 +9,24 @@
 #include <tuinator/widgets/display/markdown_view.hpp>
 #include <tuinator/widgets/widget.hpp>
 
+#include <filesystem>
 #include <string>
+#include <vector>
 
-// Tokyo Night / Catppuccin-inspired surfaces (TrueColor).
-constexpr tuinator::Rgb kUiMainBackground{26, 27, 38};       // #1a1b26 main stage
-constexpr tuinator::Rgb kUiSidebarBackground{22, 22, 30};    // #16161e sidebars + footer
-constexpr tuinator::Rgb kUiSecondaryText{86, 95, 137};
-constexpr tuinator::Rgb kUiSectionHeading{169, 177, 214};    // #a9b1d6
-constexpr tuinator::Rgb kUiSessionActiveBackground{45, 36, 59}; // #2d243b
-constexpr tuinator::Rgb kUiSessionActiveBar{203, 166, 247};   // #cba6f7
-constexpr tuinator::Rgb kUiBadgeBackground{41, 46, 66};       // #292e42
-constexpr tuinator::Rgb kUiQuickActionPillBg{36, 39, 58};     // #24273a
-constexpr tuinator::Rgb kUiQuickActionCode{137, 180, 250};   // #89b4fa
-constexpr tuinator::Rgb kUiQuickActionTest{148, 226, 213};   // #94e2d5
-constexpr tuinator::Rgb kUiQuickActionGit{250, 179, 135};    // #fab387
-constexpr tuinator::Rgb kUiLogoShadow{69, 71, 90};            // #45475a
-constexpr tuinator::Rgb kUiLogoTop{180, 190, 254};           // #b4befe
-constexpr tuinator::Rgb kUiLogoMid{203, 166, 247};           // #cba6f7
-constexpr tuinator::Rgb kUiLogoBottom{165, 140, 210};
-constexpr tuinator::Rgb kUiStatusOk{115, 218, 202};          // #73daca
-constexpr tuinator::Rgb kUiStatusWarn{224, 175, 104};        // #e0af68
-constexpr tuinator::Rgb kUiStatusIdle{86, 95, 137};
-constexpr tuinator::Rgb kUiGitBranchAccent{125, 207, 255};
-constexpr tuinator::Rgb kUiInputChromeFill{42, 38, 58};
+/// `~/.config/taiji/themes` (or `$XDG_CONFIG_HOME/taiji/themes`).
+std::filesystem::path ui_user_themes_directory(bool ensure_exists = false);
+
+/// Built-in ids plus `*.theme` files in the user themes directory (sorted, unique).
+std::vector<std::string> ui_list_theme_ids();
+
+bool ui_is_bundled_theme(const std::string& theme_id);
+std::string ui_theme_display_name(const std::string& theme_id);
+
+/// Load stylesheet (user override → dev tree → embedded default), apply palette + Tuinator theme.
+tuinator::Theme ui_apply_stylesheet(tuinator::Application& app, const std::string& theme_id);
+
+/// Last theme produced by `ui_apply_stylesheet` (use in paint for overlays that must track live preview).
+const tuinator::Theme& ui_app_theme();
 
 inline constexpr const char kDefaultFooterShortcuts[] =
     "Tab: focus · Shift+Enter: newline · Enter: send · Esc: stop";
@@ -46,6 +42,51 @@ inline constexpr const char kNfTest[] = u8"󰙨";
 inline constexpr const char kNfGit[] = u8"󰊢";
 inline constexpr const char kNfAdd[] = u8"󰐕";
 inline constexpr const char kNfFolder[] = u8"󰉋";
+
+// Semantic colors (from the active stylesheet @theme block).
+tuinator::Rgb ui_main_bg();
+tuinator::Rgb ui_sidebar_bg();
+tuinator::Rgb ui_secondary_text();
+tuinator::Rgb ui_section_heading();
+tuinator::Rgb ui_session_active_bg();
+tuinator::Rgb ui_session_active_bar();
+tuinator::Rgb ui_badge_bg();
+tuinator::Rgb ui_quick_action_pill_bg();
+tuinator::Rgb ui_quick_action_code();
+tuinator::Rgb ui_quick_action_test();
+tuinator::Rgb ui_quick_action_git();
+tuinator::Rgb ui_logo_shadow();
+tuinator::Rgb ui_logo_top();
+tuinator::Rgb ui_logo_mid();
+tuinator::Rgb ui_logo_bottom();
+tuinator::Rgb ui_status_ok();
+tuinator::Rgb ui_status_warn();
+tuinator::Rgb ui_status_idle();
+tuinator::Rgb ui_git_branch_accent();
+tuinator::Rgb ui_input_chrome_fill();
+tuinator::Rgb ui_text();
+tuinator::Rgb ui_accent();
+tuinator::Rgb ui_overlay_bg();
+tuinator::Rgb ui_list_active_bg();
+tuinator::Rgb ui_list_active_fg();
+tuinator::Rgb ui_border_chrome();
+tuinator::Rgb ui_border_chrome_alt();
+tuinator::Rgb ui_danger();
+tuinator::Rgb ui_toggle_off();
+tuinator::Rgb ui_caret_fg();
+tuinator::Rgb ui_caret_bg();
+tuinator::Rgb ui_emphasis();
+tuinator::Rgb ui_user_bubble();
+
+bool ui_is_palette_surface(tuinator::Rgb bg);
+
+tuinator::Style ui_accent_style();
+tuinator::Style ui_accent_on_main();
+tuinator::Style ui_accent_on_sidebar();
+void ui_paint_vertical_divider(tuinator::PaintContext& ctx, tuinator::Rect local_divider, tuinator::Rgb background);
+
+tuinator::Style ui_overlay_panel_style();
+tuinator::Style ui_list_selection_style(bool selected);
 
 struct GitWorkspaceStatus {
     bool valid = false;
@@ -66,10 +107,15 @@ struct UiUserBubbleInsets {
 };
 
 UiUserBubbleInsets ui_user_bubble_insets();
-/// User message bubble; square uses heavy frame (┏), rounded uses ╭╮ against chat background.
-void ui_paint_user_bubble_panel(tuinator::PaintContext& ctx, tuinator::Rect rect, tuinator::Rgb fill);
+struct UiUserBubblePanelOptions {
+    bool flush_top = false;
+};
 
-void tune_chat_theme(tuinator::Theme& theme);
+void ui_paint_user_bubble_panel(tuinator::PaintContext& ctx, tuinator::Rect rect, tuinator::Rgb fill,
+                               UiUserBubblePanelOptions options = {});
+
+tuinator::Style ui_thinking_style();
+tuinator::Style ui_composer_input_style();
 tuinator::MarkdownStyleSet ui_chat_markdown_styles(const tuinator::Theme& theme);
 
 tuinator::Style ui_sidebar_panel_style();
@@ -83,6 +129,9 @@ tuinator::Style ui_resolve_sidebar_text(const tuinator::PaintContext& ctx, const
                                         tuinator::Style style);
 tuinator::Style ui_resolve_main_text(tuinator::Style style);
 tuinator::Style ui_resolve_footer_text(tuinator::Style style);
+
+tuinator::ScrollbarOptions ui_chat_scrollbar_options();
+void ui_paint_vertical_scrollbar_track_column(tuinator::PaintContext& ctx, int x, int y, int height);
 
 GitWorkspaceStatus read_git_workspace_status(const std::string& repo_path);
 std::string shell_quote_single(const std::string& text);

@@ -52,6 +52,7 @@ type settingsPayload struct {
 	ReduceMotion            bool   `json:"reduce_motion"`
 	MessageTimestamps       bool   `json:"message_timestamps"`
 	MessageTimeClock        string `json:"message_time_clock"`
+	StickyUserMessage       bool   `json:"sticky_user_message"`
 
 	MCPAvailable []string `json:"mcp_available"`
 	MCPEnabled   []string `json:"mcp_enabled"`
@@ -292,6 +293,7 @@ func fillAppearancePrefs(h *runtimeHandle, out *settingsPayload) {
 	}
 	out.MessageTimestamps = ui.MessageTimestampsOrDefault()
 	out.MessageTimeClock = ui.MessageTimeClockOrDefault()
+	out.StickyUserMessage = ui.StickyUserMessageOrDefault()
 }
 
 func applyAppearancePrefs(cfg *taijicfg.Config, payload settingsPayload) {
@@ -337,6 +339,8 @@ func applyAppearancePrefs(cfg *taijicfg.Config, payload settingsPayload) {
 	ts := payload.MessageTimestamps
 	cfg.UI.MessageTimestamps = &ts
 	cfg.UI.MessageTimeClock = taijicfg.UIConfig{MessageTimeClock: payload.MessageTimeClock}.MessageTimeClockOrDefault()
+	sticky := payload.StickyUserMessage
+	cfg.UI.StickyUserMessage = &sticky
 }
 
 func fillModelCatalogHints(h *runtimeHandle, providerID, model, modelDefault string, out *settingsPayload) {

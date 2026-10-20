@@ -59,6 +59,7 @@ Providers are configured in .taiji/config.yaml — no code changes required to a
 	)
 	root.AddCommand(
 		newTuiCmd(),
+		newThemeCmd(),
 		newRunCmd(app),
 		newChatCmd(app),
 		newServeCmd(app),

@@ -49,6 +49,6 @@ void ThinkingIndicator::paint(tuinator::PaintContext& ctx) const {
     if (!active_) {
         return;
     }
-    ui_fill_widget_bounds(ctx, *this, kUiMainBackground);
+    ui_fill_widget_bounds(ctx, *this, ui_main_bg());
     tuinator::HBox::paint(ctx);
 }

@@ -1,0 +1,51 @@
+# Taiji TUI — Gruvbox Dark
+
+@theme {
+  glyph-set: unicode;
+
+  main-bg: #282828;
+  sidebar-bg: #1d2021;
+  secondary-text: #928374;
+  section-heading: #ebdbb2;
+  session-active-bg: #3c3836;
+  session-active-bar: #fe8019;
+  badge-bg: #3c3836;
+  quick-action-pill-bg: #32302f;
+  quick-action-code: #83a598;
+  quick-action-test: #8ec07c;
+  quick-action-git: #d79921;
+  logo-shadow: #504945;
+  logo-top: #fabd2f;
+  logo-mid: #fe8019;
+  logo-bottom: #d65d0e;
+  status-ok: #b8bb26;
+  status-warn: #fabd2f;
+  status-idle: #928374;
+  git-branch-accent: #83a598;
+  input-chrome-fill: #32302f;
+
+  text: #ebdbb2;
+  heading: #ebdbb2;
+  muted: #928374;
+  accent: #d3869b;
+  label: #ebdbb2;
+  button: white;
+  button-focused-fg: black bold;
+  button-focused-bg: #fe8019;
+  border: dim #a89984;
+  input-fg: #ebdbb2;
+  input-bg: #32302f;
+  thinking-fg: #fe8019 bold;
+  user-bubble: #d3869b;
+  scrollbar-track: #3c3836;
+  scrollbar-thumb-fg: #fe8019;
+  scrollbar-thumb-bg: #504945;
+}
+
+* { color: $text; }
+Label { color: $label; }
+TextInput { color: $input-fg; background: $input-bg; }
+TextInput:focused { color: $input-fg; background: $input-bg; }
+Button:focused { color: $button-focused-fg; background: $button-focused-bg; }
+Panel { border-color: $border; }
+SplitPane { divider-color: dim #a89984; }

@@ -1,0 +1,51 @@
+# Taiji TUI — Dracula
+
+@theme {
+  glyph-set: unicode;
+
+  main-bg: #282a36;
+  sidebar-bg: #21222c;
+  secondary-text: #6272a4;
+  section-heading: #f8f8f2;
+  session-active-bg: #343746;
+  session-active-bar: #bd93f9;
+  badge-bg: #343746;
+  quick-action-pill-bg: #2d2f3d;
+  quick-action-code: #8be9fd;
+  quick-action-test: #50fa7b;
+  quick-action-git: #ffb86c;
+  logo-shadow: #44475a;
+  logo-top: #bd93f9;
+  logo-mid: #ff79c6;
+  logo-bottom: #8be9fd;
+  status-ok: #50fa7b;
+  status-warn: #f1fa8c;
+  status-idle: #6272a4;
+  git-branch-accent: #8be9fd;
+  input-chrome-fill: #2d2f3d;
+
+  text: #f8f8f2;
+  heading: #f8f8f2;
+  muted: #6272a4;
+  accent: #bd93f9;
+  label: #f8f8f2;
+  button: white;
+  button-focused-fg: black bold;
+  button-focused-bg: #bd93f9;
+  border: dim #bd93f9;
+  input-fg: #f8f8f2;
+  input-bg: #2d2f3d;
+  thinking-fg: #ffb86c bold;
+  user-bubble: #bd93f9;
+  scrollbar-track: #343746;
+  scrollbar-thumb-fg: #bd93f9;
+  scrollbar-thumb-bg: #44475a;
+}
+
+* { color: $text; }
+Label { color: $label; }
+TextInput { color: $input-fg; background: $input-bg; }
+TextInput:focused { color: $input-fg; background: $input-bg; }
+Button:focused { color: $button-focused-fg; background: $button-focused-bg; }
+Panel { border-color: $border; }
+SplitPane { divider-color: dim #6272a4; }

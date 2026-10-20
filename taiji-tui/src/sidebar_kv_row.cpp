@@ -78,18 +78,22 @@ void SidebarKvRow::paint(tuinator::PaintContext& ctx) const {
     paint_bounds_background(ctx, ui_sidebar_panel_style());
 
     const int pad = kUiPadX;
-    tuinator::Style title_style = theme_.heading;
+    tuinator::Style title_style;
     title_style.bold = true;
+    title_style.foreground_rgb = ui_section_heading();
     title_style = ui_resolve_sidebar_text(ctx, *this, title_style);
     tuinator::Style muted = ui_resolve_sidebar_text(ctx, *this, ui_secondary_style(theme_));
-    tuinator::Style label = ui_resolve_sidebar_text(ctx, *this, theme_.label);
+    tuinator::Style label = theme_.label;
+    label.background_rgb.reset();
+    label.foreground_rgb = ui_text();
+    label = ui_resolve_sidebar_text(ctx, *this, label);
 
     if (is_collapsed()) {
         ctx.canvas.draw_text({pad, 0}, title_, title_style);
         const std::string value = empty_value_.empty() ? "—" : empty_value_;
         tuinator::Style dot_style = muted;
         const bool inactive = value == "none" || value == "inactive" || value == "—";
-        dot_style.foreground_rgb = inactive ? kUiStatusIdle : kUiStatusOk;
+        dot_style.foreground_rgb = inactive ? ui_status_idle() : ui_status_ok();
         dot_style = ui_resolve_sidebar_text(ctx, *this, dot_style);
         const std::string dot = inactive ? "○" : "●";
         const int dot_w = tuinator::text_display_width(dot);

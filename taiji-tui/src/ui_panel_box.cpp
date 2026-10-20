@@ -21,13 +21,13 @@ void paint_box_children(tuinator::PaintContext& ctx, const tuinator::Widget& box
 MainPanelVBox::MainPanelVBox(tuinator::BoxOptions options) : VBox(options) {}
 
 void MainPanelVBox::paint(tuinator::PaintContext& ctx) const {
-    ui_fill_widget_bounds(ctx, *this, kUiMainBackground);
+    ui_fill_widget_bounds(ctx, *this, ui_main_bg());
     paint_box_children(ctx, *this);
 }
 
 SidebarPanelVBox::SidebarPanelVBox(tuinator::BoxOptions options) : VBox(options) {}
 
 void SidebarPanelVBox::paint(tuinator::PaintContext& ctx) const {
-    ui_fill_widget_bounds(ctx, *this, kUiSidebarBackground);
+    ui_fill_widget_bounds(ctx, *this, ui_sidebar_bg());
     paint_box_children(ctx, *this);
 }

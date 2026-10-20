@@ -112,7 +112,7 @@ void CenteredChatColumn::paint(tuinator::PaintContext& ctx) const {
     if (bounds_.width <= 0 || bounds_.height <= 0) {
         return;
     }
-    ui_fill_widget_bounds(ctx, *this, kUiMainBackground);
+    ui_fill_widget_bounds(ctx, *this, ui_main_bg());
     if (content_ == nullptr) {
         return;
     }

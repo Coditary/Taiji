@@ -183,18 +183,19 @@ void ComposerPalette::paint(tuinator::PaintContext& ctx) const {
 
     const tuinator::BorderGlyphs border = tuinator::unicode_rounded_border_glyphs();
     tuinator::Style frame = theme_.label;
-    frame.background_rgb = kUiInputChromeFill;
-    frame.foreground_rgb = tuinator::rgb(130, 120, 170);
+    frame.background_rgb = ui_input_chrome_fill();
+    frame.foreground_rgb = ui_border_chrome();
     ctx.canvas.draw_box(panel, frame, border);
 
     tuinator::Style search = ui_resolve_main_text(ui_secondary_style(theme_));
-    search.background_rgb = kUiInputChromeFill;
+    search.background_rgb = ui_input_chrome_fill();
     tuinator::Style row_style = ui_resolve_main_text(theme_.label);
-    row_style.background_rgb = kUiInputChromeFill;
+    row_style.background_rgb = ui_input_chrome_fill();
     tuinator::Style row_active = row_style;
-    row_active.background_rgb = tuinator::rgb(55, 48, 78);
+    row_active.background_rgb = ui_list_active_bg();
+    row_active.foreground_rgb = ui_list_active_fg();
     tuinator::Style hint = ui_resolve_main_text(ui_secondary_style(theme_));
-    hint.background_rgb = kUiInputChromeFill;
+    hint.background_rgb = ui_input_chrome_fill();
 
     int y = panel.y + 1;
     const int inner_x = panel.x + 1;

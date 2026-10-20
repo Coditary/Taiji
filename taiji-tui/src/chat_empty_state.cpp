@@ -32,13 +32,13 @@ constexpr QuickAction kQuickActions[] = {
 tuinator::Rgb quick_action_icon_color(std::size_t index) {
     switch (index) {
     case 0:
-        return kUiQuickActionCode;
+        return ui_quick_action_code();
     case 1:
-        return kUiQuickActionTest;
+        return ui_quick_action_test();
     case 2:
-        return kUiQuickActionGit;
+        return ui_quick_action_git();
     default:
-        return kUiQuickActionCode;
+        return ui_quick_action_code();
     }
 }
 
@@ -49,7 +49,7 @@ void paint_quick_action_pill(tuinator::PaintContext& ctx, const tuinator::Widget
     }
 
     tuinator::Style pill_bg;
-    pill_bg.background_rgb = kUiQuickActionPillBg;
+    pill_bg.background_rgb = ui_quick_action_pill_bg();
     ctx.canvas.fill_rect({x, y, width, 1}, ' ', pill_bg);
 
     tuinator::Style body = ui_resolve_main_text(theme.label);
@@ -83,13 +83,13 @@ void paint_git_status(tuinator::PaintContext& ctx, const tuinator::Widget& widge
     }
 
     tuinator::Style icon = ui_resolve_main_text(theme.label);
-    icon.foreground_rgb = kUiGitBranchAccent;
+    icon.foreground_rgb = ui_git_branch_accent();
     tuinator::Style branch = icon;
     branch.bold = false;
-    branch.foreground_rgb = kUiGitBranchAccent;
+    branch.foreground_rgb = ui_git_branch_accent();
     tuinator::Style sep = ui_resolve_main_text(ui_secondary_style(theme));
     tuinator::Style changes = ui_resolve_main_text(theme.label);
-    changes.foreground_rgb = kUiStatusWarn;
+    changes.foreground_rgb = ui_status_warn();
 
     int cursor = x;
     ctx.canvas.draw_text({cursor, y}, kNfGitBranch, icon);

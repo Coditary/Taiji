@@ -31,7 +31,7 @@ void SidebarDivider::paint(tuinator::PaintContext& ctx) const {
         line += dash;
     }
     tuinator::Style line_style = ui_secondary_style(theme_);
-    line_style.background_rgb = kUiSidebarBackground;
+    line_style.background_rgb = ui_sidebar_bg();
     line_style.dim = true;
     ctx.canvas.draw_text({pad, 0}, line, ui_resolve_sidebar_text(ctx, *this, line_style));
 }

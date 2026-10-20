@@ -1,0 +1,74 @@
+# Taiji TUI — Tokyo Night (default id: dark)
+
+@theme {
+  glyph-set: unicode;
+
+  main-bg: #1a1b26;
+  sidebar-bg: #16161e;
+  secondary-text: #565f89;
+  section-heading: #a9b1d6;
+  session-active-bg: #2d243b;
+  session-active-bar: #cba6f7;
+  badge-bg: #292e42;
+  quick-action-pill-bg: #24273a;
+  quick-action-code: #89b4fa;
+  quick-action-test: #94e2d5;
+  quick-action-git: #fab387;
+  logo-shadow: #45475a;
+  logo-top: #b4befe;
+  logo-mid: #cba6f7;
+  logo-bottom: #a58cd2;
+  status-ok: #73daca;
+  status-warn: #e0af68;
+  status-idle: #565f89;
+  git-branch-accent: #7dcfff;
+  input-chrome-fill: #2a263a;
+
+  text: #c0c3d7;
+  heading: #a9b1d6;
+  muted: #565f89;
+  accent: #bb9af7;
+  label: #c0c3d7;
+  button: white;
+  button-focused-fg: black bold;
+  button-focused-bg: cyan;
+  border: dim cyan;
+  input-fg: #e1dcf0;
+  input-bg: #2a263a;
+  thinking-fg: #ff8c40 bold;
+  user-bubble: #bb9af7;
+  scrollbar-track: #3a344a;
+  scrollbar-thumb-fg: #bca8f5;
+  scrollbar-thumb-bg: #4e4468;
+}
+
+* {
+  color: $text;
+}
+
+Label {
+  color: $label;
+}
+
+TextInput {
+  color: $input-fg;
+  background: $input-bg;
+}
+
+TextInput:focused {
+  color: $input-fg;
+  background: $input-bg;
+}
+
+Button:focused {
+  color: $button-focused-fg;
+  background: $button-focused-bg;
+}
+
+Panel {
+  border-color: $border;
+}
+
+SplitPane {
+  divider-color: dim white;
+}

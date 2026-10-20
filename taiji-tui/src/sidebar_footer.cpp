@@ -30,19 +30,17 @@ void SidebarFooter::paint(tuinator::PaintContext& ctx) const {
     paint_bounds_background(ctx, ui_sidebar_panel_style());
 
     const int pad = kUiPadX;
-    tuinator::Style settings = theme_.accent;
+    tuinator::Style settings = ui_accent_on_sidebar();
     if (settings_hover_) {
         settings.bold = true;
     }
-    settings.background_rgb = kUiSidebarBackground;
-    settings = ui_resolve_sidebar_text(ctx, *this, settings);
 
     tuinator::Style version = ui_secondary_style(theme_);
-    version.background_rgb = kUiSidebarBackground;
+    version.background_rgb = ui_sidebar_bg();
     version = ui_resolve_sidebar_text(ctx, *this, version);
 
     tuinator::Style sep = ui_secondary_style(theme_);
-    sep.background_rgb = kUiSidebarBackground;
+    sep.background_rgb = ui_sidebar_bg();
     sep = ui_resolve_sidebar_text(ctx, *this, sep);
 
     const std::string settings_label = std::string(kNfSettings) + " Settings";

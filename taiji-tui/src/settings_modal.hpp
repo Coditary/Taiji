@@ -76,6 +76,7 @@ class SettingsModal : public tuinator::Widget {
         bool reduce_motion = false;
         bool message_timestamps = true;
         std::string message_time_clock = "24h";
+        bool sticky_user_message = true;
         bool stt_enabled = true;
         std::string stt_driver;
         std::vector<std::string> stt_driver_options;
@@ -198,10 +199,12 @@ class SettingsModal : public tuinator::Widget {
     std::string model_display_text(const std::string& model) const;
     std::string current_model_id() const;
     void toggle_scope();
-    enum class FuzzyPickerMode { Model, Provider };
+    enum class FuzzyPickerMode { Model, Provider, Theme };
 
     void open_model_fuzzy();
     void open_provider_fuzzy(bool project_scope);
+    void open_theme_fuzzy();
+    void preview_theme_fuzzy_selection();
     void cycle_provider_row(int row, int direction);
     void rebuild_fuzzy_filter();
     FuzzyOverlayLayout fuzzy_overlay_layout(const PanelRect& panel) const;
@@ -265,6 +268,7 @@ class SettingsModal : public tuinator::Widget {
     bool hit_model_row_help(tuinator::Point local) const;
     bool fuzzy_open_ = false;
     FuzzyPickerMode fuzzy_picker_mode_ = FuzzyPickerMode::Model;
+    std::string fuzzy_theme_revert_id_;
     bool fuzzy_provider_project_ = false;
     std::vector<FuzzyEntry> fuzzy_entries_;
     std::vector<int> fuzzy_filtered_;

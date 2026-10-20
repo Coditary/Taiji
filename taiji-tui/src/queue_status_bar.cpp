@@ -113,18 +113,19 @@ void QueueStatusBar::paint(tuinator::PaintContext& ctx) const {
 
     const std::string text = display_text();
     if (!text.empty()) {
-        tuinator::Style line = ui_resolve_main_text(theme_.accent);
+        tuinator::Style line = ui_accent_on_main();
         ctx.canvas.draw_text({x0, 0}, text, line);
     }
 
-    tuinator::Style promote_style = ui_resolve_main_text(theme_.accent);
+    tuinator::Style promote_style = ui_accent_on_main();
     promote_style.bold = true;
     const int delete_col = x0 + std::max(0, inner_w - tuinator::text_display_width(kDeleteGlyph));
     const int promote_col =
         delete_col - kGapCols - tuinator::text_display_width(kPromoteGlyph);
     ctx.canvas.draw_text({promote_col, 0}, kPromoteGlyph, promote_style);
 
-    tuinator::Style delete_style = ui_resolve_main_text(theme_.danger);
+    tuinator::Style delete_style = ui_accent_on_main();
+    delete_style.foreground_rgb = ui_danger();
     delete_style.bold = true;
     ctx.canvas.draw_text({delete_col, 0}, kDeleteGlyph, delete_style);
 }

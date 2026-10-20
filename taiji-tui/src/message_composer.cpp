@@ -13,12 +13,6 @@
 
 namespace {
 
-constexpr tuinator::Rgb kChipMode{203, 166, 247};
-constexpr tuinator::Rgb kChipFile{137, 180, 250};
-constexpr tuinator::Rgb kChipGit{250, 179, 135};
-constexpr tuinator::Rgb kChipClip{148, 226, 213};
-constexpr tuinator::Rgb kChipSkill{235, 200, 120};
-
 void replace_agent_mode_chip(std::vector<ComposerChip>& chips, ComposerChip chip) {
     chips.erase(std::remove_if(chips.begin(), chips.end(),
                                [](const ComposerChip& c) { return c.kind == ComposerChipKind::AgentMode; }),
@@ -33,10 +27,6 @@ MessageComposer::MessageComposer(tuinator::TextInputOptions input_options, tuina
     : palette_(theme), theme_(std::move(theme)) {
     input_options.prompt = "  ";
     input_ = std::make_unique<ChatTextInput>(input_options, style, focused_style);
-    input_->set_on_change([this](const std::string& value) {
-        sync_trigger_from_input();
-        mark_dirty();
-    });
     input_->set_on_submit([this](const std::string& value) {
         if (palette_.is_open()) {
             return;
@@ -66,6 +56,18 @@ void MessageComposer::set_host_context(HostContextProvider provider) {
 
 void MessageComposer::set_on_palette_open_changed(std::function<void(bool)> handler) {
     on_palette_open_changed_ = std::move(handler);
+}
+
+void MessageComposer::sync_field_styles(tuinator::Style normal, tuinator::Style focused) {
+    if (input_ != nullptr) {
+        input_->sync_field_styles(std::move(normal), std::move(focused));
+        input_->sync_frame_border_style();
+    }
+}
+
+void MessageComposer::notify_input_changed(const std::string& /*value*/) {
+    sync_trigger_from_input();
+    mark_dirty();
 }
 
 void MessageComposer::clear_after_send() {
@@ -148,8 +150,8 @@ void MessageComposer::paint_plus_button(tuinator::PaintContext& ctx, tuinator::R
         return;
     }
     tuinator::Style style;
-    style.background_rgb = kUiInputChromeFill;
-    style.foreground_rgb = palette_.is_open() ? tuinator::rgb(240, 120, 120) : tuinator::rgb(187, 154, 247);
+    style.background_rgb = ui_input_chrome_fill();
+    style.foreground_rgb = palette_.is_open() ? ui_danger() : ui_accent();
     style.bold = true;
     const std::string glyph = palette_.is_open() ? "×" : std::string(kNfAdd);
     ctx.canvas.fill_rect(area, ' ', style);
@@ -161,14 +163,14 @@ void MessageComposer::paint_chips(tuinator::PaintContext& ctx, tuinator::Rect ar
         return;
     }
     tuinator::Style bg;
-    bg.background_rgb = kUiMainBackground;
+    bg.background_rgb = ui_main_bg();
     ctx.canvas.fill_rect(area, ' ', bg);
 
     int x = area.x + 1;
     for (std::size_t i = 0; i < chips_.size(); ++i) {
         const ComposerChip& chip = chips_[i];
         tuinator::Style pill = ui_resolve_main_text(theme_.label);
-        pill.background_rgb = kUiBadgeBackground;
+        pill.background_rgb = ui_badge_bg();
         pill.foreground_rgb = chip.color;
         std::string text = " " + chip.label + " × ";
         const int w = tuinator::text_display_width(text);
@@ -189,7 +191,7 @@ void MessageComposer::paint(tuinator::PaintContext& ctx) const {
     }
     if (input_bounds_.width > 0 && input_bounds_.height > 0) {
         tuinator::Style chrome_fill;
-        chrome_fill.background_rgb = kUiInputChromeFill;
+        chrome_fill.background_rgb = ui_input_chrome_fill();
         ctx.canvas.fill_rect(input_bounds_, ' ', chrome_fill);
     }
     if (input_ != nullptr) {
@@ -389,46 +391,46 @@ void MessageComposer::rebuild_palette_rows(const std::string& filter) {
 
 void MessageComposer::handle_palette_select(const std::string& row_id) {
     if (row_id == "mode.plan") {
-        replace_agent_mode_chip(chips_, {ComposerChipKind::AgentMode, "plan", "Plan", "", kChipMode});
+        replace_agent_mode_chip(chips_, {ComposerChipKind::AgentMode, "plan", "Plan", "", ui_accent()});
     } else if (row_id == "mode.debug") {
-        replace_agent_mode_chip(chips_, {ComposerChipKind::AgentMode, "debug", "Debug", "", kChipMode});
+        replace_agent_mode_chip(chips_, {ComposerChipKind::AgentMode, "debug", "Debug", "", ui_accent()});
     } else if (row_id == "mode.ask") {
-        replace_agent_mode_chip(chips_, {ComposerChipKind::AgentMode, "ask", "Ask", "", kChipMode});
+        replace_agent_mode_chip(chips_, {ComposerChipKind::AgentMode, "ask", "Ask", "", ui_accent()});
     } else if (row_id.rfind("skill.", 0) == 0) {
         const std::string name = row_id.substr(6);
-        add_chip({ComposerChipKind::Skill, name, name, "", kChipSkill});
+        add_chip({ComposerChipKind::Skill, name, name, "", ui_status_warn()});
     } else if (row_id.rfind("file.", 0) == 0) {
         const std::string path = row_id.substr(5);
         const std::string snippet = read_file_snippet(path);
-        add_chip({ComposerChipKind::File, path, path, snippet, kChipFile});
+        add_chip({ComposerChipKind::File, path, path, snippet, ui_quick_action_code()});
     } else if (row_id == "ctx.git") {
         const std::string diff = capture_git_diff(ctx_cache_.work_dir);
-        add_chip({ComposerChipKind::GitDiff, "git", "Git diff", diff, kChipGit});
+        add_chip({ComposerChipKind::GitDiff, "git", "Git diff", diff, ui_quick_action_git()});
     } else if (row_id == "ctx.clipboard") {
         const std::string clip = read_clipboard_text();
         std::string label = "Clipboard";
         if (!clip.empty()) {
             label = "Clipboard text";
         }
-        add_chip({ComposerChipKind::Clipboard, "clip", label, clip, kChipClip});
+        add_chip({ComposerChipKind::Clipboard, "clip", label, clip, ui_quick_action_test()});
     } else if (row_id == "ctx.terminal") {
         const std::string log = read_last_terminal_capture();
-        add_chip({ComposerChipKind::Terminal, "build", "Build log", log, kChipGit});
+        add_chip({ComposerChipKind::Terminal, "build", "Build log", log, ui_quick_action_git()});
     } else if (row_id == "thinking.off") {
         pending_cot_ = "off";
-        add_chip({ComposerChipKind::Thinking, "off", "Thinking off", "", kChipMode});
+        add_chip({ComposerChipKind::Thinking, "off", "Thinking off", "", ui_accent()});
     } else if (row_id == "thinking.low") {
         pending_cot_ = "low";
-        add_chip({ComposerChipKind::Thinking, "low", "Thinking low", "", kChipMode});
+        add_chip({ComposerChipKind::Thinking, "low", "Thinking low", "", ui_accent()});
     } else if (row_id == "thinking.high") {
         pending_cot_ = "high";
-        add_chip({ComposerChipKind::Thinking, "high", "Thinking high", "", kChipMode});
+        add_chip({ComposerChipKind::Thinking, "high", "Thinking high", "", ui_accent()});
     } else if (row_id.rfind("mcp.", 0) == 0) {
         const std::string server = row_id.substr(4);
         auto it = std::find(pending_mcp_enabled_.begin(), pending_mcp_enabled_.end(), server);
         if (it == pending_mcp_enabled_.end()) {
             pending_mcp_enabled_.push_back(server);
-            add_chip({ComposerChipKind::McpFilter, server, server, "", kChipSkill});
+            add_chip({ComposerChipKind::McpFilter, server, server, "", ui_status_warn()});
         } else {
             pending_mcp_enabled_.erase(it);
             chips_.erase(std::remove_if(chips_.begin(), chips_.end(),

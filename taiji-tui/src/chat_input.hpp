@@ -13,6 +13,7 @@ class ChatTextInput : public tuinator::TextInput {
 
     void set_model_info(std::string model, std::string provider);
     void sync_frame_border_style();
+    void sync_field_styles(tuinator::Style normal, tuinator::Style focused);
     void set_quick_key_handler(QuickKeyHandler handler);
     void set_chrome_busy(bool busy);
     void tick_chrome(int dt_ms);

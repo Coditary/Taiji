@@ -213,7 +213,7 @@ void TurnMetricsNote::paint(tuinator::PaintContext& ctx) const {
         return;
     }
 
-    ui_fill_widget_bounds(ctx, *this, kUiMainBackground);
+    ui_fill_widget_bounds(ctx, *this, ui_main_bg());
 
     tuinator::Style body_style = ui_resolve_main_text(ui_secondary_style(theme_));
 
@@ -229,7 +229,7 @@ void TurnMetricsNote::paint(tuinator::PaintContext& ctx) const {
     }
 
     if (visible_) {
-        tuinator::Style action_style = ui_resolve_main_text(theme_.accent);
+        tuinator::Style action_style = ui_accent_on_main();
         action_style.bold = true;
         ctx.canvas.draw_text({redo_x(), 0}, kRedoGlyph, action_style);
         ctx.canvas.draw_text({copy_x(), 0}, kCopyGlyph, action_style);
@@ -239,7 +239,7 @@ void TurnMetricsNote::paint(tuinator::PaintContext& ctx) const {
         return;
     }
 
-    tuinator::Style nav_style = ui_resolve_main_text(theme_.accent);
+    tuinator::Style nav_style = ui_accent_on_main();
     nav_style.bold = true;
 
     tuinator::Style disabled_style = ui_resolve_main_text(ui_secondary_style(theme_));

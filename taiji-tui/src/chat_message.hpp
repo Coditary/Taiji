@@ -17,12 +17,14 @@ class ChatMessage : public tuinator::Widget {
     void set_wrap_width(int width);
     void set_variant(Variant variant);
     void set_time_label(std::string time_label);
-
     std::string_view widget_type_name() const override { return "ChatMessage"; }
 
     tuinator::Size preferred_size() const override;
     void layout(tuinator::Rect bounds) override;
     void paint(tuinator::PaintContext& ctx) const override;
+
+    int sticky_preview_height(int max_body_lines) const;
+    void paint_sticky_preview(tuinator::PaintContext& ctx, int panel_width, int max_body_lines) const;
 
   private:
     std::vector<std::string> wrapped_lines() const;

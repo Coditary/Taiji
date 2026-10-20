@@ -6,7 +6,7 @@ import "strings"
 type UIConfig struct {
 	TurnMetrics TurnMetricsUIConfig `yaml:"turn_metrics"`
 	ToolLabels  ToolLabelsUIConfig  `yaml:"tool_labels"`
-	// Theme is "dark" or "high_contrast" (terminal palettes).
+	// Theme is a taiji-tui stylesheet id (built-in: dark, high_contrast; or ~/.config/taiji/themes/<id>.theme).
 	Theme string `yaml:"theme,omitempty"`
 	// CornerStyle is "square", "rounded", or "flat" (fill only, no outline) for composer and user bubbles.
 	CornerStyle string `yaml:"corner_style,omitempty"`
@@ -20,6 +20,8 @@ type UIConfig struct {
 	MessageTimestamps *bool `yaml:"message_timestamps,omitempty"`
 	// MessageTimeClock is "24h" or "12h" (AM/PM).
 	MessageTimeClock string `yaml:"message_time_clock,omitempty"`
+	// StickyUserMessage pins a preview of your prompt at the top while scrolling long replies.
+	StickyUserMessage *bool `yaml:"sticky_user_message,omitempty"`
 }
 
 // TurnMetricsUIConfig selects which per-turn timing fields appear under assistant replies.
@@ -39,10 +41,12 @@ func DefaultUIConfig() UIConfig {
 	enabled := true
 	showActions := true
 	messageTimestamps := true
+	stickyUserMessage := true
 	return UIConfig{
 		Theme:               "dark",
 		MessageTimestamps:   &messageTimestamps,
 		MessageTimeClock:    "24h",
+		StickyUserMessage:   &stickyUserMessage,
 		TurnMetrics: TurnMetricsUIConfig{
 			Enabled:          &enabled,
 			ShowActions:      &showActions,
@@ -67,6 +71,14 @@ func (c UIConfig) MessageTimestampsOrDefault() bool {
 		return true
 	}
 	return *c.MessageTimestamps
+}
+
+// StickyUserMessageOrDefault reports whether scrolled prompts stay pinned at the top of the chat.
+func (c UIConfig) StickyUserMessageOrDefault() bool {
+	if c.StickyUserMessage == nil {
+		return true
+	}
+	return *c.StickyUserMessage
 }
 
 // CornersRoundedOrDefault reports whether framed UI chrome uses rounded box corners.

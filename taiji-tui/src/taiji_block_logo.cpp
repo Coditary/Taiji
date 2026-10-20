@@ -72,7 +72,7 @@ TaijiBlockLogoSize paint_taiji_block_logo(tuinator::PaintContext& ctx, const tui
         int cursor = x;
         for (std::size_t i = 0; fallback[i] != '\0'; ++i) {
             const char ch[2] = {fallback[i], '\0'};
-            tuinator::Rgb base = ui_lerp_rgb(kUiLogoMid, kUiLogoTop, breathe);
+            tuinator::Rgb base = ui_lerp_rgb(ui_logo_mid(), ui_logo_top(), breathe);
             tuinator::Rgb fg = base;
             if (static_cast<int>(i) >= wave - 1 && static_cast<int>(i) <= wave + 1) {
                 fg = ui_lerp_rgb(base, tuinator::rgb(255, 255, 255), 0.85);
@@ -80,7 +80,7 @@ TaijiBlockLogoSize paint_taiji_block_logo(tuinator::PaintContext& ctx, const tui
             tuinator::Style letter = ui_resolve_main_text(theme.accent);
             letter.bold = true;
             letter.foreground_rgb = fg;
-            letter.background_rgb = kUiMainBackground;
+            letter.background_rgb = ui_main_bg();
             ctx.canvas.draw_text({cursor, y}, ch, letter);
             cursor += tuinator::text_display_width(ch);
         }
@@ -94,12 +94,12 @@ TaijiBlockLogoSize paint_taiji_block_logo(tuinator::PaintContext& ctx, const tui
 
     auto logo_fill_for_row = [](int row) -> tuinator::Rgb {
         if (row <= 1) {
-            return kUiLogoTop;
+            return ui_logo_top();
         }
         if (row >= kGlyphH - 2) {
-            return kUiLogoBottom;
+            return ui_logo_bottom();
         }
-        return kUiLogoMid;
+        return ui_logo_mid();
     };
 
     const double breathe = ui_sine_pulse(static_cast<double>(anim_ms), 2600.0);
@@ -107,15 +107,15 @@ TaijiBlockLogoSize paint_taiji_block_logo(tuinator::PaintContext& ctx, const tui
     const int shimmer_pos = anim_ms > 0 ? (anim_ms / 32) % shimmer_span : -1;
 
     tuinator::Style shadow = ui_resolve_main_text(theme.accent);
-    shadow.foreground_rgb = kUiLogoShadow;
-    shadow.background_rgb = kUiLogoShadow;
+    shadow.foreground_rgb = ui_logo_shadow();
+    shadow.background_rgb = ui_logo_shadow();
 
     int cursor_x = x;
     for (int letter = 0; letter < kLetterCount; ++letter) {
         const uint8_t* glyph = kLetters[letter];
         for (int row = 0; row < kGlyphH; ++row) {
             tuinator::Rgb row_rgb = logo_fill_for_row(row);
-            row_rgb = ui_lerp_rgb(row_rgb, kUiLogoTop, breathe * 0.12);
+            row_rgb = ui_lerp_rgb(row_rgb, ui_logo_top(), breathe * 0.12);
             for (int col = 0; col < kGlyphW; ++col) {
                 if (!glyph_pixel(glyph, row, col)) {
                     continue;

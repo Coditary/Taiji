@@ -195,7 +195,7 @@ void ChatMessage::paint(tuinator::PaintContext& ctx) const {
     }
 
     if (variant_ == Variant::UserPrompt) {
-        ui_fill_widget_bounds(ctx, *this, kUiMainBackground);
+        ui_fill_widget_bounds(ctx, *this, ui_main_bg());
 
         const int panel_w = ui_chat_stream_panel_width() > 0 ? ui_chat_stream_panel_width() : bounds_.width;
         const ChatStreamLayout column = chat_stream_layout_for_panel(panel_w);
@@ -206,7 +206,7 @@ void ChatMessage::paint(tuinator::PaintContext& ctx) const {
         }
 
         const tuinator::Rect panel{box_x, 0, box_w, bounds_.height};
-        ui_paint_user_bubble_panel(ctx, panel, kUiQuickActionPillBg);
+        ui_paint_user_bubble_panel(ctx, panel, ui_quick_action_pill_bg());
 
         const UiUserBubbleInsets chrome = ui_user_bubble_insets();
         const int pad_x = chrome.pad_x;
@@ -214,18 +214,18 @@ void ChatMessage::paint(tuinator::PaintContext& ctx) const {
         const int bottom_inset = chrome.bottom_inset;
 
         tuinator::Style header = ui_resolve_main_text(style_);
-        header.background_rgb = kUiQuickActionPillBg;
+        header.background_rgb = ui_quick_action_pill_bg();
         header.bold = true;
-        header.foreground_rgb = tuinator::rgb(235, 232, 245);
+        header.foreground_rgb = ui_user_bubble();
 
         tuinator::Style body_style = ui_resolve_main_text(style_);
-        body_style.background_rgb = kUiQuickActionPillBg;
+        body_style.background_rgb = ui_quick_action_pill_bg();
         body_style.bold = false;
-        body_style.foreground_rgb = tuinator::rgb(220, 225, 240);
+        body_style.foreground_rgb = ui_text();
 
         tuinator::Style time_style = header;
         time_style.bold = false;
-        time_style.foreground_rgb = kUiSecondaryText;
+        time_style.foreground_rgb = ui_secondary_text();
 
         const auto lines = content_lines();
         const int header_y = ui_corners_flat() ? 0 : 1;
@@ -266,4 +266,92 @@ void ChatMessage::paint(tuinator::PaintContext& ctx) const {
         paint_plain_line(ctx, x, y, max_columns, line, base_style);
         ++y;
     }
+}
+
+int ChatMessage::sticky_preview_height(int max_body_lines) const {
+    if (variant_ != Variant::UserPrompt || text_.empty() || max_body_lines <= 0) {
+        return 0;
+    }
+    const auto lines = content_lines();
+    if (lines.empty()) {
+        return 0;
+    }
+    const int body_rows = std::min(max_body_lines, static_cast<int>(lines.size()));
+    const UiUserBubbleInsets chrome = ui_user_bubble_insets();
+    const int top_rows = ui_corners_flat() ? 1 : 2;
+    return top_rows + body_rows + chrome.bottom_inset;
+}
+
+void ChatMessage::paint_sticky_preview(tuinator::PaintContext& ctx, int panel_width, int max_body_lines) const {
+    if (variant_ != Variant::UserPrompt || text_.empty() || max_body_lines <= 0 || panel_width <= 0) {
+        return;
+    }
+
+    const int height = sticky_preview_height(max_body_lines);
+    if (height <= 0) {
+        return;
+    }
+
+    const auto lines = content_lines();
+    const int body_rows = std::min(max_body_lines, static_cast<int>(lines.size()));
+    if (body_rows <= 0) {
+        return;
+    }
+
+    ctx.with_clip({0, 0, panel_width, height}, [&](tuinator::PaintContext& clip_ctx) {
+        tuinator::Style fill;
+        fill.background_rgb = ui_main_bg();
+        clip_ctx.canvas.fill_rect({0, 0, panel_width, height}, ' ', fill);
+
+        const int layout_w = ui_chat_stream_panel_width() > 0 ? ui_chat_stream_panel_width() : panel_width;
+        const ChatStreamLayout column = chat_stream_layout_for_panel(layout_w);
+        int box_x = column.offset_x;
+        int box_w = column.content_width;
+        box_w = std::min(box_w, panel_width - box_x);
+
+        const tuinator::Rect panel{box_x, 0, box_w, height};
+        ui_paint_user_bubble_panel(clip_ctx, panel, ui_quick_action_pill_bg());
+
+        const UiUserBubbleInsets chrome = ui_user_bubble_insets();
+        const int pad_x = chrome.pad_x;
+        const int body_pad_x = chrome.body_pad_x;
+        const int bottom_inset = chrome.bottom_inset;
+
+        tuinator::Style header = ui_resolve_main_text(style_);
+        header.background_rgb = ui_quick_action_pill_bg();
+        header.bold = true;
+        header.foreground_rgb = ui_user_bubble();
+
+        tuinator::Style body_style = ui_resolve_main_text(style_);
+        body_style.background_rgb = ui_quick_action_pill_bg();
+        body_style.bold = false;
+        body_style.foreground_rgb = ui_text();
+
+        tuinator::Style time_style = header;
+        time_style.bold = false;
+        time_style.foreground_rgb = ui_secondary_text();
+
+        const int header_y = ui_corners_flat() ? 0 : 1;
+        int y = header_y;
+
+        if (y < height) {
+            const std::string who = std::string(kNfUser) + " You";
+            clip_ctx.canvas.draw_text({box_x + pad_x, y}, who, header);
+            if (!time_label_.empty()) {
+                const int time_w = tuinator::text_display_width(time_label_);
+                const int time_x = std::max(box_x + pad_x, box_x + box_w - pad_x - time_w);
+                clip_ctx.canvas.draw_text({time_x, y}, time_label_, time_style);
+            }
+            ++y;
+        }
+
+        for (int i = 0; i < body_rows; ++i) {
+            if (y >= height - bottom_inset) {
+                break;
+            }
+            paint_plain_line(clip_ctx, box_x + body_pad_x, y, box_w - body_pad_x * 2, lines[static_cast<std::size_t>(i)],
+                             body_style);
+            ++y;
+        }
+    });
 }

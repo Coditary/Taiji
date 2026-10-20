@@ -37,6 +37,11 @@ AssistantMarkdown::AssistantMarkdown(tuinator::MarkdownViewOptions options) : vi
     view_.set_follow_tail(false);
 }
 
+void AssistantMarkdown::set_markdown_styles(tuinator::MarkdownStyleSet styles) {
+    view_.set_styles(std::move(styles));
+    mark_dirty();
+}
+
 void AssistantMarkdown::append(std::string_view chunk) {
     if (chunk.empty()) {
         return;
@@ -175,7 +180,7 @@ void AssistantMarkdown::paint(tuinator::PaintContext& ctx) const {
     if (bounds_.width <= 0 || bounds_.height <= 0) {
         return;
     }
-    ui_fill_widget_bounds(ctx, *this, kUiMainBackground);
+    ui_fill_widget_bounds(ctx, *this, ui_main_bg());
     const ChatStreamLayout column = chat_stream_layout_in_widget(bounds_.width);
     const tuinator::Rect local{column.offset_x, 0, column.content_width, bounds_.height};
     const int inner_width = column.content_width;
@@ -204,9 +209,9 @@ void AssistantMarkdown::paint(tuinator::PaintContext& ctx) const {
             return;
         }
         tuinator::Style glow;
-        glow.background_rgb = kUiMainBackground;
-        glow.foreground_rgb = ui_fade_toward(tuinator::rgb(255, 255, 255), tuinator::rgb(220, 225, 240),
-                                             1.0 - static_cast<double>(stream_glow_ms_) / 90.0);
+        glow.background_rgb = ui_main_bg();
+        glow.foreground_rgb =
+            ui_fade_toward(ui_text(), ui_secondary_text(), 1.0 - static_cast<double>(stream_glow_ms_) / 90.0);
         const int tail_w = tuinator::text_display_width(tail);
         const int x = std::max(content_indent_, inner_width - tail_w);
         child_ctx.canvas.draw_text({x, last_row}, tail, glow);

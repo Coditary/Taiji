@@ -46,19 +46,19 @@ void SpeechMicButton::paint(tuinator::PaintContext& ctx) const {
     }
 
     tuinator::Style base = normal_style_;
-    base.background_rgb = kUiInputChromeFill;
+    base.background_rgb = ui_input_chrome_fill();
     if (!enabled_) {
-        base.foreground_rgb = kUiSecondaryText;
+        base.foreground_rgb = ui_secondary_text();
     } else if (recording_) {
         base = recording_style_;
-        base.background_rgb = kUiInputChromeFill;
-        base.foreground_rgb = tuinator::rgb(240, 90, 90);
+        base.background_rgb = ui_input_chrome_fill();
+        base.foreground_rgb = ui_danger();
     } else if (hover_) {
         base = hover_style_;
-        base.background_rgb = kUiInputChromeFill;
-        base.foreground_rgb = tuinator::rgb(187, 154, 247);
+        base.background_rgb = ui_input_chrome_fill();
+        base.foreground_rgb = ui_accent();
     } else {
-        base.foreground_rgb = tuinator::rgb(187, 154, 247);
+        base.foreground_rgb = ui_accent();
     }
 
     const std::string label = label_text();

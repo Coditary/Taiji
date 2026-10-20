@@ -44,6 +44,8 @@ class MessageComposer : public tuinator::Widget {
 
     void tick(int dt_ms);
     void clear_after_send();
+    void sync_field_styles(tuinator::Style normal, tuinator::Style focused);
+    void notify_input_changed(const std::string& value);
 
     std::string_view widget_type_name() const override { return "MessageComposer"; }
 

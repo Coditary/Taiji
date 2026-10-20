@@ -456,7 +456,12 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             theme.label = "Color theme";
             theme.kind = Row::Kind::EnumCycle;
             theme.enum_key = "ui_theme";
-            theme.enum_values = {"dark", "high_contrast"};
+            theme.enum_values = ui_list_theme_ids();
+            if (!draft_.ui_theme.empty() &&
+                std::find(theme.enum_values.begin(), theme.enum_values.end(), draft_.ui_theme) ==
+                    theme.enum_values.end()) {
+                theme.enum_values.push_back(draft_.ui_theme);
+            }
             rows.push_back(theme);
             Row corners;
             corners.label = "Corner style";
@@ -500,6 +505,11 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             msg_ts.kind = Row::Kind::BoolToggle;
             msg_ts.enum_key = "message_timestamps";
             rows.push_back(msg_ts);
+            Row sticky_user;
+            sticky_user.label = "Sticky last prompt";
+            sticky_user.kind = Row::Kind::BoolToggle;
+            sticky_user.enum_key = "sticky_user_message";
+            rows.push_back(sticky_user);
             if (draft_.message_timestamps) {
                 Row msg_clock;
                 msg_clock.label = "Time format";
@@ -716,6 +726,9 @@ std::string SettingsModal::row_value_text(const Row& row) const {
             if (row.enum_key == "code_block_wrap") {
                 return draft_.code_block_wrap ? "on" : "off";
             }
+            if (row.enum_key == "sticky_user_message") {
+                return draft_.sticky_user_message ? "on" : "off";
+            }
             if (row.enum_key == "reduce_motion") {
                 return draft_.reduce_motion ? "on" : "off";
             }
@@ -812,7 +825,7 @@ std::string SettingsModal::row_hint_text(const Row& row) const {
         return "Language for tool status labels in the UI.";
     }
     if (row.enum_key == "ui_theme") {
-        return "Terminal color palette for the TUI.";
+        return "Enter: fuzzy search themes. <-/->: cycle. User themes: ~/.config/taiji/themes/";
     }
     if (row.enum_key == "ui_corners") {
         return "Square or rounded frame, or flat fill without an outer border.";
@@ -837,6 +850,9 @@ std::string SettingsModal::row_hint_text(const Row& row) const {
     }
     if (row.enum_key == "message_timestamps") {
         return "Show send time on your message bubbles.";
+    }
+    if (row.enum_key == "sticky_user_message") {
+        return "Pin the top of your last scrolled prompt while reading long replies.";
     }
     if (row.enum_key == "message_time_clock") {
         return "24-hour clock or 12-hour with AM/PM.";
@@ -1142,7 +1158,8 @@ void SettingsModal::activate_row(int row, int direction) {
                 const int n = static_cast<int>(r.enum_values.size());
                 const int next = (static_cast<int>(idx) + dir + n) % n;
                 *field = r.enum_values[static_cast<std::size_t>(next)];
-                if ((r.enum_key == "chat_width" || r.enum_key == "message_time_clock" || r.enum_key == "ui_corners") &&
+                if ((r.enum_key == "chat_width" || r.enum_key == "message_time_clock" || r.enum_key == "ui_corners" ||
+                     r.enum_key == "ui_theme") &&
                     on_preview_) {
                     on_preview_(draft_);
                 }
@@ -1167,6 +1184,11 @@ void SettingsModal::activate_row(int row, int direction) {
             } else if (r.enum_key == "message_timestamps") {
                 draft_.message_timestamps = !draft_.message_timestamps;
                 rebuild_rows();
+                if (on_preview_) {
+                    on_preview_(draft_);
+                }
+            } else if (r.enum_key == "sticky_user_message") {
+                draft_.sticky_user_message = !draft_.sticky_user_message;
                 if (on_preview_) {
                     on_preview_(draft_);
                 }
@@ -1276,13 +1298,15 @@ void SettingsModal::layout(tuinator::Rect bounds) {
 }
 
 void SettingsModal::paint_frame(tuinator::Canvas& clipped, const PanelRect& panel) const {
-    tuinator::Style border = theme_.accent;
-    tuinator::Style line = theme_.muted;
+    const tuinator::Theme& theme = ui_app_theme();
+    tuinator::Style border = theme.muted;
+    border.foreground_rgb = ui_border_chrome();
+    tuinator::Style line = theme.muted;
     const int nav_w = nav_width();
     const int sep_y = footer_sep_y(panel);
     const tuinator::Rect inner{0, 0, panel.w, panel.h};
 
-    clipped.draw_box(inner, border, theme_.glyphs);
+    clipped.draw_box(inner, border, theme.glyphs);
     for (int x = 1; x < panel.w - 1; ++x) {
         clipped.draw_text({x, sep_y}, "─", line);
     }
@@ -1299,23 +1323,24 @@ void SettingsModal::paint_content_row(tuinator::Canvas& clipped, const Row& row,
         return;
     }
     if (row.kind == Row::Kind::Section) {
-        tuinator::Style section = theme_.heading;
+        tuinator::Style section = ui_app_theme().heading;
         section.bold = true;
         clipped.draw_text({content_x, y}, clip(row.label, value_x + value_w - content_x), section);
         return;
     }
 
-    tuinator::Style key_style = theme_.label;
-    key_style.foreground_rgb = tuinator::rgb(190, 188, 200);
-    tuinator::Style value_style = theme_.label;
-    value_style.foreground_rgb = tuinator::rgb(235, 232, 245);
+    const tuinator::Theme& theme = ui_app_theme();
+    tuinator::Style key_style = theme.label;
+    key_style.foreground_rgb = ui_secondary_text();
+    tuinator::Style value_style = theme.label;
+    value_style.foreground_rgb = ui_text();
 
-    tuinator::Style sel_bg = theme_.muted;
-    sel_bg.background_rgb = kUiSessionActiveBackground;
+    tuinator::Style sel_bg = ui_overlay_panel_style();
+    sel_bg.background_rgb = ui_list_active_bg();
     if (selected) {
         const int row_w = std::max(1, value_x + value_w - content_x + 1);
         clipped.fill_rect({content_x - 1, y, row_w, 1}, ' ', sel_bg);
-        tuinator::Style marker = theme_.accent;
+        tuinator::Style marker = theme.accent;
         marker.background_rgb = sel_bg.background_rgb;
         clipped.draw_text({content_x, y}, "▸", marker);
         key_style.background_rgb = sel_bg.background_rgb;
@@ -1329,7 +1354,7 @@ void SettingsModal::paint_content_row(tuinator::Canvas& clipped, const Row& row,
                            value.find("(none)") != std::string::npos || value == "0 (unlimited)";
     if (dim_value) {
         value_style.dim = true;
-        value_style.foreground_rgb = tuinator::rgb(130, 128, 145);
+        value_style.foreground_rgb = ui_secondary_text();
     }
 
     std::string rendered;
@@ -1337,9 +1362,9 @@ void SettingsModal::paint_content_row(tuinator::Canvas& clipped, const Row& row,
         const bool on = value == "on";
         tuinator::Style toggle = value_style;
         if (on) {
-            toggle.foreground_rgb = tuinator::rgb(120, 220, 140);
+            toggle.foreground_rgb = ui_status_ok();
         } else {
-            toggle.foreground_rgb = tuinator::rgb(100, 98, 110);
+            toggle.foreground_rgb = ui_toggle_off();
             toggle.dim = true;
         }
         rendered = on ? "● on" : "○ off";
@@ -1349,7 +1374,7 @@ void SettingsModal::paint_content_row(tuinator::Canvas& clipped, const Row& row,
     if (row.kind == Row::Kind::MCPToggle) {
         const bool on = value == "on";
         tuinator::Style toggle = value_style;
-        toggle.foreground_rgb = on ? kUiStatusOk : tuinator::rgb(100, 98, 110);
+        toggle.foreground_rgb = on ? ui_status_ok() : ui_toggle_off();
         if (!on) {
             toggle.dim = true;
         }
@@ -1360,17 +1385,27 @@ void SettingsModal::paint_content_row(tuinator::Canvas& clipped, const Row& row,
     if (row.kind == Row::Kind::SkillAllowToggle) {
         tuinator::Style toggle = value_style;
         if (value == "pinned") {
-            toggle.foreground_rgb = tuinator::rgb(120, 220, 140);
+            toggle.foreground_rgb = ui_status_ok();
             rendered = "● pinned";
         } else if (value == "auto") {
-            toggle.foreground_rgb = tuinator::rgb(180, 200, 255);
+            toggle.foreground_rgb = ui_emphasis();
             rendered = "● auto";
         } else {
-            toggle.foreground_rgb = tuinator::rgb(100, 98, 110);
+            toggle.foreground_rgb = ui_toggle_off();
             toggle.dim = true;
             rendered = "○ off";
         }
         clipped.draw_text({value_x, y}, clip(rendered, value_w), toggle);
+        return;
+    }
+    if (row.kind == Row::Kind::EnumCycle && row.enum_key == "ui_theme") {
+        rendered = "[ " + value + " ]";
+        clipped.draw_text({value_x, y}, clip(rendered, std::max(0, value_w - 5)), value_style);
+        tuinator::Style help = ui_app_theme().accent;
+        if (!selected) {
+            help.dim = true;
+        }
+        clipped.draw_text({value_x + std::max(0, value_w - 4), y}, "(⌕)", help);
         return;
     }
     if (row.kind == Row::Kind::EnumCycle || row.kind == Row::Kind::ProviderCycle ||
@@ -1384,7 +1419,7 @@ void SettingsModal::paint_content_row(tuinator::Canvas& clipped, const Row& row,
         if (row.enum_key == "model") {
             rendered = "[ " + value + " ]";
             clipped.draw_text({value_x, y}, clip(rendered, std::max(0, value_w - 5)), value_style);
-            tuinator::Style help = theme_.accent;
+            tuinator::Style help = ui_app_theme().accent;
             if (!selected) {
                 help.dim = true;
             }
@@ -1409,21 +1444,22 @@ void SettingsModal::paint(tuinator::PaintContext& ctx) const {
     tuinator::Canvas& canvas = ctx.canvas;
     const PanelRect panel = panel_rect();
     const tuinator::Rect box{panel.x, panel.y, panel.w, panel.h};
-    tuinator::Style panel_bg = theme_.muted;
+    const tuinator::Theme& theme = ui_app_theme();
+    tuinator::Style panel_bg = ui_overlay_panel_style();
 
     canvas.with_clip(box, [&](tuinator::Canvas& clipped) {
         const tuinator::Rect inner{0, 0, panel.w, panel.h};
         clipped.fill_rect(inner, ' ', panel_bg);
         paint_frame(clipped, panel);
 
-        tuinator::Style title_style = theme_.heading;
+        tuinator::Style title_style = theme.heading;
         clipped.draw_text({2, 0}, " Settings ", title_style);
         if (!chat_only_) {
             const std::string scope_label = draft_.scope == "project" ? "Project" : "Chat";
             const std::string scope_text = "Save to: ◂ " + scope_label + " ▸";
             const int scope_w = tuinator::text_display_width(scope_text);
-            tuinator::Style scope_style = theme_.label;
-            scope_style.foreground_rgb = tuinator::rgb(200, 195, 220);
+            tuinator::Style scope_style = theme.label;
+            scope_style.foreground_rgb = ui_text();
             clipped.draw_text({std::max(2, panel.w - scope_w - 2), 0}, scope_text, scope_style);
         }
 
@@ -1434,18 +1470,20 @@ void SettingsModal::paint(tuinator::PaintContext& ctx) const {
         const int sep_y = footer_sep_y(panel);
         const int footer_row = footer_y(panel);
 
-        tuinator::Style nav_heading = theme_.muted;
+        tuinator::Style nav_heading = theme.muted;
         nav_heading.dim = !focus_nav_;
         if (focus_nav_) {
-            nav_heading.foreground = tuinator::Color::Magenta;
+            nav_heading.foreground_rgb = ui_section_heading();
+            nav_heading.foreground = tuinator::Color::Default;
             nav_heading.bold = true;
         }
         clipped.draw_text({1, 1}, clip("Categories", nav_w - 1), nav_heading);
 
-        tuinator::Style content_heading = theme_.muted;
+        tuinator::Style content_heading = theme.muted;
         content_heading.dim = focus_nav_;
         if (!focus_nav_) {
-            content_heading.foreground = tuinator::Color::Magenta;
+            content_heading.foreground_rgb = ui_section_heading();
+            content_heading.foreground = tuinator::Color::Default;
             content_heading.bold = true;
         }
         clipped.draw_text({content_x, 1}, clip(category_subtitle(), value_x + value_w - content_x), content_heading);
@@ -1453,7 +1491,7 @@ void SettingsModal::paint(tuinator::PaintContext& ctx) const {
         for (int i = 0; i < category_count(); ++i) {
             const Category cat = static_cast<Category>(i);
             const bool active = cat == category_;
-            tuinator::Style style = active ? theme_.accent : theme_.muted;
+            tuinator::Style style = active ? theme.accent : theme.muted;
             if (!focus_nav_) {
                 style.dim = true;
             }
@@ -1477,15 +1515,15 @@ void SettingsModal::paint(tuinator::PaintContext& ctx) const {
             hint = row_hint_text(rows_[static_cast<std::size_t>(selected_row_)]);
         }
         if (!hint.empty() && sep_y > row_start_y + 1) {
-            tuinator::Style hint_style = theme_.muted;
+            tuinator::Style hint_style = theme.muted;
             hint_style.dim = true;
             clipped.draw_text({content_x, sep_y - 1}, clip(hint, panel.w - content_x - 2), hint_style);
         }
 
         const std::string footer = " Esc: close   Tab: pane   Space/Enter: change   ←/→: cycle";
-        clipped.draw_text({2, footer_row}, clip(footer, panel.w - 22), theme_.muted);
+        clipped.draw_text({2, footer_row}, clip(footer, panel.w - 22), theme.muted);
         if (is_dirty()) {
-            tuinator::Style apply_style = theme_.accent;
+            tuinator::Style apply_style = theme.accent;
             apply_style.bold = true;
             clipped.draw_text({panel.w - 18, footer_row}, " Ctrl+S: apply ", apply_style);
         }
@@ -1709,6 +1747,8 @@ bool SettingsModal::handle_event(const tuinator::Event& event) {
                     const Row& r = rows_[selected_row_];
                     if (r.kind == Row::Kind::ProviderCycle) {
                         open_provider_fuzzy(r.enum_key == "project_provider");
+                    } else if (r.kind == Row::Kind::EnumCycle && r.enum_key == "ui_theme") {
+                        open_theme_fuzzy();
                     } else if (r.kind == Row::Kind::FixedValue) {
                         note_dirty();
                     } else if (r.kind == Row::Kind::Text || r.kind == Row::Kind::IntValue ||
@@ -1764,6 +1804,8 @@ bool SettingsModal::handle_event(const tuinator::Event& event) {
                             open_provider_fuzzy(r.enum_key == "project_provider");
                         } else if (r.kind == Row::Kind::Text && r.enum_key == "model") {
                             open_model_fuzzy();
+                        } else if (r.kind == Row::Kind::EnumCycle && r.enum_key == "ui_theme") {
+                            open_theme_fuzzy();
                         } else if (r.kind == Row::Kind::IntValue || r.kind == Row::Kind::FloatValue) {
                             begin_value_edit(row);
                         } else if (r.kind == Row::Kind::Text) {

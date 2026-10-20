@@ -13,12 +13,6 @@
 
 namespace {
 
-constexpr tuinator::Rgb kUsageSystem{140, 145, 160};
-constexpr tuinator::Rgb kUsageTools{187, 154, 247};
-constexpr tuinator::Rgb kUsageSkills{235, 200, 120};
-constexpr tuinator::Rgb kUsageChat{240, 140, 120};
-constexpr tuinator::Rgb kUsageFree{58, 52, 74};
-
 struct UsageSegment {
     int tokens = 0;
     tuinator::Rgb color;
@@ -28,11 +22,11 @@ std::vector<UsageSegment> usage_segments(const ContextPanel::UsageBreakdown& usa
     const int window = std::max({context_window, total_tokens, 1});
     int free_tokens = std::max(0, window - total_tokens);
     std::vector<UsageSegment> segments = {
-        {usage.system_tokens, kUsageSystem},
-        {usage.tools_tokens, kUsageTools},
-        {usage.skills_tokens, kUsageSkills},
-        {usage.conversation_tokens, kUsageChat},
-        {free_tokens, kUsageFree},
+        {usage.system_tokens, ui_secondary_text()},
+        {usage.tools_tokens, ui_accent()},
+        {usage.skills_tokens, ui_status_warn()},
+        {usage.conversation_tokens, ui_session_active_bar()},
+        {free_tokens, ui_badge_bg()},
     };
     return segments;
 }
@@ -217,15 +211,16 @@ void ContextPanel::paint(tuinator::PaintContext& ctx) const {
     const int pad = kUiPadX;
     const int inner_w = std::max(0, bounds_.width - pad * 2);
 
-    tuinator::Style heading = theme_.heading;
+    tuinator::Style heading;
     heading.bold = true;
+    heading.foreground_rgb = ui_section_heading();
     if (title_hover_) {
-        heading.foreground_rgb = theme_.accent.foreground_rgb;
+        heading.foreground_rgb = ui_accent();
     }
     const tuinator::Style muted = ui_resolve_sidebar_text(ctx, *this, ui_secondary_style(theme_));
     const tuinator::Style label = ui_resolve_sidebar_text(ctx, *this, theme_.label);
     tuinator::Style track = label;
-    track.foreground_rgb = kUsageFree;
+    track.foreground_rgb = ui_badge_bg();
 
     int y = 0;
     const std::string chevron = usage_expanded_ ? "▾ " : "▸ ";
@@ -276,21 +271,21 @@ void ContextPanel::paint(tuinator::PaintContext& ctx) const {
         if (!skills_summary_.empty()) {
             skills_label += " (" + skills_summary_ + ")";
         }
-        paint_category_row(ctx, y++, kUsageSystem, "System prompt", usage_.system_tokens, label);
+        paint_category_row(ctx, y++, ui_secondary_text(), "System prompt", usage_.system_tokens, label);
         if (y < bounds_.height) {
-            paint_category_row(ctx, y++, kUsageTools, "Tool definitions & MCP", usage_.tools_tokens, label);
+            paint_category_row(ctx, y++, ui_accent(), "Tool definitions & MCP", usage_.tools_tokens, label);
         }
         if (y < bounds_.height) {
-            paint_category_row(ctx, y++, kUsageSkills, skills_label, usage_.skills_tokens, label);
+            paint_category_row(ctx, y++, ui_status_warn(), skills_label, usage_.skills_tokens, label);
         }
         if (y < bounds_.height) {
-            paint_category_row(ctx, y++, kUsageChat, "Conversation", usage_.conversation_tokens, label);
+            paint_category_row(ctx, y++, ui_session_active_bar(), "Conversation", usage_.conversation_tokens, label);
         }
     }
 
     if (y < bounds_.height) {
         tuinator::Style rule = muted;
-        rule.foreground_rgb = tuinator::rgb(70, 66, 88);
+        rule.foreground_rgb = ui_border_chrome();
         std::string rule_text;
         const int rule_w = inner_w;
         for (int i = 0; i < rule_w; ++i) {

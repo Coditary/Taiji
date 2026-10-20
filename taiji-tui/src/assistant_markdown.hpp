@@ -17,6 +17,7 @@ class AssistantMarkdown : public tuinator::Widget {
     void set_wrap_width(int width);
     void sync_from(const std::string& text, bool clear_first);
     void tick_stream_glow(int dt_ms);
+    void set_markdown_styles(tuinator::MarkdownStyleSet styles);
     bool has_stream_animation() const { return stream_glow_ms_ > 0; }
 
     std::string_view widget_type_name() const override { return "AssistantMarkdown"; }

@@ -55,18 +55,14 @@ void LeftLabel::paint(tuinator::PaintContext& ctx) const {
         return;
     }
 
-    if (style_.background_rgb.has_value() && style_.background_rgb.value() == kUiSidebarBackground) {
-        paint_bounds_background(ctx, ui_sidebar_panel_style());
-    } else {
-        paint_bounds_background(ctx, style_);
-    }
+    paint_bounds_background(ctx, ui_sidebar_panel_style());
 
     tuinator::Style style = style_;
-    if (style_.background_rgb.has_value() && style_.background_rgb.value() == kUiSidebarBackground) {
-        style = ui_resolve_sidebar_text(ctx, *this, style_);
-    } else {
-        style = ui_resolve_main_text(style_);
+    style.background_rgb.reset();
+    if (style.bold) {
+        style.foreground_rgb = ui_section_heading();
     }
+    style = ui_resolve_sidebar_text(ctx, *this, style);
     int y = 0;
     std::size_t start = 0;
     while (start <= text_.size() && y < bounds_.height) {

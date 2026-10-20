@@ -182,7 +182,7 @@ class AppShell : public tuinator::Widget {
 std::unique_ptr<LeftLabel> make_sidebar_heading(const std::string& title, const tuinator::Theme& theme) {
     tuinator::Style style = theme.heading;
     style.bold = true;
-    style.background_rgb = kUiSidebarBackground;
+    style.background_rgb.reset();
     return std::make_unique<LeftLabel>(title, style);
 }
 
@@ -330,43 +330,6 @@ int chat_width_cols_from_pref(const std::string& width) {
         return 160;
     }
     return 0; // auto: use terminal width
-}
-
-tuinator::Style composer_input_style() {
-    tuinator::Style style;
-    style.foreground_rgb = tuinator::rgb(225, 220, 240);
-    style.background_rgb = kUiInputChromeFill;
-    return style;
-}
-
-tuinator::Style thinking_style() {
-    tuinator::Style style;
-    style.foreground_rgb = tuinator::rgb(255, 140, 64);
-    style.bold = true;
-    return style;
-}
-
-tuinator::ScrollbarOptions chat_scrollbar_options() {
-    tuinator::Style track_style;
-    track_style.foreground_rgb = tuinator::rgb(58, 52, 74);
-
-    tuinator::Style thumb_style;
-    thumb_style.foreground_rgb = tuinator::rgb(188, 168, 245);
-    thumb_style.background_rgb = tuinator::rgb(78, 68, 104);
-
-    tuinator::ScrollbarGlyphPatch glyphs;
-    glyphs.vertical_track = "┊";
-    glyphs.thumb = "┃";
-
-    const auto style = tuinator::ScrollbarStyle::thin()
-                           .patch_glyphs(glyphs)
-                           .with_track_style(track_style)
-                           .with_thumb_style(thumb_style);
-
-    return tuinator::ScrollbarOptions::classic()
-        .with_horizontal(false)
-        .with_behavior(tuinator::ScrollbarBehavior::minimal())
-        .with_style(style);
 }
 
 constexpr int kNavSidebarCols = 26;
@@ -763,13 +726,10 @@ bool is_cancellation_error(const std::string& error) {
 } // namespace
 
 ChatApp::ChatApp(tuinator::Application& app)
-    : app_(app), theme_(tuinator::dark_theme({.glyphs = tuinator::GlyphSet::Unicode})) {
-    tune_chat_theme(theme_);
-    app_.set_theme(theme_);
-    thinking_style_ = thinking_style();
-    input_style_ = composer_input_style();
+    : app_(app), theme_(ui_apply_stylesheet(app_, "dark")) {
+    thinking_style_ = ui_thinking_style();
+    input_style_ = ui_composer_input_style();
     input_focused_style_ = input_style_;
-    input_focused_style_.foreground_rgb = tuinator::rgb(255, 255, 255);
 
     footer_text_ = "Starting…";
 }
@@ -794,14 +754,17 @@ ChatApp::~ChatApp() {
 
 void ChatApp::set_root() {
     auto shell = std::make_unique<AppShell>(theme_);
+    shell->set_widget_id("taiji-shell");
     session_context_menu_ = shell->context_menu();
     settings_modal_ = shell->settings_modal();
     settings_modal_->set_handle(taiji_handle_);
     settings_modal_->set_on_preview([this](const SettingsModal::Draft& draft) {
+        apply_ui_theme(draft.ui_theme);
         // Live preview while cycling chat width in settings (before Ctrl+S).
         chat_max_width_cols_ = chat_width_cols_from_pref(draft.chat_width);
         update_chat_wrap_widths();
         apply_message_time_prefs(draft.message_timestamps, draft.message_time_clock);
+        apply_sticky_user_message_pref(draft.sticky_user_message);
         ui_apply_corners_pref(draft.ui_corners);
         if (input_ != nullptr) {
             input_->sync_frame_border_style();
@@ -855,7 +818,7 @@ void ChatApp::set_root() {
     tuinator::ScrollViewOptions scroll_options;
     scroll_options.width = 0;
     scroll_options.height = 0;
-    scroll_options.scrollbars = chat_scrollbar_options();
+    scroll_options.scrollbars = ui_chat_scrollbar_options();
     scroll_options.background = ui_main_panel_style();
     auto chat_scroll = std::make_unique<tuinator::ScrollView>(std::move(chat_log), scroll_options);
 
@@ -866,6 +829,8 @@ void ChatApp::set_root() {
         empty_state_->set_on_quick_action([this](int index) { trigger_empty_quick_action(index); });
     }
     chat_scroll_ = static_cast<tuinator::ScrollView*>(middle_pane_->chat_scroll());
+    middle_pane_->set_sticky_user_resolver([this]() { return resolve_sticky_user_message(); });
+    middle_pane_->set_sticky_user_message_enabled(sticky_user_message_enabled_);
     middle_pane->set_flex(1);
     main_column->add_child(std::move(middle_pane));
 
@@ -881,6 +846,9 @@ void ChatApp::set_root() {
     message_composer_ = message_composer.get();
     input_ = message_composer_->text_input();
     input_->set_on_change([this](const std::string& value) {
+        if (message_composer_ != nullptr) {
+            message_composer_->notify_input_changed(value);
+        }
         if (input_ != nullptr) {
             input_->mark_dirty();
         }
@@ -915,6 +883,9 @@ void ChatApp::set_root() {
     composer_switch_ = composer_switch.get();
     if (input_ != nullptr) {
         input_->set_quick_key_handler([this](const tuinator::KeyPress& key) {
+            if (input_ != nullptr && input_->is_focused()) {
+                return false;
+            }
             return empty_state_ != nullptr && empty_state_->is_visible() && empty_state_->try_quick_action(key);
         });
     }
@@ -923,7 +894,7 @@ void ChatApp::set_root() {
 
     tuinator::Style mic_style = input_style_;
     tuinator::Style mic_recording = input_style_;
-    mic_recording.foreground_rgb = tuinator::rgb(240, 90, 90);
+    mic_recording.foreground_rgb = ui_danger();
     tuinator::Style mic_hover = input_focused_style_;
     auto speech_mic = std::make_unique<SpeechMicButton>(
         mic_style, mic_recording, mic_hover, [this]() { toggle_speech_input(); });
@@ -1326,28 +1297,108 @@ void ChatApp::request_chat_layout_refresh() {
 }
 
 void ChatApp::apply_ui_theme(const std::string& theme_id) {
-    tuinator::Theme next = tuinator::dark_theme({.glyphs = tuinator::GlyphSet::Unicode});
-    if (theme_id == "high_contrast") {
-        next = tuinator::dark_theme({.glyphs = tuinator::GlyphSet::Unicode});
-        next.muted.foreground_rgb = tuinator::rgb(245, 245, 250);
-        next.label.foreground_rgb = tuinator::rgb(255, 255, 255);
-        next.accent.foreground_rgb = tuinator::rgb(255, 220, 80);
-        next.heading.foreground_rgb = tuinator::rgb(255, 255, 255);
-    } else {
-        tune_chat_theme(next);
-    }
-    theme_ = next;
-    thinking_style_ = theme_.muted;
-    thinking_style_.dim = true;
-    input_style_ = composer_input_style();
+    const std::string id = theme_id.empty() ? "dark" : theme_id;
+    theme_ = ui_apply_stylesheet(app_, id);
+    thinking_style_ = ui_thinking_style();
+    input_style_ = ui_composer_input_style();
     input_focused_style_ = input_style_;
-    input_focused_style_.foreground_rgb = theme_.accent.foreground_rgb;
-    app_.set_theme(theme_);
+    if (message_composer_ != nullptr) {
+        message_composer_->sync_field_styles(input_style_, input_focused_style_);
+    } else if (input_ != nullptr) {
+        input_->sync_field_styles(input_style_, input_focused_style_);
+        input_->sync_frame_border_style();
+    }
+
+    const tuinator::MarkdownStyleSet markdown_styles = ui_chat_markdown_styles(theme_);
+    tuinator::Style user_bubble;
+    user_bubble.foreground_rgb = ui_user_bubble();
+    for (TurnView& view : turn_views_) {
+        if (view.assistant != nullptr) {
+            view.assistant->set_markdown_styles(markdown_styles);
+        }
+        if (view.assistant_lead != nullptr) {
+            view.assistant_lead->set_markdown_styles(markdown_styles);
+        }
+        if (view.user != nullptr) {
+            view.user->set_style(user_bubble);
+        }
+    }
+
+    if (chat_scroll_ != nullptr) {
+        tuinator::ScrollViewOptions scroll_options = chat_scroll_->options();
+        scroll_options.scrollbars = ui_chat_scrollbar_options();
+        scroll_options.background = ui_main_panel_style();
+        chat_scroll_->set_options(std::move(scroll_options));
+    }
+
+    app_.repaint_all();
 }
 
 void ChatApp::apply_message_time_prefs(bool enabled, const std::string& clock_pref) {
     message_timestamps_enabled_ = enabled;
     message_time_clock_ = message_time_clock_from_pref(clock_pref);
+}
+
+void ChatApp::apply_sticky_user_message_pref(bool enabled) {
+    sticky_user_message_enabled_ = enabled;
+    if (middle_pane_ != nullptr) {
+        middle_pane_->set_sticky_user_message_enabled(enabled);
+    }
+}
+
+int ChatApp::user_message_content_y(const ChatMessage& user) const {
+    if (chat_log_ == nullptr) {
+        return user.bounds().y;
+    }
+    return user.bounds().y - chat_log_->bounds().y;
+}
+
+const ChatMessage* ChatApp::sticky_user_message_candidate() const {
+    if (!sticky_user_message_enabled_ || chat_scroll_ == nullptr || middle_pane_ == nullptr) {
+        return nullptr;
+    }
+    if (!middle_pane_->shows_chat_log()) {
+        return nullptr;
+    }
+
+    const int scroll_y = chat_scroll_->scroll_y();
+    const ChatMessage* sticky = nullptr;
+    int sticky_user_top = -1;
+
+    for (const TurnView& view : turn_views_) {
+        if (view.user == nullptr) {
+            continue;
+        }
+        const int user_top = user_message_content_y(*view.user);
+        if (user_top > scroll_y) {
+            continue;
+        }
+        if (user_top > sticky_user_top) {
+            sticky_user_top = user_top;
+            sticky = view.user;
+        }
+    }
+
+    if (sticky == nullptr || sticky_user_top >= scroll_y) {
+        return nullptr;
+    }
+    return sticky;
+}
+
+const ChatMessage* ChatApp::resolve_sticky_user_message() const {
+    const ChatMessage* sticky = sticky_user_message_candidate();
+    if (sticky == nullptr || chat_scroll_ == nullptr) {
+        return nullptr;
+    }
+
+    const int scroll_y = chat_scroll_->scroll_y();
+    const int viewport_h = std::max(0, chat_scroll_->bounds().height);
+    const int sticky_user_top = user_message_content_y(*sticky);
+    const int user_bottom = sticky_user_top + sticky->bounds().height;
+    if (viewport_h > 0 && user_bottom > scroll_y && sticky_user_top < scroll_y + viewport_h) {
+        return nullptr;
+    }
+    return sticky;
 }
 
 std::string ChatApp::user_time_label_for_turn(const ChatTurn& turn) const {
@@ -1408,6 +1459,11 @@ void ChatApp::refresh_appearance_prefs() {
         timestamps = true;
     }
     apply_message_time_prefs(timestamps, json_extract_string(json, "message_time_clock"));
+    bool sticky_user = json_extract_bool(json, "sticky_user_message");
+    if (json.find("\"sticky_user_message\":") == std::string::npos) {
+        sticky_user = true;
+    }
+    apply_sticky_user_message_pref(sticky_user);
     refresh_user_time_labels_on_screen();
     refresh_user_message_chrome();
 }
@@ -2123,7 +2179,9 @@ void ChatApp::ensure_turn_widgets(std::size_t count) {
     }
 
     while (turn_views_.size() < count) {
-        auto user = std::make_unique<ChatMessage>("", theme_.accent, ChatMessage::Align::Left,
+        tuinator::Style user_style;
+        user_style.foreground_rgb = ui_user_bubble();
+        auto user = std::make_unique<ChatMessage>("", user_style, ChatMessage::Align::Left,
                                                   ChatMessage::Variant::UserPrompt);
         auto thinking = std::make_unique<ThinkingIndicator>(thinking_style_, thinking_style_);
         tuinator::MarkdownViewOptions assistant_options;
@@ -2188,7 +2246,9 @@ void ChatApp::sync_turn_view(std::size_t index, const ChatTurn& turn, bool worke
 
     if (turn.status == TurnStatus::Cancelled) {
         view.user->set_text(turn.user);
-        view.user->set_style(theme_.accent);
+        tuinator::Style user_style;
+        user_style.foreground_rgb = ui_user_bubble();
+        view.user->set_style(user_style);
         view.thinking->set_active(false);
         if (view.activity != nullptr) {
             view.activity->clear();
@@ -2208,7 +2268,9 @@ void ChatApp::sync_turn_view(std::size_t index, const ChatTurn& turn, bool worke
         view.user->set_text("");
     } else {
         view.user->set_text(turn.user);
-        view.user->set_style(theme_.accent);
+        tuinator::Style user_style;
+        user_style.foreground_rgb = ui_user_bubble();
+        view.user->set_style(user_style);
         view.user->set_time_label(user_time_label_for_turn(turn));
     }
 
@@ -2397,8 +2459,14 @@ void ChatApp::sync_scroll_follow() {
         return;
     }
 
+    const int scroll_y = chat_scroll_->scroll_y();
     const int max_y = chat_scroll_->max_scroll_y();
-    follow_chat_bottom_ = max_y <= 0 || chat_scroll_->scroll_y() >= max_y - 1;
+    follow_chat_bottom_ = max_y <= 0 || scroll_y >= max_y - 1;
+
+    if (sticky_user_message_enabled_ && middle_pane_ != nullptr && scroll_y != last_chat_scroll_y_) {
+        last_chat_scroll_y_ = scroll_y;
+        middle_pane_->mark_dirty();
+    }
 }
 
 void ChatApp::scroll_chat_to_bottom(bool force) {

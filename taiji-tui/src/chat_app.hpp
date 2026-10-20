@@ -184,6 +184,10 @@ class ChatApp {
     void open_settings_modal();
     void refresh_appearance_prefs();
     void apply_message_time_prefs(bool enabled, const std::string& clock_pref);
+    void apply_sticky_user_message_pref(bool enabled);
+    const ChatMessage* resolve_sticky_user_message() const;
+    const ChatMessage* sticky_user_message_candidate() const;
+    int user_message_content_y(const ChatMessage& user) const;
     std::string user_time_label_for_turn(const ChatTurn& turn) const;
     void refresh_user_time_labels_on_screen();
     void refresh_user_message_chrome();
@@ -207,6 +211,8 @@ class ChatApp {
     tuinator::Theme theme_;
     int chat_max_width_cols_ = 0;
     bool message_timestamps_enabled_ = true;
+    bool sticky_user_message_enabled_ = true;
+    int last_chat_scroll_y_ = -1;
     MessageTimeClock message_time_clock_ = MessageTimeClock::Hour24;
     tuinator::Style thinking_style_;
     tuinator::Style input_style_;

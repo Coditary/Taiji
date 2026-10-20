@@ -393,9 +393,10 @@ void SessionSidebar::paint(tuinator::PaintContext& ctx) const {
 
     const int pad = kUiPadX;
     ctx.canvas.fill_rect({0, 0, bounds_.width, 1}, ' ', ui_sidebar_panel_style());
-    tuinator::Style header_style = theme_.heading;
+    tuinator::Style header_style;
     header_style.bold = true;
-    header_style.background_rgb = kUiSidebarBackground;
+    header_style.foreground_rgb = ui_section_heading();
+    header_style.background_rgb = ui_sidebar_bg();
     ctx.canvas.draw_text({pad, 0}, "PROJECTS", ui_resolve_sidebar_text(ctx, *this, header_style));
 
     const int content_height = std::max(0, bounds_.height - 2);
@@ -410,20 +411,20 @@ void SessionSidebar::paint(tuinator::PaintContext& ctx) const {
 
         tuinator::Style row_fill = ui_sidebar_panel_style();
         tuinator::Style style = theme_.label;
-        style.background_rgb = kUiSidebarBackground;
+        style.background_rgb = ui_sidebar_bg();
         if (row.kind == Row::Kind::ProjectHeader) {
-            style = theme_.heading;
             style.bold = true;
-            style.background_rgb = kUiSidebarBackground;
+            style.foreground_rgb = ui_section_heading();
+            style.background_rgb = ui_sidebar_bg();
         } else if (row.active) {
             style = theme_.label;
             style.bold = true;
-            style.foreground_rgb = tuinator::rgb(255, 255, 255);
-            style.background_rgb = kUiSessionActiveBackground;
-            row_fill.background_rgb = kUiSessionActiveBackground;
+            style.foreground_rgb = ui_list_active_fg();
+            style.background_rgb = ui_list_active_bg();
+            row_fill.background_rgb = ui_list_active_bg();
         } else if (row_index == hovered_row_) {
-            style.background_rgb = tuinator::rgb(36, 39, 52);
-            row_fill.background_rgb = tuinator::rgb(36, 39, 52);
+            style.background_rgb = ui_badge_bg();
+            row_fill.background_rgb = ui_badge_bg();
         }
         ctx.canvas.fill_rect({0, paint_y, bounds_.width, 1}, ' ', row_fill);
 
@@ -451,7 +452,7 @@ void SessionSidebar::paint(tuinator::PaintContext& ctx) const {
             tuinator::Style indent = draw_style;
             ctx.canvas.draw_text({pad, paint_y}, "  ", indent);
             tuinator::Style bar = draw_style;
-            bar.foreground_rgb = kUiSessionActiveBar;
+            bar.foreground_rgb = ui_session_active_bar();
             bar.bold = true;
             const int bar_x = pad + tuinator::text_display_width("  ");
             ctx.canvas.draw_text({bar_x, paint_y}, "▎", bar);
@@ -461,7 +462,7 @@ void SessionSidebar::paint(tuinator::PaintContext& ctx) const {
             ctx.canvas.draw_text({pad, paint_y}, text, draw_style);
         }
         if (row.kind == Row::Kind::ProjectHeader) {
-            tuinator::Style plus_style = theme_.accent;
+            tuinator::Style plus_style = ui_accent_on_sidebar();
             plus_style.bold = true;
             ctx.canvas.draw_text({project_new_button_x(), paint_y}, kProjectNewGlyph,
                                  ui_resolve_sidebar_text(ctx, *this, plus_style));
@@ -479,7 +480,7 @@ void SessionSidebar::paint(tuinator::PaintContext& ctx) const {
         ctx.canvas.fill_rect({0, hint_y, bounds_.width, 1}, ' ', ui_sidebar_panel_style());
         const char* hint = "R-Click: menu";
         tuinator::Style hint_style = ui_secondary_style(theme_);
-        hint_style.background_rgb = kUiSidebarBackground;
+        hint_style.background_rgb = ui_sidebar_bg();
         ctx.canvas.draw_text({pad, hint_y}, hint, ui_resolve_sidebar_text(ctx, *this, hint_style));
     }
 }

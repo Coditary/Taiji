@@ -384,6 +384,10 @@ bool settings_parse_draft(const std::string& json, SettingsModal::Draft& out) {
     if (out.message_time_clock != "12h") {
         out.message_time_clock = "24h";
     }
+    out.sticky_user_message = json_extract_bool(json, "sticky_user_message");
+    if (json.find("\"sticky_user_message\":") == std::string::npos) {
+        out.sticky_user_message = true;
+    }
     out.stt_enabled = json_extract_bool(json, "stt_enabled");
     if (json.find("\"stt_enabled\":") == std::string::npos) {
         out.stt_enabled = true;
@@ -503,6 +507,7 @@ std::string SettingsModal::build_apply_json() const {
     body += std::string(",\"message_timestamps\":") + (draft_.message_timestamps ? "true" : "false");
     body += ",\"message_time_clock\":";
     json_escape_append(body, draft_.message_time_clock == "12h" ? "12h" : "24h");
+    body += std::string(",\"sticky_user_message\":") + (draft_.sticky_user_message ? "true" : "false");
     body += std::string(",\"decisions_enabled\":") + (draft_.decisions_enabled ? "true" : "false");
     body += std::string(",\"memory_enabled\":") + (draft_.memory_enabled ? "true" : "false");
     body += ",\"project_default_provider\":";

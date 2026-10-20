@@ -70,7 +70,7 @@ int draw_footer_segments(tuinator::PaintContext& ctx, const tuinator::Widget& wi
             break;
         }
         tuinator::Style key_bg = badge_key;
-        key_bg.background_rgb = kUiBadgeBackground;
+        key_bg.background_rgb = ui_badge_bg();
         ctx.canvas.fill_rect({cursor, y, key_w, 1}, ' ', key_bg);
         ctx.canvas.draw_text({cursor, y}, key_text, key_bg);
         cursor += key_w;
@@ -125,14 +125,14 @@ void StatusFooter::paint(tuinator::PaintContext& ctx) const {
     paint_bounds_background(ctx, ui_sidebar_panel_style());
 
     tuinator::Style path = ui_resolve_footer_text(path_style_);
-    path.foreground_rgb = kUiSecondaryText;
+    path.foreground_rgb = ui_secondary_text();
     tuinator::Style status = ui_resolve_footer_text(status_style_);
     tuinator::Style badge_key = status;
     badge_key.bold = true;
-    badge_key.foreground_rgb = tuinator::rgb(220, 225, 240);
+    badge_key.foreground_rgb = ui_text();
     tuinator::Style badge_label = status;
     badge_label.dim = true;
-    badge_label.foreground_rgb = kUiSecondaryText;
+    badge_label.foreground_rgb = ui_secondary_text();
 
     const int pad = kUiPadX;
     const std::string display_path = path_.empty() ? "" : shorten_display_path(path_);

@@ -12,13 +12,13 @@ namespace {
 
 tuinator::Style mcp_dot_style(bool connected) {
     tuinator::Style style;
-    style.foreground_rgb = connected ? kUiStatusOk : kUiStatusIdle;
+    style.foreground_rgb = connected ? ui_status_ok() : ui_status_idle();
     return style;
 }
 
 tuinator::Style mcp_row_fill_style() {
     tuinator::Style style;
-    style.background_rgb = kUiSidebarBackground;
+    style.background_rgb = ui_sidebar_bg();
     return style;
 }
 
@@ -99,11 +99,12 @@ void McpServerList::paint(tuinator::PaintContext& ctx) const {
         return;
     }
 
-    ui_fill_widget_bounds(ctx, *this, kUiSidebarBackground);
+    ui_fill_widget_bounds(ctx, *this, ui_sidebar_bg());
 
     const int pad = kUiPadX;
-    tuinator::Style heading = theme_.heading;
+    tuinator::Style heading;
     heading.bold = true;
+    heading.foreground_rgb = ui_section_heading();
     heading = ui_resolve_sidebar_text(ctx, *this, heading);
     tuinator::Style muted = ui_resolve_sidebar_text(ctx, *this, ui_secondary_style(theme_));
     tuinator::Style label = ui_resolve_sidebar_text(ctx, *this, theme_.label);
@@ -138,22 +139,22 @@ void McpServerList::paint(tuinator::PaintContext& ctx) const {
         const std::string& name = servers_[static_cast<std::size_t>(row)];
         tuinator::Style row_bg = mcp_row_fill_style();
         if (row == selected_row_) {
-            row_bg.background_rgb = kUiSessionActiveBackground;
+            row_bg.background_rgb = ui_session_active_bg();
         } else if (row == hovered_row_) {
-            row_bg.background_rgb = tuinator::rgb(36, 39, 52);
+            row_bg.background_rgb = ui_list_active_bg();
         }
         ctx.canvas.fill_rect({0, y, bounds_.width, 1}, ' ', row_bg);
 
         const tuinator::Rgb row_rgb =
-            row_bg.background_rgb.has_value() ? *row_bg.background_rgb : kUiSidebarBackground;
+            row_bg.background_rgb.has_value() ? *row_bg.background_rgb : ui_sidebar_bg();
         tuinator::Style dot = ui_resolve_panel_text(mcp_dot_style(true), row_rgb);
         if (!active_server_.empty() && name == active_server_) {
-            dot.foreground_rgb = ui_pulse_rgb(kUiStatusOk, tuinator::rgb(125, 207, 255), active_pulse_ms_, 700.0);
+            dot.foreground_rgb = ui_pulse_rgb(ui_status_ok(), ui_git_branch_accent(), active_pulse_ms_, 700.0);
         }
         tuinator::Style name_style = ui_resolve_panel_text(theme_.label, row_rgb);
         if (row == selected_row_) {
             name_style.bold = true;
-            name_style.foreground_rgb = tuinator::rgb(255, 255, 255);
+            name_style.foreground_rgb = ui_list_active_fg();
         }
 
         ctx.canvas.draw_text({pad, y}, "●", dot);

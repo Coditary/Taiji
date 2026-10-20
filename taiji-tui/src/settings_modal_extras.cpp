@@ -1,6 +1,7 @@
 #include "settings_modal.hpp"
 #include "model_display.hpp"
 #include "skim_fuzzy.hpp"
+#include "ui_theme.hpp"
 
 #include <tuinator/render/text.hpp>
 
@@ -104,6 +105,26 @@ void SettingsModal::rebuild_fuzzy_filter() {
         fuzzy_cursor_ = std::max(0, static_cast<int>(fuzzy_filtered_.size()) - 1);
     }
     sync_fuzzy_list_scroll(10);
+    if (fuzzy_open_ && fuzzy_picker_mode_ == FuzzyPickerMode::Theme) {
+        preview_theme_fuzzy_selection();
+    }
+}
+
+void SettingsModal::preview_theme_fuzzy_selection() {
+    if (fuzzy_picker_mode_ != FuzzyPickerMode::Theme || fuzzy_filtered_.empty()) {
+        return;
+    }
+    if (fuzzy_cursor_ < 0 || fuzzy_cursor_ >= static_cast<int>(fuzzy_filtered_.size())) {
+        return;
+    }
+    const FuzzyEntry& entry = fuzzy_entries_[static_cast<std::size_t>(fuzzy_filtered_[fuzzy_cursor_])];
+    if (entry.model.empty() || entry.model == draft_.ui_theme) {
+        return;
+    }
+    draft_.ui_theme = entry.model;
+    if (on_preview_) {
+        on_preview_(draft_);
+    }
 }
 
 std::string SettingsModal::provider_display_label() const {
@@ -248,6 +269,16 @@ void SettingsModal::cycle_skill_state(const std::string& name) {
 }
 
 void SettingsModal::apply_fuzzy_pick(const FuzzyEntry& pick) {
+    if (fuzzy_picker_mode_ == FuzzyPickerMode::Theme) {
+        if (!pick.model.empty()) {
+            draft_.ui_theme = pick.model;
+            note_dirty();
+            if (on_preview_) {
+                on_preview_(draft_);
+            }
+        }
+        return;
+    }
     if (fuzzy_picker_mode_ == FuzzyPickerMode::Provider) {
         std::size_t idx = draft_.provider_options.size();
         for (std::size_t i = 0; i < draft_.provider_options.size(); ++i) {
@@ -429,12 +460,14 @@ void SettingsModal::paint_model_detail_overlay(tuinator::Canvas& clipped, const 
     const int dy = layout.y;
     const int dw = layout.w;
     const int dh = layout.h;
-    tuinator::Style border = theme_.accent;
+    const tuinator::Theme& theme = ui_app_theme();
+    tuinator::Style border = theme.muted;
+    border.foreground_rgb = ui_border_chrome();
     border.bold = true;
-    tuinator::Style bg = theme_.muted;
+    tuinator::Style bg = ui_overlay_panel_style();
     clipped.fill_rect({dx, dy, dw, dh}, ' ', bg);
-    clipped.draw_box({dx, dy, dw, dh}, border, theme_.glyphs);
-    tuinator::Style title = theme_.heading;
+    clipped.draw_box({dx, dy, dw, dh}, border, theme.glyphs);
+    tuinator::Style title = theme.heading;
     title.bold = true;
     title.background_rgb = bg.background_rgb;
     clipped.draw_text({dx + 2, dy}, " Model details ", title);
@@ -448,17 +481,56 @@ void SettingsModal::paint_model_detail_overlay(tuinator::Canvas& clipped, const 
         if (static_cast<int>(line.size()) > dw - 4) {
             line = line.substr(0, static_cast<std::size_t>(dw - 5)) + "…";
         }
-        tuinator::Style line_style = theme_.label;
+        tuinator::Style line_style = theme.label;
         line_style.background_rgb = bg.background_rgb;
         if (row == 0) {
             line_style.bold = true;
         }
         clipped.draw_text({dx + 2, body_y + row}, line, line_style);
     }
-    tuinator::Style hint = theme_.muted;
+    tuinator::Style hint = theme.muted;
     hint.dim = true;
     hint.background_rgb = bg.background_rgb;
     clipped.draw_text({dx + 2, dy + dh - 2}, " Esc: close  ↑↓: scroll ", hint);
+}
+
+void SettingsModal::open_theme_fuzzy() {
+    fuzzy_picker_mode_ = FuzzyPickerMode::Theme;
+    fuzzy_theme_revert_id_ = draft_.ui_theme;
+    fuzzy_entries_.clear();
+    const std::vector<std::string> ids = ui_list_theme_ids();
+    for (const std::string& id : ids) {
+        FuzzyEntry entry;
+        entry.model = id;
+        if (ui_is_bundled_theme(id)) {
+            entry.line = id + "  ·  " + ui_theme_display_name(id);
+        } else {
+            entry.line = id + "  ·  user";
+        }
+        entry.meta = id + " " + ui_theme_display_name(id) + " theme color palette stylesheet";
+        fuzzy_entries_.push_back(std::move(entry));
+    }
+    if (std::find(ids.begin(), ids.end(), draft_.ui_theme) == ids.end() && !draft_.ui_theme.empty()) {
+        FuzzyEntry entry;
+        entry.model = draft_.ui_theme;
+        entry.line = draft_.ui_theme + "  ·  (missing file)";
+        entry.meta = draft_.ui_theme;
+        fuzzy_entries_.push_back(std::move(entry));
+    }
+    fuzzy_query_.clear();
+    fuzzy_list_scroll_ = 0;
+    rebuild_fuzzy_filter();
+    fuzzy_cursor_ = 0;
+    for (int row = 0; row < static_cast<int>(fuzzy_filtered_.size()); ++row) {
+        const FuzzyEntry& entry = fuzzy_entries_[static_cast<std::size_t>(fuzzy_filtered_[row])];
+        if (entry.model == draft_.ui_theme) {
+            fuzzy_cursor_ = row;
+            break;
+        }
+    }
+    sync_fuzzy_viewport_to_cursor();
+    fuzzy_open_ = true;
+    mark_dirty();
 }
 
 void SettingsModal::open_model_fuzzy() {
@@ -551,15 +623,20 @@ void SettingsModal::paint_fuzzy_overlay(tuinator::Canvas& clipped, const PanelRe
     const int h = layout.h;
     const int x = layout.x;
     const int y = layout.y;
-    tuinator::Style border = theme_.accent;
-    tuinator::Style bg = theme_.muted;
+    const tuinator::Theme& theme = ui_app_theme();
+    tuinator::Style border = theme.muted;
+    border.foreground_rgb = ui_border_chrome();
+    tuinator::Style bg = ui_overlay_panel_style();
     clipped.fill_rect({x, y, w, h}, ' ', bg);
-    clipped.draw_box({x, y, w, h}, border, theme_.glyphs);
-    tuinator::Style title = theme_.heading;
+    clipped.draw_box({x, y, w, h}, border, theme.glyphs);
+    tuinator::Style title = theme.heading;
     title.bold = true;
-    std::string title_text =
-        fuzzy_picker_mode_ == FuzzyPickerMode::Provider ? " Select Provider " : " Select Model ";
-    if (fuzzy_picker_mode_ == FuzzyPickerMode::Model) {
+    std::string title_text = " Select Model ";
+    if (fuzzy_picker_mode_ == FuzzyPickerMode::Provider) {
+        title_text = " Select Provider ";
+    } else if (fuzzy_picker_mode_ == FuzzyPickerMode::Theme) {
+        title_text = " Select Color Theme ";
+    } else if (fuzzy_picker_mode_ == FuzzyPickerMode::Model) {
         title_text = " Model · " + provider_display_label() + " ";
     }
     if (static_cast<int>(title_text.size()) > w - 4) {
@@ -567,14 +644,22 @@ void SettingsModal::paint_fuzzy_overlay(tuinator::Canvas& clipped, const PanelRe
     }
     clipped.draw_text({x + 2, y}, title_text, title);
     const std::string query_line = "> " + fuzzy_query_ + "_";
-    clipped.draw_text({x + 2, y + 2}, query_line.substr(0, static_cast<std::size_t>(w - 4)), theme_.label);
+    clipped.draw_text({x + 2, y + 2}, query_line.substr(0, static_cast<std::size_t>(w - 4)), theme.label);
     const int list_y = layout.list_y;
     const int max_rows = layout.max_rows;
     if (fuzzy_filtered_.empty()) {
-        tuinator::Style empty_style = theme_.label;
+        tuinator::Style empty_style = theme.label;
         empty_style.dim = true;
-        const char* msg = fuzzy_entries_.empty() ? " (no providers — run: taiji providers refresh)"
-                                                 : " (no matches)";
+        const char* msg = " (no matches)";
+        if (fuzzy_entries_.empty()) {
+            if (fuzzy_picker_mode_ == FuzzyPickerMode::Provider) {
+                msg = " (no providers — run: taiji providers refresh)";
+            } else if (fuzzy_picker_mode_ == FuzzyPickerMode::Theme) {
+                msg = " (no themes — run: taiji theme init)";
+            } else {
+                msg = " (no models)";
+            }
+        }
         clipped.draw_text({x + 2, list_y}, msg, empty_style);
     }
     for (int row = 0; row < max_rows; ++row) {
@@ -583,10 +668,9 @@ void SettingsModal::paint_fuzzy_overlay(tuinator::Canvas& clipped, const PanelRe
             break;
         }
         const FuzzyEntry& entry = fuzzy_entries_[static_cast<std::size_t>(fuzzy_filtered_[idx])];
-        tuinator::Style line_style = theme_.label;
+        tuinator::Style line_style = theme.label;
         if (idx == fuzzy_cursor_) {
-            line_style.background_rgb = tuinator::rgb(52, 44, 78);
-            line_style.foreground_rgb = tuinator::rgb(235, 232, 245);
+            line_style = ui_list_selection_style(true);
         }
         std::string prefix = idx == fuzzy_cursor_ ? "> " : "  ";
         std::string line = prefix + entry.line;
@@ -596,7 +680,7 @@ void SettingsModal::paint_fuzzy_overlay(tuinator::Canvas& clipped, const PanelRe
         clipped.draw_text({x + 2, list_y + row}, line, line_style);
     }
     if (static_cast<int>(fuzzy_filtered_.size()) > max_rows) {
-        tuinator::Style scroll_hint = theme_.label;
+        tuinator::Style scroll_hint = theme.label;
         scroll_hint.dim = true;
         const std::string hint = std::to_string(fuzzy_cursor_ + 1) + "/" +
                                  std::to_string(fuzzy_filtered_.size()) + "  ↑↓";
@@ -638,6 +722,7 @@ bool SettingsModal::handle_fuzzy_event(const tuinator::Event& event) {
             if (idx >= 0 && idx < static_cast<int>(fuzzy_filtered_.size())) {
                 fuzzy_cursor_ = idx;
                 sync_fuzzy_list_scroll(fuzzy_visible_rows);
+                preview_theme_fuzzy_selection();
                 if (mouse->action == tuinator::MouseAction::Release &&
                     mouse->button == tuinator::MouseButton::Left) {
                     const FuzzyEntry& pick = fuzzy_entries_[static_cast<std::size_t>(fuzzy_filtered_[idx])];
@@ -665,6 +750,12 @@ bool SettingsModal::handle_fuzzy_event(const tuinator::Event& event) {
     const auto* key = std::get_if<tuinator::KeyPress>(&event);
     if (key != nullptr) {
         if (key->key == tuinator::Key::Escape) {
+            if (fuzzy_picker_mode_ == FuzzyPickerMode::Theme) {
+                draft_.ui_theme = fuzzy_theme_revert_id_;
+                if (on_preview_) {
+                    on_preview_(draft_);
+                }
+            }
             fuzzy_open_ = false;
             mark_dirty();
             return true;
@@ -682,6 +773,7 @@ bool SettingsModal::handle_fuzzy_event(const tuinator::Event& event) {
         if (key->key == tuinator::Key::Up) {
             fuzzy_cursor_ = std::max(0, fuzzy_cursor_ - 1);
             sync_fuzzy_list_scroll(fuzzy_visible_rows);
+            preview_theme_fuzzy_selection();
             mark_dirty();
             return true;
         }
@@ -689,6 +781,7 @@ bool SettingsModal::handle_fuzzy_event(const tuinator::Event& event) {
             if (!fuzzy_filtered_.empty()) {
                 fuzzy_cursor_ = std::min(static_cast<int>(fuzzy_filtered_.size()) - 1, fuzzy_cursor_ + 1);
                 sync_fuzzy_list_scroll(fuzzy_visible_rows);
+                preview_theme_fuzzy_selection();
                 mark_dirty();
             }
             return true;
@@ -696,6 +789,7 @@ bool SettingsModal::handle_fuzzy_event(const tuinator::Event& event) {
         if (key->key == tuinator::Key::PageUp) {
             fuzzy_cursor_ = std::max(0, fuzzy_cursor_ - fuzzy_visible_rows);
             sync_fuzzy_list_scroll(fuzzy_visible_rows);
+            preview_theme_fuzzy_selection();
             mark_dirty();
             return true;
         }
@@ -704,6 +798,7 @@ bool SettingsModal::handle_fuzzy_event(const tuinator::Event& event) {
                 fuzzy_cursor_ =
                     std::min(static_cast<int>(fuzzy_filtered_.size()) - 1, fuzzy_cursor_ + fuzzy_visible_rows);
                 sync_fuzzy_list_scroll(fuzzy_visible_rows);
+                preview_theme_fuzzy_selection();
                 mark_dirty();
             }
             return true;
@@ -711,6 +806,7 @@ bool SettingsModal::handle_fuzzy_event(const tuinator::Event& event) {
         if (key->key == tuinator::Key::Home) {
             fuzzy_cursor_ = 0;
             sync_fuzzy_list_scroll(fuzzy_visible_rows);
+            preview_theme_fuzzy_selection();
             mark_dirty();
             return true;
         }
@@ -718,6 +814,7 @@ bool SettingsModal::handle_fuzzy_event(const tuinator::Event& event) {
             if (!fuzzy_filtered_.empty()) {
                 fuzzy_cursor_ = static_cast<int>(fuzzy_filtered_.size()) - 1;
                 sync_fuzzy_list_scroll(fuzzy_visible_rows);
+                preview_theme_fuzzy_selection();
                 mark_dirty();
             }
             return true;

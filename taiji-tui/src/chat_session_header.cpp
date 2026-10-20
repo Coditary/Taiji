@@ -48,7 +48,7 @@ void ChatSessionHeader::paint(tuinator::PaintContext& ctx) const {
     tuinator::Style project_style = ui_resolve_main_text(ui_secondary_style(theme_));
     tuinator::Style session_style = ui_resolve_main_text(theme_.heading);
     session_style.bold = true;
-    session_style.foreground_rgb = tuinator::rgb(255, 255, 255);
+    session_style.foreground_rgb = ui_list_active_fg();
     tuinator::Style slash_style = project_style;
 
     if (project_.empty() && !session_.empty()) {

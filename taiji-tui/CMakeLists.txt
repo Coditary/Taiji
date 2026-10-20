@@ -87,6 +87,55 @@ else()
     find_package(Tuinator CONFIG REQUIRED)
 endif()
 
+set(TAIJI_UI_THEMES_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/themes")
+set(TAIJI_UI_THEMES_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/themes")
+
+set(TAIJI_UI_BUNDLED_THEME_IDS
+    dark
+    high_contrast
+    gruvbox_dark
+    gruvbox_light
+    catppuccin_mocha
+    catppuccin_latte
+    nord
+    dracula
+    rose_pine
+    solarized_dark
+    everforest_dark
+    one_dark
+)
+
+set(TAIJI_UI_BUNDLED_THEME_FILES "")
+foreach(theme_id IN LISTS TAIJI_UI_BUNDLED_THEME_IDS)
+    list(APPEND TAIJI_UI_BUNDLED_THEME_FILES "${TAIJI_UI_THEMES_SOURCE_DIR}/${theme_id}.theme")
+endforeach()
+
+add_custom_command(
+    OUTPUT "${TAIJI_UI_THEMES_BUILD_DIR}/dark.theme"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${TAIJI_UI_THEMES_SOURCE_DIR}" "${TAIJI_UI_THEMES_BUILD_DIR}"
+    DEPENDS ${TAIJI_UI_BUNDLED_THEME_FILES}
+    COMMENT "Copy Taiji UI theme stylesheets"
+    VERBATIM
+)
+
+add_custom_target(taiji_tui_themes DEPENDS "${TAIJI_UI_THEMES_BUILD_DIR}/dark.theme")
+
+set(TAIJI_UI_THEMES_EMBED_CPP "${CMAKE_CURRENT_BINARY_DIR}/ui_themes_bundled.cpp")
+add_custom_command(
+    OUTPUT "${TAIJI_UI_THEMES_EMBED_CPP}"
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONUTF8=1
+            python3 "${CMAKE_CURRENT_SOURCE_DIR}/scripts/embed_ui_themes.py"
+            "${TAIJI_UI_THEMES_SOURCE_DIR}"
+            "${TAIJI_UI_THEMES_EMBED_CPP}"
+            ${TAIJI_UI_BUNDLED_THEME_IDS}
+    DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/scripts/embed_ui_themes.py"
+        ${TAIJI_UI_BUNDLED_THEME_FILES}
+    COMMENT "Embedding default UI themes into taiji-tui"
+    VERBATIM
+)
+add_custom_target(taiji_tui_themes_embed DEPENDS "${TAIJI_UI_THEMES_EMBED_CPP}")
+
 add_executable(taiji-tui
     src/main.cpp
     src/chat_app.cpp
@@ -111,6 +160,8 @@ add_executable(taiji-tui
     src/status_footer.cpp
     src/ui_layout.cpp
     src/ui_theme.cpp
+    src/ui_themes_bundled_lookup.cpp
+    "${TAIJI_UI_THEMES_EMBED_CPP}"
     src/ui_message_time.cpp
     src/ui_anim.cpp
     src/context_panel.cpp
@@ -133,9 +184,16 @@ add_executable(taiji-tui
     src/speech_mic_button.cpp
 )
 
-add_dependencies(taiji-tui taiji_embed_build taiji_fuzzy_build)
-target_include_directories(taiji-tui PRIVATE "${TAIJI_FUZZY_CRATE_DIR}/include")
+add_dependencies(taiji-tui taiji_embed_build taiji_fuzzy_build taiji_tui_themes taiji_tui_themes_embed)
+target_include_directories(taiji-tui PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    "${CMAKE_CURRENT_BINARY_DIR}"
+    "${TAIJI_FUZZY_CRATE_DIR}/include"
+)
+target_compile_definitions(taiji-tui PRIVATE TAIJI_UI_THEMES_DIR="${TAIJI_UI_THEMES_BUILD_DIR}")
 target_link_libraries(taiji-tui PRIVATE tuinator::tuinator taiji_embed taiji_fuzzy)
+
+install(DIRECTORY "${TAIJI_UI_THEMES_SOURCE_DIR}/" DESTINATION share/taiji-tui/themes)
 
 if(UNIX AND NOT APPLE)
     target_link_libraries(taiji-tui PRIVATE pthread dl m resolv)

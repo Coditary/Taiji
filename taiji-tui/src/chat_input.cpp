@@ -14,6 +14,10 @@
 ChatTextInput::ChatTextInput(tuinator::TextInputOptions options, tuinator::Style style, tuinator::Style focused_style)
     : tuinator::TextInput(options, style, focused_style), options_(std::move(options)) {}
 
+void ChatTextInput::sync_field_styles(tuinator::Style normal, tuinator::Style focused) {
+    set_field_styles(std::move(normal), std::move(focused));
+}
+
 void ChatTextInput::sync_frame_border_style() {
     const tuinator::BorderStyle style = ui_frame_border_style();
     const bool show_border = ui_corners_framed();
@@ -100,7 +104,7 @@ void ChatTextInput::layout(tuinator::Rect bounds) {
 bool ChatTextInput::handle_event(const tuinator::Event& event) {
     if (quick_key_handler_) {
         if (const auto* key = std::get_if<tuinator::KeyPress>(&event)) {
-            if (value().empty() && quick_key_handler_(*key)) {
+            if (value().empty() && !is_focused() && quick_key_handler_(*key)) {
                 return true;
             }
         }
@@ -118,8 +122,8 @@ void ChatTextInput::paint_border_label(tuinator::PaintContext& ctx) const {
     }
 
     tuinator::Style border_style;
-    border_style.background_rgb = kUiInputChromeFill;
-    border_style.foreground_rgb = tuinator::rgb(130, 120, 170);
+    border_style.background_rgb = ui_input_chrome_fill();
+    border_style.foreground_rgb = ui_border_chrome();
 
     int label_start = 2;
     int erase_reserve = 0;
@@ -136,12 +140,12 @@ void ChatTextInput::paint_border_label(tuinator::PaintContext& ctx) const {
 
     tuinator::Style model_style = border_style;
     model_style.bold = true;
-    model_style.foreground_rgb = tuinator::rgb(245, 242, 255);
+    model_style.foreground_rgb = ui_text();
     tuinator::Style icon_style = model_style;
-    icon_style.foreground_rgb = tuinator::rgb(187, 154, 247);
+    icon_style.foreground_rgb = ui_accent();
     tuinator::Style provider_style = border_style;
     provider_style.bold = false;
-    provider_style.foreground_rgb = kUiSecondaryText;
+    provider_style.foreground_rgb = ui_secondary_text();
 
     const std::string icon_text = std::string(kNfModel) + " ";
     const std::string model_text = model_label_;
@@ -174,18 +178,18 @@ tuinator::Style composer_caret_style(const tuinator::Style& field) {
     style.reverse = false;
     style.bold = false;
     style.dim = false;
-    style.foreground_rgb = tuinator::rgb(28, 24, 40);
-    style.background_rgb = tuinator::rgb(196, 178, 255);
+    style.foreground_rgb = ui_caret_fg();
+    style.background_rgb = ui_caret_bg();
     if (!style.background_rgb.has_value()) {
-        style.background_rgb = kUiInputChromeFill;
+        style.background_rgb = ui_input_chrome_fill();
     }
     return style;
 }
 
 tuinator::Style composer_field_text_style(const tuinator::PaintContext& ctx, const ChatTextInput& input, bool focused) {
     tuinator::Style base;
-    base.background_rgb = kUiInputChromeFill;
-    base.foreground_rgb = tuinator::rgb(245, 242, 255);
+    base.background_rgb = ui_input_chrome_fill();
+    base.foreground_rgb = ui_text();
     return focused ? ctx.styles().focused(input, base) : ctx.styles().text(input, base);
 }
 
@@ -208,7 +212,7 @@ void ChatTextInput::paint_caret(tuinator::PaintContext& ctx) const {
     if (!caret_visible_) {
         if (value().empty()) {
             tuinator::Style fill = field_style;
-            fill.background_rgb = kUiInputChromeFill;
+            fill.background_rgb = ui_input_chrome_fill();
             ctx.canvas.fill_rect({at.x, at.y, 1, 1}, ' ', fill);
             return;
         }
@@ -217,11 +221,11 @@ void ChatTextInput::paint_caret(tuinator::PaintContext& ctx) const {
         if (index < value().size()) {
             const int char_len = static_cast<int>(tuinator::utf8_char_length(value(), index));
             tuinator::Style glyph_style = field_style;
-            glyph_style.background_rgb = kUiInputChromeFill;
+            glyph_style.background_rgb = ui_input_chrome_fill();
             ctx.canvas.draw_text({at.x, at.y}, value().substr(index, static_cast<std::size_t>(char_len)), glyph_style);
         } else {
             tuinator::Style fill = field_style;
-            fill.background_rgb = kUiInputChromeFill;
+            fill.background_rgb = ui_input_chrome_fill();
             ctx.canvas.fill_rect({at.x, at.y, 1, 1}, ' ', fill);
         }
         return;
@@ -238,8 +242,8 @@ void ChatTextInput::paint_chrome_animation(tuinator::PaintContext& ctx) const {
         return;
     }
     const tuinator::Rect local{0, 0, bounds_.width, bounds_.height};
-    ui_paint_rect_border_wave(ctx, local, chrome_anim_ms_, true, tuinator::rgb(130, 120, 170),
-                              tuinator::rgb(168, 148, 215), kUiInputChromeFill);
+    ui_paint_rect_border_wave(ctx, local, chrome_anim_ms_, true, ui_border_chrome(), ui_border_chrome_alt(),
+                              ui_input_chrome_fill());
 }
 
 void ChatTextInput::paint(tuinator::PaintContext& ctx) const {
@@ -257,8 +261,8 @@ void ChatTextInput::paint(tuinator::PaintContext& ctx) const {
             std::max(0, bounds_.width - 4 - static_cast<int>(tuinator::text_display_width(prompt())));
 
         tuinator::Style placeholder_base;
-        placeholder_base.background_rgb = kUiInputChromeFill;
-        placeholder_base.foreground_rgb = tuinator::rgb(120, 115, 140);
+        placeholder_base.background_rgb = ui_input_chrome_fill();
+        placeholder_base.foreground_rgb = ui_secondary_text();
         placeholder_base.dim = true;
         const tuinator::Style placeholder_style = ctx.styles().text(*this, placeholder_base);
 
