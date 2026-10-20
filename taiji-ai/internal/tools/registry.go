@@ -49,6 +49,9 @@ func (r *Registry) Definitions() []Definition {
 	tools := r.List()
 	out := make([]Definition, 0, len(tools))
 	for _, t := range tools {
+		if ht, ok := t.(CatalogHidden); ok && ht.HideFromCatalog() {
+			continue
+		}
 		out = append(out, ToDefinition(t))
 	}
 	return out

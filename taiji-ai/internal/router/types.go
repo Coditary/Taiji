@@ -10,7 +10,7 @@ const (
 	ActionDecide          Action = "decide"
 	ActionInvokeSkill     Action = "invoke_skill"
 	ActionAskUser         Action = "ask_user"
-	ActionRAGQuery        Action = "rag_query"
+	ActionRAGSearch       Action = "rag_search"
 	ActionAnswerDirect    Action = "answer_direct"
 	ActionContinueSession Action = "continue_session"
 	ActionHook            Action = "hook"

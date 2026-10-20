@@ -10,6 +10,11 @@ type Tool interface {
 	Run(ctx context.Context, args map[string]any) (string, error)
 }
 
+// CatalogHidden marks tools that execute at runtime but are omitted from LLM tool catalogs.
+type CatalogHidden interface {
+	HideFromCatalog() bool
+}
+
 // Definition describes a tool for LLM providers.
 type Definition struct {
 	Name        string

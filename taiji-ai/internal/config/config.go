@@ -26,6 +26,7 @@ type Config struct {
 	Hooks           HooksConfig               `yaml:"hooks"`
 	UI              UIConfig                  `yaml:"ui"`
 	STT             STTConfig                 `yaml:"stt"`
+	Tools           ToolsConfig               `yaml:"tools"`
 	Root            string                    `yaml:"-"`
 }
 
@@ -48,7 +49,12 @@ type AgentConfig struct {
 	MaxContinues     int                `yaml:"max_continues"`
 	ContinuePrompt   string             `yaml:"continue_prompt"`
 	AutoNameSessions     *bool `yaml:"auto_name_sessions,omitempty"`
-	DefaultContextWindow int   `yaml:"default_context_window,omitempty"`
+	DefaultContextWindow      int   `yaml:"default_context_window,omitempty"`
+	PruneStaleObservations    *bool `yaml:"prune_stale_observations,omitempty"`
+	ThrashingThreshold        int   `yaml:"thrashing_threshold,omitempty"`
+	CacheFriendlyPruning      *bool `yaml:"cache_friendly_pruning,omitempty"`
+	MaxContextChars           *int  `yaml:"max_context_chars,omitempty"`
+	DelegateMaxConcurrent     int   `yaml:"delegate_max_concurrent,omitempty"`
 }
 
 // AutoNameSessionsEnabled reports whether chat sessions should get an LLM-generated title.
@@ -197,6 +203,7 @@ func defaultConfig(root string) *Config {
 			return d
 		}(),
 		Memory: DefaultMemoryConfig(),
+		Tools:  DefaultToolsConfig(),
 		MCP: MCPConfig{
 			ConfigPath: filepath.Join(root, ".wuji", "mcp.json"),
 		},
@@ -306,6 +313,7 @@ type fileConfig struct {
 	Skills          SkillsConfig              `yaml:"skills,omitempty"`
 	UI              UIConfig                  `yaml:"ui,omitempty"`
 	STT             STTConfig                 `yaml:"stt,omitempty"`
+	Tools           ToolsConfig               `yaml:"tools,omitempty"`
 }
 
 // Save writes .taiji/config.yaml.
@@ -329,6 +337,7 @@ func (c *Config) Save() error {
 		Skills:          c.Skills,
 		UI:              c.UI,
 		STT:             c.STT,
+		Tools:           c.Tools,
 	}
 	raw, err := yaml.Marshal(fc)
 	if err != nil {

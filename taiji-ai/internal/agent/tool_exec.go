@@ -63,6 +63,9 @@ func runToolCall(ctx context.Context, hookRunner *hooks.Runner, reg *tools.Regis
 		}
 	}
 
+	unlock := lockFilePaths(filePathsForToolLock(toolData.Tool, toolData.Args))
+	defer unlock()
+
 	start := time.Now()
 	result, err := reg.Run(question.WithToolCall(ctx, tc.ID), toolData.Tool, toolData.Args)
 	outcome := toolExecOutcome{

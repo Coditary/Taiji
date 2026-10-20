@@ -403,7 +403,7 @@ func (s *chatState) handleSlashCommand(line string) (handled bool, exit bool, er
 		}
 		return true, false, nil
 	case "/compact":
-		summary, err := session.CompactSession(context.Background(), s.session, s.rt.Providers, s.providerID, session.DefaultCompactOptions())
+		summary, err := agent.CompactSessionHistory(context.Background(), s.session, s.rt.Providers, s.providerID, s.rt.Config)
 		if err != nil {
 			return true, false, err
 		}

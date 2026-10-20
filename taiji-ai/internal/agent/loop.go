@@ -19,6 +19,7 @@ import (
 	"github.com/coditary/taiji/internal/session"
 	"github.com/coditary/taiji/internal/skills"
 	"github.com/coditary/taiji/internal/tools"
+	"github.com/coditary/taiji/internal/tools/builtin"
 	"github.com/coditary/taiji/internal/tools/mcp"
 )
 
@@ -45,6 +46,7 @@ type RunRequest struct {
 	StreamThinkDelta   func(delta string) error
 	StreamThoughtStart func(thoughtNum int) error
 	StreamEnd          func() error
+	SubRun             SubRunConfig
 }
 
 // RunResult is the final agent output.
@@ -84,9 +86,17 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 		agentRT = (&session.Session{}).AgentRuntimeForRun(req.Config)
 	}
 	maxSteps := agentRT.MaxSteps
+	if req.SubRun.Enabled && req.SubRun.MaxSteps > 0 {
+		maxSteps = req.SubRun.MaxSteps
+	}
 	cotMode := agentRT.ChainOfThought
 	systemPrompt := taijicfg.DefaultSystemPrompt()
-	if req.Config != nil {
+	if req.SubRun.Enabled {
+		systemPrompt = strings.TrimSpace(req.SubRun.SystemPrompt)
+		if systemPrompt == "" {
+			systemPrompt = defaultSubAgentSystemPrompt
+		}
+	} else if req.Config != nil {
 		if sp := strings.TrimSpace(req.Config.Agent.SystemPrompt); sp != "" {
 			systemPrompt = sp
 		} else if usesTaggedCoT(cotMode) {
@@ -96,58 +106,60 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 			systemPrompt += appendix
 		}
 	}
-	if extra := strings.TrimSpace(agentRT.SystemPromptExtra); extra != "" {
-		systemPrompt += "\n\n" + extra
-	}
-	if preset := strings.TrimSpace(sessionPresentationPreset(req.Session)); preset != "" {
-		if appendix := presentationPromptAppendix(preset); appendix != "" {
-			systemPrompt += "\n\n" + appendix
+	if !req.SubRun.Enabled {
+		if extra := strings.TrimSpace(agentRT.SystemPromptExtra); extra != "" {
+			systemPrompt += "\n\n" + extra
 		}
-	}
-	if usesTaggedCoT(cotMode) && userRequestsThinking(req.Goal) {
-		systemPrompt += "\n\n" + explicitThinkingRequestAppendix()
-	}
-	if shouldUseThoughtChain(req.Goal, cotMode) {
-		systemPrompt += "\n\n" + chainOnePerMessageAppendix()
-	}
-	if appendix, err := loadAgentsAppendix(req.WorkDir); err != nil {
-		return nil, err
-	} else if appendix != "" {
-		systemPrompt += "\n\n" + appendix
-	}
-	if appendix := rag.SystemPromptAppendix(req.RAG); appendix != "" {
-		systemPrompt += "\n\n" + appendix
-	}
-	if agentRT.MemoryEnabled {
-		if appendix := memory.SystemPromptAppendix(req.Memory); appendix != "" {
-			systemPrompt += "\n\n" + appendix
-		}
-	}
-	systemPrompt += "\n\n" + router.SystemPromptAppendix()
-	if appendix := mcp.SystemPromptAppendix(req.MCP); appendix != "" {
-		systemPrompt += "\n\n" + appendix
-	}
-	if agentRT.DecisionsEnabled && req.DecisionProfiles != nil {
-		if appendix, err := decisions.SystemPromptAppendix(req.DecisionProfiles); err != nil {
-			return nil, err
-		} else if appendix != "" {
-			systemPrompt += "\n\n" + appendix
-		}
-	}
-	if req.Skills != nil {
-		if appendix, err := skills.SystemPromptAppendix(req.Skills); err != nil {
-			return nil, err
-		} else if appendix != "" {
-			systemPrompt += "\n\n" + appendix
-		}
-		if len(req.SkillNames) > 0 {
-			all, err := req.Skills.LoadAll()
-			if err != nil {
-				return nil, err
-			}
-			appendix := skills.BuildSystemAppendix(all, req.SkillNames)
-			if appendix != "" {
+		if preset := strings.TrimSpace(sessionPresentationPreset(req.Session)); preset != "" {
+			if appendix := presentationPromptAppendix(preset); appendix != "" {
 				systemPrompt += "\n\n" + appendix
+			}
+		}
+		if usesTaggedCoT(cotMode) && userRequestsThinking(req.Goal) {
+			systemPrompt += "\n\n" + explicitThinkingRequestAppendix()
+		}
+		if shouldUseThoughtChain(req.Goal, cotMode) {
+			systemPrompt += "\n\n" + chainOnePerMessageAppendix()
+		}
+		if appendix, err := loadAgentsAppendix(req.WorkDir); err != nil {
+			return nil, err
+		} else if appendix != "" {
+			systemPrompt += "\n\n" + appendix
+		}
+		if appendix := rag.SystemPromptAppendix(req.RAG); appendix != "" {
+			systemPrompt += "\n\n" + appendix
+		}
+		if agentRT.MemoryEnabled {
+			if appendix := memory.SystemPromptAppendix(req.Memory); appendix != "" {
+				systemPrompt += "\n\n" + appendix
+			}
+		}
+		systemPrompt += "\n\n" + router.SystemPromptAppendix()
+		if appendix := mcp.SystemPromptAppendix(req.MCP); appendix != "" {
+			systemPrompt += "\n\n" + appendix
+		}
+		if agentRT.DecisionsEnabled && req.DecisionProfiles != nil {
+			if appendix, err := decisions.SystemPromptAppendix(req.DecisionProfiles); err != nil {
+				return nil, err
+			} else if appendix != "" {
+				systemPrompt += "\n\n" + appendix
+			}
+		}
+		if req.Skills != nil {
+			if appendix, err := skills.SystemPromptAppendix(req.Skills); err != nil {
+				return nil, err
+			} else if appendix != "" {
+				systemPrompt += "\n\n" + appendix
+			}
+			if len(req.SkillNames) > 0 {
+				all, err := req.Skills.LoadAll()
+				if err != nil {
+					return nil, err
+				}
+				appendix := skills.BuildSystemAppendix(all, req.SkillNames)
+				if appendix != "" {
+					systemPrompt += "\n\n" + appendix
+				}
 			}
 		}
 	}
@@ -181,6 +193,7 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 		sessionID = req.Session.State.ID
 	}
 	ctx = session.WithRunContext(ctx, agentRT)
+	ctx = builtin.WithToolSessionID(ctx, sessionID)
 
 	if req.Questions != nil {
 		ctx = question.AttachRun(ctx, question.RunConfig{
@@ -200,7 +213,7 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 	}
 
 	hookEnv := hookEnvFor(req, 0, goal)
-	if req.Hooks != nil {
+	if !req.SubRun.SkipHooks && req.Hooks != nil {
 		if err := req.Hooks.RunSession(ctx, hooks.EventSessionStart, hooks.SessionData{Env: hookEnv, Answer: goal}); err != nil {
 			return nil, err
 		}
@@ -211,7 +224,12 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 		}
 		goal = strings.TrimSpace(prompt.Text)
 	}
-	routed := runTurnRouter(ctx, req, goal, emit)
+	var routed turnRouterResult
+	if req.SubRun.SkipTurnRouter {
+		routed = turnRouterResult{goal: goal, plan: router.Plan{Action: router.ActionUnknown, Reason: "sub-agent run"}}
+	} else {
+		routed = runTurnRouter(ctx, req, goal, emit)
+	}
 	if routed.plan.Action == router.ActionStop {
 		answer := routed.stopAnswer
 		emit(events.Event{Type: events.TypeDone, Step: 1, Text: answer})
@@ -237,9 +255,12 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 	if skillAppendix != "" {
 		systemPrompt += "\n\n" + skillAppendix
 	}
-	if planAppendix != "" || skillAppendix != "" {
-		messages[0].Content = systemPrompt
+	if !req.SubRun.Enabled {
+		if todoAppendix := todoPlanAppendix(sessionID); todoAppendix != "" {
+			systemPrompt += "\n\n" + todoAppendix
+		}
 	}
+	messages[0].Content = systemPrompt
 	if routed.prefetch.stored {
 		memTracker.rememberCalls++
 	}
@@ -262,6 +283,13 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 	var finalAnswer string
 	var resp *provider.CompletionResponse
 	var lastStep int
+	thrashing := newThrashingState()
+	thrashingThreshold := 3
+	cacheFriendlyPrune := true
+	if req.Config != nil {
+		thrashingThreshold = req.Config.Agent.ThrashingThresholdOrDefault()
+		cacheFriendlyPrune = req.Config.Agent.CacheFriendlyPruningOrDefault()
+	}
 	for step := 1; step <= maxSteps; step++ {
 		lastStep = step
 		if !shouldRunPlanPass(req.Goal, cotMode) || step > 1 {
@@ -269,6 +297,19 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 		}
 
 		stepMessages := messages
+		if !req.SubRun.Enabled {
+			if rem := todoPlanAppendix(sessionID); rem != "" {
+				stepMessages = appendHookContext(messages, rem)
+			}
+		}
+		pruneObs := true
+		if req.Config != nil {
+			pruneObs = req.Config.Agent.PruneStaleObservationsOrDefault()
+		}
+		if pruneObs && !req.SubRun.Enabled {
+			messages = pruneStaleToolObservations(messages, step, pruneOptions{cacheFriendly: cacheFriendlyPrune})
+		}
+
 		if req.Hooks != nil {
 			ctxData, hookErr := req.Hooks.RunContextBefore(ctx, hooks.ContextData{Env: hookEnvFor(req, step, goal)})
 			if hookErr != nil {
@@ -332,6 +373,16 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 				}
 			}
 			memTracker.recordToolCall(tc.Name, tc.Args, hadError, autoRecall)
+			if hadError && !req.SubRun.Enabled {
+				if rem := todoPlanAppendix(sessionID); rem != "" {
+					out += "\n\n" + rem
+				}
+			}
+			if !req.SubRun.Enabled {
+				if breaker := thrashing.observeToolOutcome(tc.Name, tc.Args, out, hadError, thrashingThreshold); breaker != "" {
+					out += "\n\n" + breaker
+				}
+			}
 			if isSkill {
 				skillObservations = append(skillObservations, emitSkillToolActivity(emit, step, tc, outcome, mcpServer, isMCP)...)
 			} else if isDecisionTool(tc.Name) {
@@ -374,7 +425,7 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 		}
 	}
 
-	if req.Memory != nil {
+	if req.Memory != nil && !req.SubRun.SkipMemoryPasses {
 		runDeterministicMemoryRevision(ctx, req, memTracker, finalAnswer, emit)
 		if !memTracker.storedMemory() {
 			messages, _ = runMemoryReflectionPass(ctx, p, req, messages, toolDefs, memTracker, emit)

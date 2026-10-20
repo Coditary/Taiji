@@ -20,6 +20,7 @@ type MemoryConfig struct {
 	SynonymsFile       string           `yaml:"synonyms_file,omitempty"`
 	KindsFile          string           `yaml:"kinds_file,omitempty"`
 	Kinds              []MemoryKindSpec `yaml:"kinds,omitempty"`
+	PrefetchOnTurn     *bool            `yaml:"prefetch_on_turn,omitempty"`
 }
 
 const memorySynonymsFile = "memory-synonyms.yaml"
@@ -80,6 +81,16 @@ func mergeMemory(dst *MemoryConfig, src MemoryConfig) {
 	if len(src.Kinds) > 0 {
 		dst.Kinds = append([]MemoryKindSpec(nil), src.Kinds...)
 	}
+	if src.PrefetchOnTurn != nil {
+		dst.PrefetchOnTurn = src.PrefetchOnTurn
+	}
+}
+
+func (m MemoryConfig) PrefetchOnTurnOrDefault() bool {
+	if m.PrefetchOnTurn == nil {
+		return false
+	}
+	return *m.PrefetchOnTurn
 }
 
 func (m MemoryConfig) EnabledOrDefault() bool {

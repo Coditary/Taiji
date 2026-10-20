@@ -14,7 +14,7 @@ Taiji may inject a short routing note for this turn. Interpret the user message 
 | hook | explicit hook command — follow hook output |
 | stop | do not continue this turn |
 
-Use memory_recall when the user asks about stored facts; memory_remember when they ask you to remember something. Use list_dir, read_file, grep, shell, rag_query, decide, invoke_skill, and ask_user as appropriate. Do not guess when inspection would help.`)
+Use memory_recall when the user asks about stored facts; memory_remember when they ask you to remember something. Use list_dir, read_file, edit_file, grep, shell, rag_search, decide, invoke_skill, and ask_user as appropriate. Do not guess when inspection would help.`)
 }
 
 // PlanAppendix returns turn-specific routing guidance.

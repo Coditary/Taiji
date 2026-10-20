@@ -2058,7 +2058,16 @@ void ChatApp::refresh_status_footer() {
     char* work_dir = taiji_work_dir(taiji_handle_);
     const std::string path = work_dir != nullptr ? work_dir : "";
     status_footer_->set_path(path);
-    status_footer_->set_status(footer_text_);
+    std::string status = footer_text_;
+    char* hud = taiji_session_hud_line(taiji_handle_);
+    if (hud != nullptr && hud[0] != '\0') {
+        if (!status.empty()) {
+            status += "  ·  ";
+        }
+        status += hud;
+        std::free(hud);
+    }
+    status_footer_->set_status(status);
     if (work_dir != nullptr) {
         std::free(work_dir);
     }

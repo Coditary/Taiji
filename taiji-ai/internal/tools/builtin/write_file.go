@@ -43,12 +43,15 @@ func (WriteFile) Run(ctx context.Context, args map[string]any) (string, error) {
 	return res.Text, err
 }
 
-func (WriteFile) RunWithMetadata(_ context.Context, args map[string]any) (tools.RunResult, error) {
+func (WriteFile) RunWithMetadata(ctx context.Context, args map[string]any) (tools.RunResult, error) {
 	path, _ := args["path"].(string)
 	content, _ := args["content"].(string)
 	path = strings.TrimSpace(path)
 	if path == "" {
 		return tools.RunResult{}, fmt.Errorf("path is required")
+	}
+	if err := CaptureWorkspaceBaseline(ctx, path); err != nil {
+		return tools.RunResult{}, err
 	}
 
 	oldContent, isNew, readErr := readExistingFile(path)
@@ -62,6 +65,7 @@ func (WriteFile) RunWithMetadata(_ context.Context, args map[string]any) (tools.
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		return tools.RunResult{}, err
 	}
+	NoteWorkspaceModified(ctx, path)
 
 	text := fmt.Sprintf("wrote %d bytes to %s", len(content), path)
 	data := map[string]any{
@@ -73,6 +77,7 @@ func (WriteFile) RunWithMetadata(_ context.Context, args map[string]any) (tools.
 	if unified := diff.Unified(path, oldContent, content, writeFileDiffMaxLines); unified != "" {
 		data["diff"] = unified
 	}
+	text = enrichResultWithGoDiagnostics(path, text)
 	return tools.RunResult{Text: text, Data: data}, nil
 }
 

@@ -82,6 +82,7 @@ import (
 	"github.com/coditary/taiji/internal/runtime"
 	"github.com/coditary/taiji/internal/session"
 	"github.com/coditary/taiji/internal/skills"
+	"github.com/coditary/taiji/internal/tools/builtin"
 )
 
 type runtimeHandle struct {
@@ -1073,6 +1074,10 @@ func maybeAutoCompactSession(ctx context.Context, h *runtimeHandle, providerID s
 	if h == nil || h.cfg == nil || h.session == nil || rt == nil {
 		return
 	}
+	if agent.ShouldAutoCompactHistory(h.session.State.Messages, h.cfg) {
+		_, _ = agent.CompactSessionHistory(ctx, h.session, rt.Providers, providerID, h.cfg)
+		return
+	}
 	threshold := h.cfg.UI.AutoCompactContextPct
 	if threshold <= 0 {
 		return
@@ -1081,7 +1086,7 @@ func maybeAutoCompactSession(ctx context.Context, h *runtimeHandle, providerID s
 	if snap.ContextUsedPct < float64(threshold) {
 		return
 	}
-	_, _ = session.CompactSession(ctx, h.session, rt.Providers, providerID, session.DefaultCompactOptions())
+	_, _ = agent.CompactSessionHistory(ctx, h.session, rt.Providers, providerID, h.cfg)
 }
 
 //export taiji_session_compact
@@ -1109,7 +1114,7 @@ func taiji_session_compact(handle C.uint64_t, errorOut **C.char) C.int {
 		providerID = h.session.ResolveProviderID(h.cfg)
 	}
 
-	_, err := session.CompactSession(context.Background(), h.session, rt.Providers, providerID, session.DefaultCompactOptions())
+	_, err := agent.CompactSessionHistory(context.Background(), h.session, rt.Providers, providerID, h.cfg)
 	if err != nil {
 		if errorOut != nil {
 			*errorOut = C.CString(err.Error())
@@ -1117,6 +1122,21 @@ func taiji_session_compact(handle C.uint64_t, errorOut **C.char) C.int {
 		return 0
 	}
 	return 1
+}
+
+//export taiji_session_hud_line
+func taiji_session_hud_line(handle C.uint64_t) *C.char {
+	handlesMu.Lock()
+	h, ok := handles[uint64(handle)]
+	handlesMu.Unlock()
+	if !ok || h == nil || h.session == nil {
+		return nil
+	}
+	line := builtin.FormatSessionHUDLine(builtin.GetSessionHUD(h.session.State.ID))
+	if strings.TrimSpace(line) == "" {
+		return nil
+	}
+	return C.CString(line)
 }
 
 //export taiji_session_switch

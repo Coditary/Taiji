@@ -17,6 +17,17 @@ func TestResolvedMemoryDefaults(t *testing.T) {
 	if !mem.AutoRecallOnErrorOrDefault() {
 		t.Fatal("expected auto recall on error")
 	}
+	if mem.PrefetchOnTurnOrDefault() {
+		t.Fatal("prefetch on turn should default to false")
+	}
+}
+
+func TestMemoryPrefetchOnTurnConfig(t *testing.T) {
+	on := true
+	cfg := &Config{Memory: MemoryConfig{PrefetchOnTurn: &on}}
+	if !cfg.ResolvedMemory().PrefetchOnTurnOrDefault() {
+		t.Fatal("expected prefetch enabled")
+	}
 }
 
 func TestProjectMemoryDir(t *testing.T) {

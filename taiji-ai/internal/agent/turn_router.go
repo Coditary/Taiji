@@ -38,6 +38,11 @@ func runTurnRouter(
 		return out
 	}
 
+	if req.Config != nil && req.Config.ResolvedMemory().PrefetchOnTurnOrDefault() && req.Memory != nil && req.Memory.Enabled() {
+		goal, out.prefetch = runMemoryPrefetch(ctx, req, goal, emit)
+		out.goal = goal
+	}
+
 	out.skillMatches = runSkillPrefetch(ctx, req, goal, emit)
 	plan.SkillMatches = out.skillMatches
 	if len(out.skillMatches) > 0 && strings.TrimSpace(plan.SkillName) == "" {

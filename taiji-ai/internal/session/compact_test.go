@@ -36,7 +36,7 @@ func TestTurnsFromMessagesCompact(t *testing.T) {
 }
 
 func TestChatTurnsToMessagesCompact(t *testing.T) {
-	msgs := chatTurnsToMessages([]ChatTurn{
+	msgs := ChatTurnsToMessages([]ChatTurn{
 		{User: "summary text", UserKind: "compact"},
 		{User: "q", Assistant: "a"},
 	})

@@ -116,7 +116,7 @@ func CompactSession(ctx context.Context, sess *Session, providers *provider.Regi
 	oldTurns := turns[:split]
 	recentTurns := turns[split:]
 
-	transcript := formatTurnsTranscript(oldTurns)
+	transcript := FormatTurnsTranscript(oldTurns)
 	summary, err := GenerateCompactSummary(ctx, providers, providerID, transcript)
 	if err != nil {
 		return "", err
@@ -126,14 +126,15 @@ func CompactSession(ctx context.Context, sess *Session, providers *provider.Regi
 	rebuilt = append(rebuilt, ChatTurn{User: summary, UserKind: "compact"})
 	rebuilt = append(rebuilt, recentTurns...)
 
-	sess.State.Messages = chatTurnsToMessages(rebuilt)
+	sess.State.Messages = ChatTurnsToMessages(rebuilt)
 	if err := sess.Save(); err != nil {
 		return "", err
 	}
 	return summary, nil
 }
 
-func formatTurnsTranscript(turns []ChatTurn) string {
+// FormatTurnsTranscript renders turns for compaction summarization.
+func FormatTurnsTranscript(turns []ChatTurn) string {
 	var b strings.Builder
 	for _, t := range turns {
 		if t.UserKind == "compact" {
@@ -159,7 +160,8 @@ func formatTurnsTranscript(turns []ChatTurn) string {
 	return b.String()
 }
 
-func chatTurnsToMessages(turns []ChatTurn) []provider.Message {
+// ChatTurnsToMessages converts chat turns back to provider messages.
+func ChatTurnsToMessages(turns []ChatTurn) []provider.Message {
 	var out []provider.Message
 	for _, t := range turns {
 		if t.UserKind == "compact" {

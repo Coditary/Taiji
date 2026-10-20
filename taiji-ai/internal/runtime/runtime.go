@@ -68,6 +68,9 @@ func New(ctx context.Context, cfg *taijicfg.Config, opts Options) (*Runtime, err
 	}
 	toolReg := tools.NewRegistry()
 	builtin.Register(toolReg)
+	if cfg != nil {
+		builtin.ConfigureTools(cfg)
+	}
 	skillsLoader := skills.NewLoader(cfg.Skills.Dirs)
 	builtin.EnableSkillOrchestration(toolReg, skillsLoader)
 
@@ -78,6 +81,7 @@ func New(ctx context.Context, cfg *taijicfg.Config, opts Options) (*Runtime, err
 		builtin.EnableRAGOrchestration(toolReg, ragSvc)
 		logInfo(opts, "taiji: rag scope: %s\n", ragSvc.DescribeScope())
 	}
+	builtin.ConfigureWorkspace(cfg, ragSvc)
 	skillsCatalog := skills.NewCatalog(skillsLoader, ragSvc, cfg)
 	if skillsCatalog != nil && skillsCatalog.Enabled() {
 		indexSkills := func() {
@@ -152,6 +156,7 @@ func New(ctx context.Context, cfg *taijicfg.Config, opts Options) (*Runtime, err
 	} else if err := attachMCP(ctx, cfg, toolReg, rt, opts); err != nil {
 		return nil, err
 	}
+	runExtendedTools(rt)
 	return rt, nil
 }
 
@@ -191,5 +196,6 @@ func (r *Runtime) Close() error {
 			err = closeErr
 		}
 	}
+	builtin.DefaultJobManager().KillAll()
 	return err
 }

@@ -74,6 +74,7 @@ char* taiji_tool_scope_label(uint64_t handle, char* scope);
 char* taiji_projects_list(uint64_t handle);
 char* taiji_session_turns(uint64_t handle);
 int taiji_session_compact(uint64_t handle, char** error_out);
+char* taiji_session_hud_line(uint64_t handle);
 int taiji_session_switch(uint64_t handle, char* project_root, char* session_id, char** error_out);
 int taiji_session_new(uint64_t handle, char* project_root, char** error_out);
 int taiji_session_delete(uint64_t handle, char* project_root, char* session_id, char** error_out);

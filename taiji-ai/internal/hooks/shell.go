@@ -114,9 +114,38 @@ func ExtractFilesFromArgs(toolName, argsJSON string) []string {
 		return nil
 	}
 	switch toolName {
-	case "write_file", "read_file":
+	case "write_file", "edit_file", "read_file", "manage_file":
+		if raw, ok := args["files"].([]any); ok && len(raw) > 0 {
+			var paths []string
+			for _, item := range raw {
+				if m, ok := item.(map[string]any); ok {
+					if p, ok := m["path"].(string); ok && strings.TrimSpace(p) != "" {
+						paths = append(paths, strings.TrimSpace(p))
+					}
+				}
+			}
+			if len(paths) > 0 {
+				return paths
+			}
+		}
 		if path, ok := args["path"].(string); ok && path != "" {
-			return []string{path}
+			out := []string{path}
+			if dest, ok := args["dest"].(string); ok && strings.TrimSpace(dest) != "" {
+				out = append(out, strings.TrimSpace(dest))
+			}
+			return out
+		}
+	case "batch_edit":
+		if raw, ok := args["files"].([]any); ok {
+			var paths []string
+			for _, item := range raw {
+				if m, ok := item.(map[string]any); ok {
+					if p, ok := m["path"].(string); ok && strings.TrimSpace(p) != "" {
+						paths = append(paths, strings.TrimSpace(p))
+					}
+				}
+			}
+			return paths
 		}
 	}
 	return nil

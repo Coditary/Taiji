@@ -18,6 +18,7 @@ func EnableRAGOrchestration(reg *tools.Registry, svc *rag.Service) {
 	reg.Register(RAGSearch{svc: svc})
 	reg.Register(RAGIndex{svc: svc})
 	reg.Register(NewIndexingWriteFile(svc))
+	reg.Register(NewIndexingEditFile(svc))
 }
 
 type RAGSearch struct {
