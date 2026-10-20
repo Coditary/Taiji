@@ -2,6 +2,7 @@ package session
 
 import (
 	"testing"
+	"time"
 
 	"github.com/coditary/taiji/internal/events"
 	"github.com/coditary/taiji/internal/provider"
@@ -64,6 +65,25 @@ func TestTurnsWithActivity(t *testing.T) {
 	}
 	if len(turns[1].Activity) != 2 || !turns[1].Activity[0].IsSkill {
 		t.Fatalf("turn 1 activity = %#v", turns[1].Activity)
+	}
+}
+
+func TestTurnsWithActivityUserSentAt(t *testing.T) {
+	sent := time.Date(2026, 3, 20, 14, 30, 0, 0, time.UTC)
+	messages := []provider.Message{
+		{Role: provider.RoleUser, Content: "hi"},
+		{Role: provider.RoleAssistant, Content: "hey"},
+	}
+	all := []events.Event{
+		{Type: events.TypeStep, Step: 1, Timestamp: sent},
+		{Type: events.TypeDone, Step: 1},
+	}
+	turns := TurnsWithActivity(messages, all)
+	if len(turns) != 1 {
+		t.Fatalf("turns = %d", len(turns))
+	}
+	if !turns[0].UserSentAt.Equal(sent) {
+		t.Fatalf("user_sent_at = %v, want %v", turns[0].UserSentAt, sent)
 	}
 }
 

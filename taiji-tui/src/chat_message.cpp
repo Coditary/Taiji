@@ -1,5 +1,8 @@
 #include "chat_message.hpp"
 
+#include "ui_chat_column.hpp"
+#include "ui_theme.hpp"
+
 #include <tuinator/render/text.hpp>
 
 #include <algorithm>
@@ -7,8 +10,8 @@
 
 namespace {
 
-constexpr int kUserBarCols = 1;
-constexpr int kUserTextIndent = 2;
+constexpr int kUserHeaderPadX = 1;
+constexpr int kUserBodyPadX = 2;
 
 std::vector<std::string> wrap_paragraph(const std::string& paragraph, int max_cols) {
     if (max_cols <= 0 || paragraph.empty()) {
@@ -131,8 +134,18 @@ int ChatMessage::wrap_cols() const {
     return 72;
 }
 
+void ChatMessage::set_time_label(std::string time_label) {
+    if (time_label_ == time_label) {
+        return;
+    }
+    time_label_ = std::move(time_label);
+    mark_dirty();
+    mark_layout_dirty();
+}
+
 int ChatMessage::content_wrap_cols() const {
-    return std::max(8, wrap_cols() - kUserTextIndent);
+    const int body_pad_x = ui_user_bubble_insets().body_pad_x;
+    return std::max(8, wrap_cols() - body_pad_x * 2);
 }
 
 std::vector<std::string> ChatMessage::content_lines() const {
@@ -150,8 +163,12 @@ tuinator::Size ChatMessage::preferred_size() const {
 
     if (variant_ == Variant::UserPrompt) {
         const auto lines = content_lines();
-        const int height = 1 + std::max(1, static_cast<int>(lines.size()));
-        return {wrap_cols(), height};
+        const int body_rows = std::max(1, static_cast<int>(lines.size()));
+        const UiUserBubbleInsets chrome = ui_user_bubble_insets();
+        const int top_rows = ui_corners_flat() ? 1 : 2;
+        const int height = top_rows + body_rows + chrome.bottom_inset;
+        const int w = chat_stream_row_preferred_width(bounds_.width > 0 ? bounds_.width : wrap_cols());
+        return {w, height};
     }
 
     const int cols = wrap_cols();
@@ -178,32 +195,58 @@ void ChatMessage::paint(tuinator::PaintContext& ctx) const {
     }
 
     if (variant_ == Variant::UserPrompt) {
-        paint_bounds_background(ctx, style_);
+        ui_fill_widget_bounds(ctx, *this, kUiMainBackground);
 
-        tuinator::Style bar_style = style_;
-        bar_style.bold = true;
+        const int panel_w = ui_chat_stream_panel_width() > 0 ? ui_chat_stream_panel_width() : bounds_.width;
+        const ChatStreamLayout column = chat_stream_layout_for_panel(panel_w);
+        int box_x = column.offset_x;
+        int box_w = column.content_width;
+        if (bounds_.width > 0) {
+            box_w = std::min(box_w, bounds_.width - box_x);
+        }
 
-        tuinator::Style label_style = style_;
-        label_style.bold = true;
+        const tuinator::Rect panel{box_x, 0, box_w, bounds_.height};
+        ui_paint_user_bubble_panel(ctx, panel, kUiQuickActionPillBg);
 
-        tuinator::Style body_style = style_;
+        const UiUserBubbleInsets chrome = ui_user_bubble_insets();
+        const int pad_x = chrome.pad_x;
+        const int body_pad_x = chrome.body_pad_x;
+        const int bottom_inset = chrome.bottom_inset;
+
+        tuinator::Style header = ui_resolve_main_text(style_);
+        header.background_rgb = kUiQuickActionPillBg;
+        header.bold = true;
+        header.foreground_rgb = tuinator::rgb(235, 232, 245);
+
+        tuinator::Style body_style = ui_resolve_main_text(style_);
+        body_style.background_rgb = kUiQuickActionPillBg;
         body_style.bold = false;
+        body_style.foreground_rgb = tuinator::rgb(220, 225, 240);
+
+        tuinator::Style time_style = header;
+        time_style.bold = false;
+        time_style.foreground_rgb = kUiSecondaryText;
 
         const auto lines = content_lines();
-        int y = 0;
+        const int header_y = ui_corners_flat() ? 0 : 1;
+        int y = header_y;
 
         if (y < bounds_.height) {
-            ctx.canvas.draw_text({0, y}, "│", bar_style);
-            paint_plain_line(ctx, kUserTextIndent, y, bounds_.width - kUserTextIndent, "Du", label_style);
+            const std::string who = std::string(kNfUser) + " You";
+            ctx.canvas.draw_text({box_x + pad_x, y}, who, header);
+            if (!time_label_.empty()) {
+                const int time_w = tuinator::text_display_width(time_label_);
+                const int time_x = std::max(box_x + pad_x, box_x + box_w - pad_x - time_w);
+                ctx.canvas.draw_text({time_x, y}, time_label_, time_style);
+            }
             ++y;
         }
 
         for (const auto& line : lines) {
-            if (y >= bounds_.height) {
+            if (y >= bounds_.height - bottom_inset) {
                 break;
             }
-            ctx.canvas.draw_text({0, y}, "│", bar_style);
-            paint_plain_line(ctx, kUserTextIndent, y, bounds_.width - kUserTextIndent, line, body_style);
+            paint_plain_line(ctx, box_x + body_pad_x, y, box_w - body_pad_x * 2, line, body_style);
             ++y;
         }
         return;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ui_chat_column.hpp"
+
 #include <tuinator/tuinator.hpp>
 
 #include <cstddef>
@@ -38,6 +40,8 @@ class TurnMetricsNote : public tuinator::Widget {
     int version_label_x() const;
     int next_x() const;
     std::string version_label() const;
+    ChatStreamLayout chat_stream_layout() const;
+    int content_right_x() const;
     int metrics_x() const;
     int metrics_max_width() const;
 

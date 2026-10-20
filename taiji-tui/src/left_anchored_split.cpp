@@ -1,38 +1,16 @@
 #include "left_anchored_split.hpp"
 
-#include <tuinator/render/box_drawing.hpp>
-#include <tuinator/render/glyphs.hpp>
+#include "ui_theme.hpp"
 
 #include <algorithm>
 
 namespace {
 
-tuinator::GlyphSet divider_glyph_set(const tuinator::Theme& theme) {
-    const tuinator::BorderGlyphs ascii = tuinator::ascii_border_glyphs();
-    if (theme.glyphs.horizontal == ascii.horizontal && theme.glyphs.vertical == ascii.vertical) {
-        return tuinator::GlyphSet::Ascii;
-    }
-    return tuinator::GlyphSet::Unicode;
-}
-
-void paint_vertical_divider(tuinator::PaintContext& ctx, const tuinator::Rect& bounds, int local_x) {
-    if (bounds.height <= 0) {
+void paint_panel_background(tuinator::PaintContext& ctx, const tuinator::Rect& local_bounds, const tuinator::Style& bg) {
+    if (local_bounds.width <= 0 || local_bounds.height <= 0) {
         return;
     }
-
-    tuinator::GlyphSet glyph_set = divider_glyph_set(ctx.theme);
-    if (glyph_set == tuinator::GlyphSet::Auto) {
-        glyph_set = tuinator::detect_glyph_set();
-    }
-    const std::string glyph = tuinator::box_drawing_glyph(tuinator::BoxDrawing::Vertical, glyph_set);
-
-    tuinator::Style divider_style{};
-    divider_style.foreground = tuinator::Color::White;
-    divider_style.dim = true;
-
-    for (int y = 0; y < bounds.height; ++y) {
-        ctx.canvas.draw_text({local_x, y}, glyph, divider_style);
-    }
+    ctx.canvas.fill_rect(local_bounds, ' ', bg);
 }
 
 } // namespace
@@ -185,11 +163,27 @@ void LeftAnchoredSplit::paint(tuinator::PaintContext& ctx) const {
         ctx.with_clip(local, [&](tuinator::PaintContext& child_ctx) { child->paint(child_ctx); });
     };
 
+    if (left_ != nullptr) {
+        const tuinator::Rect local{
+            left_->bounds().x - bounds_.x,
+            left_->bounds().y - bounds_.y,
+            left_->bounds().width,
+            left_->bounds().height,
+        };
+        paint_panel_background(ctx, local, ui_sidebar_panel_style());
+    }
+    if (right_ != nullptr) {
+        const tuinator::Rect local{
+            right_->bounds().x - bounds_.x,
+            right_->bounds().y - bounds_.y,
+            right_->bounds().width,
+            right_->bounds().height,
+        };
+        paint_panel_background(ctx, local, ui_main_panel_style());
+    }
+
     paint_child(left_.get());
     paint_child(right_.get());
-
-    const tuinator::Rect divider = divider_bounds();
-    paint_vertical_divider(ctx, bounds_, divider.x - bounds_.x);
 }
 
 tuinator::Widget* LeftAnchoredSplit::hit_test(tuinator::Point point) {

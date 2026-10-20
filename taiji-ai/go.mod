@@ -2,6 +2,8 @@ module github.com/coditary/taiji
 
 go 1.26.0
 
+replace github.com/coditary/wuji-core => ../wuji-core
+
 require (
 	github.com/coditary/wuji-core v0.0.0-20260921203522-b23583482ab7
 	github.com/spf13/cobra v1.9.1
@@ -12,6 +14,7 @@ require (
 
 require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect

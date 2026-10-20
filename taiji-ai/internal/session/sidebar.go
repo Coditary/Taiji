@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/coditary/taiji/internal/config"
 	"github.com/coditary/taiji/internal/events"
@@ -34,10 +35,11 @@ type TurnMetrics struct {
 
 // ChatTurn is a user/assistant pair for TUI history replay.
 type ChatTurn struct {
-	User      string         `json:"user"`
-	Assistant string         `json:"assistant"`
-	Activity  []events.Event `json:"activity,omitempty"`
-	Metrics   *TurnMetrics   `json:"metrics,omitempty"`
+	User       string         `json:"user"`
+	Assistant  string         `json:"assistant"`
+	UserSentAt time.Time      `json:"user_sent_at,omitempty"`
+	Activity   []events.Event `json:"activity,omitempty"`
+	Metrics    *TurnMetrics   `json:"metrics,omitempty"`
 }
 
 // BuildSidebar assembles the project/session tree for the TUI left sidebar.

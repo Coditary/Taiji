@@ -23,6 +23,7 @@ type State struct {
 	Goal       string             `json:"goal"`
 	Messages   []provider.Message `json:"messages"`
 	Stats      Stats              `json:"stats,omitempty"`
+	Settings   Settings           `json:"settings,omitempty"`
 }
 
 // Stats aggregates usage for a session.

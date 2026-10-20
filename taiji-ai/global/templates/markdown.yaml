@@ -1,0 +1,8 @@
+id: markdown
+name: Markdown Assistant
+description: Standard assistant with full markdown replies.
+settings:
+  preset: markdown
+  presentation: markdown
+  chain_of_thought: prompt
+  turn_metrics_preset: dev

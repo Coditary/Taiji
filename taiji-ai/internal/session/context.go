@@ -33,7 +33,7 @@ func (s *Session) ContextSnapshot(cfg *config.Config, providerID string) Context
 		}
 	}
 
-	window := ResolveContextWindow(cfg, providerID)
+	window := s.resolveContextWindow(cfg, providerID)
 	pct := 0.0
 	if window > 0 && contextTokens > 0 {
 		pct = float64(contextTokens) / float64(window) * 100
@@ -50,6 +50,15 @@ func (s *Session) ContextSnapshot(cfg *config.Config, providerID string) Context
 		OutputTokens:     st.OutputTokens,
 		EstimatedCostUSD: st.EstimatedCostUSD,
 	}
+}
+
+func (s *Session) resolveContextWindow(cfg *config.Config, providerID string) int {
+	if s != nil {
+		if v := s.State.Settings.ContextWindow; v != nil && *v > 0 {
+			return *v
+		}
+	}
+	return ResolveContextWindow(cfg, providerID)
 }
 
 // ResolveContextWindow returns the configured or inferred context limit for a provider.

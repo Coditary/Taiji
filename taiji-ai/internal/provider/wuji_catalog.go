@@ -12,6 +12,7 @@ type wujiProviderCatalog struct {
 }
 
 type wujiProviderSummary struct {
+	Name   string `json:"name"`
 	Model  string `json:"model"`
 	Driver string `json:"driver"`
 	Kind   string `json:"kind"`

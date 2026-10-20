@@ -1,0 +1,10 @@
+id: story
+name: Story Mode
+description: Narrative, flowing prose instead of bullet-heavy answers.
+settings:
+  preset: story
+  presentation: narrative
+  chain_of_thought: off
+  max_steps: 20
+  turn_metrics_preset: minimal
+  system_prompt_extra: "Erzähle in zusammenhängendem Fließtext. Vermeide Stichpunkte, wenn der Nutzer sie nicht verlangt."

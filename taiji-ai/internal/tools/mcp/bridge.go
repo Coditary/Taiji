@@ -68,7 +68,7 @@ func (b *Bridge) Connect(ctx context.Context, cfg ServerConfig) error {
 	if err != nil {
 		return err
 	}
-	cmd.Stderr = os.Stderr
+	cmd.Stderr = io.Discard
 	if err := cmd.Start(); err != nil {
 		return err
 	}

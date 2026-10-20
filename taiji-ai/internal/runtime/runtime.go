@@ -24,6 +24,15 @@ import (
 type Options struct {
 	Local     bool
 	LocalOnly bool
+	// Quiet suppresses informational stderr lines (embed/TUI startup).
+	Quiet bool
+}
+
+func logInfo(opts Options, format string, args ...any) {
+	if opts.Quiet {
+		return
+	}
+	fmt.Fprintf(os.Stderr, format, args...)
 }
 
 // Runtime holds shared Taiji services.
@@ -48,12 +57,12 @@ func New(ctx context.Context, cfg *taijicfg.Config, opts Options) (*Runtime, err
 		root := provider.ResolveWujiRoot(cfg)
 		endpoint := provider.ResolveTaijiWujiEndpoint(cfg.Root, cfg.Wuji.Endpoint, cfg.Wuji.WujiRoot)
 		if err := provider.EnsureWujiCore(ctx, root, endpoint); err != nil {
-			fmt.Fprintf(os.Stderr, "taiji: wuji core unavailable: %v\n", err)
+			logInfo(opts, "taiji: wuji core unavailable: %v\n", err)
 		} else {
-			fmt.Fprintf(os.Stderr, "taiji: wuji core: %s\n", endpoint)
+			logInfo(opts, "taiji: wuji core: %s\n", endpoint)
 		}
 	}
-	reg, err := provider.NewRegistry(ctx, cfg)
+	reg, err := provider.NewRegistry(ctx, cfg, opts.Quiet)
 	if err != nil {
 		return nil, err
 	}
@@ -64,17 +73,24 @@ func New(ctx context.Context, cfg *taijicfg.Config, opts Options) (*Runtime, err
 
 	ragSvc, err := rag.NewService(cfg, rag.Options{Local: opts.Local, LocalOnly: opts.LocalOnly})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "taiji: rag unavailable: %v\n", err)
+		logInfo(opts, "taiji: rag unavailable: %v\n", err)
 	} else {
 		builtin.EnableRAGOrchestration(toolReg, ragSvc)
-		fmt.Fprintf(os.Stderr, "taiji: rag scope: %s\n", ragSvc.DescribeScope())
+		logInfo(opts, "taiji: rag scope: %s\n", ragSvc.DescribeScope())
 	}
 	skillsCatalog := skills.NewCatalog(skillsLoader, ragSvc, cfg)
 	if skillsCatalog != nil && skillsCatalog.Enabled() {
-		if err := skillsCatalog.EnsureIndexed(ctx); err != nil {
-			fmt.Fprintf(os.Stderr, "taiji: skills index: %v\n", err)
+		indexSkills := func() {
+			if err := skillsCatalog.EnsureIndexed(ctx); err != nil {
+				logInfo(opts, "taiji: skills index: %v\n", err)
+			} else {
+				logInfo(opts, "taiji: skills search: collection=%s\n", skillsCatalog.Collection())
+			}
+		}
+		if opts.Quiet {
+			go indexSkills()
 		} else {
-			fmt.Fprintf(os.Stderr, "taiji: skills search: collection=%s\n", skillsCatalog.Collection())
+			indexSkills()
 		}
 	}
 	builtin.EnableImageGeneration(toolReg, cfg)
@@ -83,47 +99,41 @@ func New(ctx context.Context, cfg *taijicfg.Config, opts Options) (*Runtime, err
 	decSvc, err := decision.NewService(cfg)
 	if err != nil {
 		if err != decision.ErrDisabled {
-			fmt.Fprintf(os.Stderr, "taiji: decisions unavailable: %v\n", err)
+			logInfo(opts, "taiji: decisions unavailable: %v\n", err)
 		}
 	} else {
 		profileLoader = decisions.NewLoader(cfg.ResolvedDecision().Dirs)
 		builtin.EnableDecisionOrchestration(toolReg, decSvc, profileLoader, taijicfg.ProjectDecisionsDir(cfg.Root))
-		fmt.Fprintf(os.Stderr, "taiji: decisions: %s\n", decSvc.DescribeBackend())
+		logInfo(opts, "taiji: decisions: %s\n", decSvc.DescribeBackend())
 		if profiles, err := profileLoader.LoadAll(); err == nil && len(profiles) > 0 {
-			fmt.Fprintf(os.Stderr, "taiji: decision profiles: %d loaded\n", len(profiles))
+			logInfo(opts, "taiji: decision profiles: %d loaded\n", len(profiles))
 		}
 	}
 
 	memSvc := memory.NewService(cfg, ragSvc)
 	builtin.EnableMemoryOrchestration(toolReg, memSvc)
 	if memSvc != nil && memSvc.Enabled() {
-		fmt.Fprintf(os.Stderr, "taiji: memory: %s\n", memSvc.DescribeDirs())
+		logInfo(opts, "taiji: memory: %s\n", memSvc.DescribeDirs())
 	}
 
 	questionsSvc := question.NewService(question.RejectPrompter{})
 	builtin.EnableAskUser(toolReg, questionsSvc)
 
-	bridge, err := mcp.AttachFromConfig(ctx, cfg, toolReg)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "taiji: mcp unavailable: %v\n", err)
-		bridge = mcp.NewBridge()
-	} else if len(cfg.MCP.Servers) > 0 {
-		fmt.Fprintf(os.Stderr, "taiji: mcp connected: %s\n", strings.Join(bridge.ConnectedServers(), ", "))
-	}
+	bridge := mcp.NewBridge()
 
 	var hookRunner *hooks.Runner
 	if cfg != nil && cfg.Hooks.HooksEnabled() {
 		if loaded, err := hooks.LoadFromPaths(taijicfg.HookSearchPaths(cfg)); err != nil {
-			fmt.Fprintf(os.Stderr, "taiji: hooks unavailable: %v\n", err)
+			logInfo(opts, "taiji: hooks unavailable: %v\n", err)
 		} else {
 			hookRunner = loaded
 			if hookRunner != nil && hookRunner.Enabled() {
-				fmt.Fprintf(os.Stderr, "taiji: hooks loaded\n")
+				logInfo(opts, "taiji: hooks loaded\n")
 			}
 		}
 	}
 
-	return &Runtime{
+	rt := &Runtime{
 		Config:    cfg,
 		Providers: reg,
 		Tools:     toolReg,
@@ -136,7 +146,31 @@ func New(ctx context.Context, cfg *taijicfg.Config, opts Options) (*Runtime, err
 		Memory:           memSvc,
 		Questions:        questionsSvc,
 		Hooks:            hookRunner,
-	}, nil
+	}
+	if opts.Quiet {
+		go attachMCPAsync(cfg, toolReg, rt, opts)
+	} else if err := attachMCP(ctx, cfg, toolReg, rt, opts); err != nil {
+		return nil, err
+	}
+	return rt, nil
+}
+
+func attachMCP(ctx context.Context, cfg *taijicfg.Config, toolReg *tools.Registry, rt *Runtime, opts Options) error {
+	bridge, err := mcp.AttachFromConfig(ctx, cfg, toolReg)
+	if err != nil {
+		logInfo(opts, "taiji: mcp unavailable: %v\n", err)
+		rt.MCP = mcp.NewBridge()
+		return nil
+	}
+	rt.MCP = bridge
+	if len(cfg.MCP.Servers) > 0 {
+		logInfo(opts, "taiji: mcp connected: %s\n", strings.Join(bridge.ConnectedServers(), ", "))
+	}
+	return nil
+}
+
+func attachMCPAsync(cfg *taijicfg.Config, toolReg *tools.Registry, rt *Runtime, opts Options) {
+	_ = attachMCP(context.Background(), cfg, toolReg, rt, opts)
 }
 
 // Close releases runtime resources.

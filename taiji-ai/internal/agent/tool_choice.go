@@ -206,7 +206,7 @@ func buildCompletionRequest(
 		tools = nil
 		toolChoice = ""
 	}
-	return provider.CompletionRequest{
+	comp := provider.CompletionRequest{
 		Messages:      messages,
 		Tools:         tools,
 		ContextWindow: contextWindow,
@@ -214,4 +214,17 @@ func buildCompletionRequest(
 		OnDelta:       onDelta,
 		OnThinkDelta:  onThinkDelta,
 	}
+	if req.Session != nil {
+		rt := req.Session.AgentRuntimeForRun(req.Config)
+		if model := strings.TrimSpace(rt.Model); model != "" {
+			comp.Model = model
+		}
+		if rt.MaxTokens > 0 {
+			comp.MaxTokens = rt.MaxTokens
+		}
+		if rt.Temperature > 0 {
+			comp.Temperature = rt.Temperature
+		}
+	}
+	return comp
 }

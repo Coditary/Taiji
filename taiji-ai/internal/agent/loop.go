@@ -66,7 +66,7 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 	}
 	providerID := strings.TrimSpace(req.ProviderID)
 	if providerID == "" && req.Session != nil {
-		providerID = req.Session.State.Provider
+		providerID = req.Session.ResolveProviderID(req.Config)
 	}
 	p, err := req.Providers.Get(providerID)
 	if err != nil {
@@ -77,14 +77,16 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 		providerID = p.ID()
 	}
 
-	maxSteps := 25
-	cotMode := taijicfg.ChainOfThoughtOff
+	agentRT := session.AgentRuntime{}
+	if req.Session != nil {
+		agentRT = req.Session.AgentRuntimeForRun(req.Config)
+	} else if req.Config != nil {
+		agentRT = (&session.Session{}).AgentRuntimeForRun(req.Config)
+	}
+	maxSteps := agentRT.MaxSteps
+	cotMode := agentRT.ChainOfThought
 	systemPrompt := taijicfg.DefaultSystemPrompt()
 	if req.Config != nil {
-		cotMode = req.Config.Agent.ChainOfThought.OrDefault()
-		if req.Config.Agent.MaxSteps > 0 {
-			maxSteps = req.Config.Agent.MaxSteps
-		}
 		if sp := strings.TrimSpace(req.Config.Agent.SystemPrompt); sp != "" {
 			systemPrompt = sp
 		} else if usesTaggedCoT(cotMode) {
@@ -92,6 +94,14 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 		}
 		if appendix := cotMode.SystemPromptAppendix(); appendix != "" {
 			systemPrompt += appendix
+		}
+	}
+	if extra := strings.TrimSpace(agentRT.SystemPromptExtra); extra != "" {
+		systemPrompt += "\n\n" + extra
+	}
+	if preset := strings.TrimSpace(sessionPresentationPreset(req.Session)); preset != "" {
+		if appendix := presentationPromptAppendix(preset); appendix != "" {
+			systemPrompt += "\n\n" + appendix
 		}
 	}
 	if usesTaggedCoT(cotMode) && userRequestsThinking(req.Goal) {
@@ -108,14 +118,16 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 	if appendix := rag.SystemPromptAppendix(req.RAG); appendix != "" {
 		systemPrompt += "\n\n" + appendix
 	}
-	if appendix := memory.SystemPromptAppendix(req.Memory); appendix != "" {
-		systemPrompt += "\n\n" + appendix
+	if agentRT.MemoryEnabled {
+		if appendix := memory.SystemPromptAppendix(req.Memory); appendix != "" {
+			systemPrompt += "\n\n" + appendix
+		}
 	}
 	systemPrompt += "\n\n" + router.SystemPromptAppendix()
 	if appendix := mcp.SystemPromptAppendix(req.MCP); appendix != "" {
 		systemPrompt += "\n\n" + appendix
 	}
-	if req.DecisionProfiles != nil {
+	if agentRT.DecisionsEnabled && req.DecisionProfiles != nil {
 		if appendix, err := decisions.SystemPromptAppendix(req.DecisionProfiles); err != nil {
 			return nil, err
 		} else if appendix != "" {
@@ -147,7 +159,7 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 		messages = append(messages, req.Session.State.Messages...)
 	}
 
-	toolDefs := toProviderTools(req.Tools.Definitions())
+	toolDefs := filterProviderTools(req.Tools, agentRT)
 	memTracker := newMemoryRunTracker()
 	continueCfg := resolveContinueConfig(req.Config)
 	tagCoT := usesTaggedCoT(cotMode)
@@ -168,6 +180,8 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 	if req.Session != nil {
 		sessionID = req.Session.State.ID
 	}
+	ctx = session.WithRunContext(ctx, agentRT)
+
 	if req.Questions != nil {
 		ctx = question.AttachRun(ctx, question.RunConfig{
 			SessionID: sessionID,

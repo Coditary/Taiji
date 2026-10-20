@@ -15,7 +15,7 @@ type Registry struct {
 }
 
 // NewRegistry builds providers from config entries, syncing from Wuji first when enabled.
-func NewRegistry(ctx context.Context, cfg *taijicfg.Config) (*Registry, error) {
+func NewRegistry(ctx context.Context, cfg *taijicfg.Config, quiet bool) (*Registry, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("config is nil")
 	}
@@ -26,7 +26,9 @@ func NewRegistry(ctx context.Context, cfg *taijicfg.Config) (*Registry, error) {
 	if err != nil {
 		return nil, err
 	}
-	LogSyncResult(syncRes)
+	if !quiet {
+		LogSyncResult(syncRes)
+	}
 
 	providers := make(map[string]Provider, len(cfg.Providers))
 	for id, pc := range cfg.Providers {

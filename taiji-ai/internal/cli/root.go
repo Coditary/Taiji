@@ -24,6 +24,9 @@ func New() (*App, error) {
 		Long: `Taiji runs agent loops with YAML-defined providers, built-in tools, MCP, and skills.
 
 Providers are configured in .taiji/config.yaml — no code changes required to add backends.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return launchTUI(args)
+		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			local, err := cmd.Root().PersistentFlags().GetBool("local")
 			if err != nil {
@@ -55,6 +58,7 @@ Providers are configured in .taiji/config.yaml — no code changes required to a
 		"like --local but RAG reads only the local store (no global knowledge)",
 	)
 	root.AddCommand(
+		newTuiCmd(),
 		newRunCmd(app),
 		newChatCmd(app),
 		newServeCmd(app),

@@ -465,7 +465,7 @@ void QuestionComposer::begin_custom_edit() {
     options.chrome = tuinator::TextInputChrome::Framed;
     options.max_content_lines = 1;
     options.prompt = "› ";
-    options.placeholder = "Eigene Antwort…";
+    options.placeholder = "Custom answer…";
     custom_input_ = std::make_unique<tuinator::TextInput>(options, style_, focused_style_);
     custom_input_->set_on_submit([this](const std::string&) { finish_custom_edit(true); });
     editing_custom_ = true;
@@ -500,21 +500,21 @@ void QuestionComposer::finish_custom_edit(bool keep) {
 
 std::string QuestionComposer::footer_hint() const {
     if (editing_custom_) {
-        return "Enter: übernehmen  ·  Esc: zurück";
+        return "Enter: apply  ·  Esc: back";
     }
     if (current_question().multiple) {
-        std::string hint = "↑↓ wählen  ·  Leertaste: umschalten  ·  Enter: weiter";
+        std::string hint = "↑↓ select  ·  Space: toggle  ·  Enter: next";
         if (questions_.size() > 1) {
-            hint += "  ·  Tab: Frage wechseln";
+            hint += "  ·  Tab: switch question";
         }
         return hint;
     }
-    std::string hint = "↑↓ wählen  ·  Enter: bestätigen";
+    std::string hint = "↑↓ select  ·  Enter: confirm";
     if (questions_.size() > 1) {
-        hint += "  ·  Tab: Frage wechseln";
+        hint += "  ·  Tab: switch question";
     }
     if (current_question().custom) {
-        hint += "  ·  eigene Antwort wählbar";
+        hint += "  ·  custom answer available";
     }
     return hint;
 }
@@ -592,7 +592,7 @@ void QuestionComposer::paint(tuinator::PaintContext& ctx) const {
 
         std::string label;
         if (visible.custom) {
-            label = "Eigene Antwort";
+            label = "Custom answer";
         } else {
             label = q.options.at(static_cast<std::size_t>(visible.option_index)).label;
         }

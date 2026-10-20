@@ -14,6 +14,10 @@ typedef struct taiji_session_stats_t {
     int32_t input_tokens;
     int32_t output_tokens;
     double estimated_cost_usd;
+    int32_t usage_system_tokens;
+    int32_t usage_tools_tokens;
+    int32_t usage_skills_tokens;
+    int32_t usage_conversation_tokens;
 } taiji_session_stats_t;
 
 typedef struct taiji_turn_metrics_t {
@@ -39,6 +43,8 @@ typedef void (*taiji_done_cb)(int ok, const char* error, const char* answer, voi
 typedef void (*taiji_event_cb)(const char* event_json, void* user_data);
 
 uint64_t taiji_init(char* work_dir, int local_mode, char** error_out);
+int taiji_runtime_ready(uint64_t handle);
+char* taiji_runtime_error(uint64_t handle);
 void taiji_close(uint64_t handle);
 
 int taiji_chat(uint64_t handle, char* goal, char* provider, taiji_delta_cb on_delta, taiji_done_cb on_done,
@@ -74,6 +80,14 @@ char* taiji_init_error(void);
 
 int taiji_question_reply(uint64_t handle, char* request_id, char* answers_json);
 int taiji_question_reject(uint64_t handle, char* request_id);
+
+char* taiji_settings_get(uint64_t handle, char* scope);
+int taiji_settings_apply(uint64_t handle, char* json_payload);
+char* taiji_stt_toggle(uint64_t handle);
+char* taiji_provider_models(uint64_t handle, char* provider_id);
+char* taiji_provider_model_details(uint64_t handle, char* provider_id, char* model_id);
+int taiji_template_apply(uint64_t handle, char* template_id);
+char* taiji_presentation_mode(uint64_t handle);
 
 #ifdef __cplusplus
 }

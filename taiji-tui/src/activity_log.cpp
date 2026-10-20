@@ -1,5 +1,9 @@
 #include "activity_log.hpp"
 
+#include "ui_anim.hpp"
+#include "ui_chat_column.hpp"
+#include "ui_theme.hpp"
+
 #include <libtaiji.h>
 
 #include <tuinator/render/text.hpp>
@@ -129,7 +133,7 @@ std::string skill_name_from_result_text(const std::string& text) {
     return trimmed;
 }
 
-constexpr int kHeaderIndent = 4; // chevron + status icon + spaces
+constexpr int kTreeTextCol = 5; // "├─ ✓ "
 constexpr int kBodyBarCol = 2;
 constexpr int kBodyIndent = 4;
 constexpr int kSpinnerPeriodMs = 80;
@@ -140,23 +144,147 @@ constexpr std::size_t kMaxParamLines = 60;
 const char* kSpinnerFrames[] = {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"};
 constexpr int kSpinnerFrameCount = 10;
 
+constexpr tuinator::Rgb kActivityOkBadgeBg{52, 78, 62};
+constexpr tuinator::Rgb kActivityFailBadgeBg{78, 48, 48};
+constexpr tuinator::Rgb kActivityAddLineBg{45, 68, 52};
+constexpr tuinator::Rgb kActivityDelLineBg{72, 48, 48};
+constexpr tuinator::Rgb kActivityRunningBadgeBg{58, 48, 72};
+
+tuinator::Style activity_on_panel(tuinator::Style style) {
+    return ui_resolve_main_text(style);
+}
+
+tuinator::Style activity_draw_style(tuinator::Style style) {
+    if (style.background_rgb.has_value() && *style.background_rgb != kUiMainBackground) {
+        return style;
+    }
+    return activity_on_panel(style);
+}
+
+void paint_activity_row_bg(tuinator::PaintContext& ctx, int y, int width,
+                           tuinator::Rgb background = kUiMainBackground) {
+    if (width <= 0) {
+        return;
+    }
+    tuinator::Style fill;
+    fill.background_rgb = background;
+    ctx.canvas.fill_rect({0, y, width, 1}, ' ', fill);
+}
+
+void paint_activity_running_prefix_bg(tuinator::PaintContext& ctx, int stream_x, int y, int panel_width) {
+    if (panel_width <= stream_x || kTreeTextCol <= 0) {
+        return;
+    }
+    tuinator::Style fill;
+    fill.background_rgb = kActivityRunningBadgeBg;
+    ctx.canvas.fill_rect({stream_x, y, kTreeTextCol, 1}, ' ', fill);
+}
+
+void paint_text_with_background(tuinator::PaintContext& ctx, int x, int y, const std::string& text,
+                                tuinator::Style style) {
+    if (text.empty()) {
+        return;
+    }
+    const tuinator::Style draw = activity_draw_style(style);
+    const int width = tuinator::text_display_width(text);
+    if (width > 0) {
+        ctx.canvas.fill_rect({x, y, width, 1}, ' ', draw);
+    }
+    ctx.canvas.draw_text({x, y}, text, draw);
+}
+
+std::string skill_highlight_token(const std::string& skill_name, const std::string& tool_name,
+                                  const std::string& args, bool skill_scope) {
+    if (!skill_name.empty() && !is_invoke_skill_tool_name(skill_name)) {
+        return skill_name;
+    }
+    if (skill_scope || tool_name == "skill_search") {
+        const std::string from_args = skill_name_from_args(args);
+        if (!from_args.empty() && !is_invoke_skill_tool_name(from_args)) {
+            return from_args;
+        }
+    }
+    return {};
+}
+
+void paint_activity_header_text(tuinator::PaintContext& ctx, int x, int y, const std::string& text,
+                                tuinator::Style header_style, const std::string& skill_token) {
+    if (text.empty()) {
+        return;
+    }
+    if (skill_token.empty()) {
+        paint_text_with_background(ctx, x, y, text, header_style);
+        return;
+    }
+    const std::size_t pos = text.find(skill_token);
+    if (pos == std::string::npos) {
+        paint_text_with_background(ctx, x, y, text, header_style);
+        return;
+    }
+
+    int cursor = x;
+    if (pos > 0) {
+        const std::string before = text.substr(0, pos);
+        paint_text_with_background(ctx, cursor, y, before, header_style);
+        cursor += tuinator::text_display_width(before);
+    }
+
+    tuinator::Style badge = header_style;
+    badge.background_rgb = kUiBadgeBackground;
+    badge.foreground_rgb = kUiSectionHeading;
+    badge.bold = true;
+    paint_text_with_background(ctx, cursor, y, skill_token, badge);
+    cursor += tuinator::text_display_width(skill_token);
+
+    const std::size_t after_pos = pos + skill_token.size();
+    if (after_pos < text.size()) {
+        paint_text_with_background(ctx, cursor, y, text.substr(after_pos), header_style);
+    }
+}
+
+void paint_activity_tree_prefix(tuinator::PaintContext& ctx, int stream_x, int y, const std::string& branch,
+                                const std::string& status, tuinator::Style branch_style,
+                                tuinator::Style status_style, tuinator::Rgb row_bg) {
+    tuinator::Style row_fill;
+    row_fill.background_rgb = row_bg;
+    ctx.canvas.fill_rect({stream_x, y, kTreeTextCol, 1}, ' ', row_fill);
+    paint_text_with_background(ctx, stream_x, y, branch, branch_style);
+
+    if (status.empty()) {
+        return;
+    }
+    const int status_x = stream_x + 3;
+    paint_text_with_background(ctx, status_x, y, status, status_style);
+
+    const int gap_x = status_x + tuinator::text_display_width(status);
+    const int gap_w = (stream_x + kTreeTextCol) - gap_x;
+    if (gap_w > 0) {
+        tuinator::Style gap = branch_style;
+        gap.background_rgb = row_bg;
+        ctx.canvas.fill_rect({gap_x, y, gap_w, 1}, ' ', activity_draw_style(gap));
+    }
+}
+
 tuinator::Style make_done_style() {
     tuinator::Style style;
-    style.foreground_rgb = tuinator::rgb(150, 200, 170);
-    style.bold = true;
+    style.background_rgb = kUiMainBackground;
+    style.foreground_rgb = kUiSectionHeading;
+    style.bold = false;
     return style;
 }
 
 tuinator::Style make_failed_style() {
     tuinator::Style style;
-    style.foreground_rgb = tuinator::rgb(235, 120, 120);
+    style.background_rgb = kActivityFailBadgeBg;
+    style.foreground_rgb = tuinator::rgb(250, 200, 200);
     style.bold = true;
     return style;
 }
 
 tuinator::Style make_failed_body_style() {
     tuinator::Style style;
-    style.foreground_rgb = tuinator::rgb(235, 120, 120);
+    style.background_rgb = tuinator::rgb(55, 38, 42);
+    style.foreground_rgb = tuinator::rgb(240, 190, 190);
     return style;
 }
 
@@ -179,13 +307,15 @@ bool tool_observation_failed(const std::string& text) {
 
 tuinator::Style make_add_style() {
     tuinator::Style style;
-    style.foreground_rgb = tuinator::rgb(120, 210, 140);
+    style.background_rgb = kActivityAddLineBg;
+    style.foreground_rgb = tuinator::rgb(200, 235, 205);
     return style;
 }
 
 tuinator::Style make_del_style() {
     tuinator::Style style;
-    style.foreground_rgb = tuinator::rgb(235, 120, 120);
+    style.background_rgb = kActivityDelLineBg;
+    style.foreground_rgb = tuinator::rgb(250, 200, 200);
     return style;
 }
 
@@ -476,6 +606,27 @@ void ActivityLog::clear() {
     entries_.clear();
     received_think_deltas_ = false;
     spinner_ms_ = 0;
+    pipeline_title_.clear();
+    generating_tail_ = false;
+    mark_dirty();
+    mark_layout_dirty();
+}
+
+void ActivityLog::set_pipeline_title(std::string title) {
+    if (pipeline_title_ == title) {
+        return;
+    }
+    pipeline_title_ = std::move(title);
+    mark_dirty();
+    mark_layout_dirty();
+}
+
+void ActivityLog::set_generating_tail(bool show, std::string label) {
+    if (generating_tail_ == show && generating_label_ == label) {
+        return;
+    }
+    generating_tail_ = show;
+    generating_label_ = std::move(label);
     mark_dirty();
     mark_layout_dirty();
 }
@@ -584,6 +735,8 @@ void ActivityLog::finalize_entry(Entry& entry) {
         entry.duration_ms = elapsed_ms(entry);
         entry.has_duration = true;
     }
+    entry.settle_ms = kUiAnimFadeMs;
+    entry.flash_ms = kUiAnimFlashMs;
     mark_dirty();
     mark_layout_dirty();
 }
@@ -773,6 +926,10 @@ bool ActivityLog::has_running() const {
     return false;
 }
 
+bool ActivityLog::has_live_spinner() const {
+    return has_running() || generating_tail_;
+}
+
 std::string ActivityLog::running_label() const {
     for (const Entry& entry : entries_) {
         if (!entry.running) {
@@ -786,12 +943,37 @@ std::string ActivityLog::running_label() const {
     return "Loading model…";
 }
 
+bool ActivityLog::needs_animation_tick() const {
+    if (has_running() || generating_tail_) {
+        return true;
+    }
+    for (const Entry& entry : entries_) {
+        if (entry.settle_ms > 0 || entry.flash_ms > 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void ActivityLog::tick(int dt_ms) {
-    if (!has_running()) {
+    if (!needs_animation_tick()) {
         return;
     }
-    spinner_ms_ = (spinner_ms_ + dt_ms) % (kSpinnerPeriodMs * kSpinnerFrameCount);
-    mark_dirty();
+    spinner_ms_ = (spinner_ms_ + dt_ms) % 60000;
+    bool changed = has_running() || generating_tail_;
+    for (Entry& entry : entries_) {
+        if (entry.settle_ms > 0) {
+            entry.settle_ms = std::max(0, entry.settle_ms - dt_ms);
+            changed = true;
+        }
+        if (entry.flash_ms > 0) {
+            entry.flash_ms = std::max(0, entry.flash_ms - dt_ms);
+            changed = true;
+        }
+    }
+    if (changed) {
+        mark_dirty();
+    }
 }
 
 const char* ActivityLog::spinner_frame() const {
@@ -1106,27 +1288,37 @@ int ActivityLog::entry_height(const Entry& entry) const {
 
 int ActivityLog::total_lines() const {
     int total = 0;
+    if (!pipeline_title_.empty() && !entries_.empty()) {
+        ++total;
+    }
     for (const Entry& entry : entries_) {
         total += entry_height(entry);
+    }
+    if (generating_tail_) {
+        ++total;
     }
     return total;
 }
 
 tuinator::Size ActivityLog::preferred_size() const {
-    if (entries_.empty()) {
+    if (entries_.empty() && !generating_tail_) {
         return {0, 0};
     }
-    const int width = wrap_cols();
+    const int width =
+        std::max({wrap_cols(), chat_stream_content_width(bounds_.width), chat_stream_row_preferred_width(bounds_.width)});
     int max_line_width = 0;
+    if (!pipeline_title_.empty()) {
+        max_line_width = std::max(max_line_width, tuinator::text_display_width(pipeline_title_) + kTreeTextCol + 2);
+    }
     for (const Entry& entry : entries_) {
-        max_line_width = std::max(max_line_width, tuinator::text_display_width(header_text(entry)) + kHeaderIndent);
+        max_line_width = std::max(max_line_width, tuinator::text_display_width(header_text(entry)) + kTreeTextCol);
         if (entry.expanded) {
             for (const auto& line : body_lines(entry)) {
                 max_line_width = std::max(max_line_width, tuinator::text_display_width(line.text) + kBodyIndent);
             }
         }
     }
-    return {std::min(max_line_width, width), total_lines()};
+    return {width, total_lines()};
 }
 
 void ActivityLog::layout(tuinator::Rect bounds) {
@@ -1137,32 +1329,94 @@ void ActivityLog::layout(tuinator::Rect bounds) {
 }
 
 void ActivityLog::paint(tuinator::PaintContext& ctx) const {
-    if (bounds_.width <= 0 || bounds_.height <= 0 || entries_.empty()) {
+    if (bounds_.width <= 0 || bounds_.height <= 0) {
+        return;
+    }
+    if (entries_.empty() && !generating_tail_) {
         return;
     }
 
+    const ChatStreamLayout stream = chat_stream_layout_in_widget(bounds_.width);
+    const int stream_x = stream.offset_x;
+
     int y = 0;
-    for (const Entry& entry : entries_) {
+    if (!pipeline_title_.empty() && !entries_.empty() && y < bounds_.height) {
+        paint_activity_row_bg(ctx, y, bounds_.width);
+        paint_activity_tree_prefix(ctx, stream_x, y, "╭─", "", muted_style_, muted_style_, kUiMainBackground);
+        tuinator::Style title = activity_on_panel(heading_style_);
+        title.bold = true;
+        paint_text_with_background(ctx, stream_x + kTreeTextCol - 1, y, pipeline_title_, title);
+        ++y;
+    }
+
+    for (std::size_t entry_index = 0; entry_index < entries_.size(); ++entry_index) {
+        const Entry& entry = entries_[entry_index];
         if (y >= bounds_.height) {
             break;
         }
 
-        const char* chevron = entry.expanded ? "▾" : "▸";
-        const tuinator::Style& chrome_style = entry.failed ? failed_body_style_ : muted_style_;
-        ctx.canvas.draw_text({0, y}, chevron, chrome_style);
+        const tuinator::Rgb row_bg = kUiMainBackground;
+        paint_activity_row_bg(ctx, y, bounds_.width, row_bg);
+        if (entry.running) {
+            paint_activity_running_prefix_bg(ctx, stream_x, y, bounds_.width);
+        }
 
-        const char* status = entry.running ? spinner_frame() : (entry.failed ? "✗" : "✓");
-        const tuinator::Style& status_style =
+        const tuinator::Style& chrome_style = entry.failed ? failed_body_style_ : muted_style_;
+        tuinator::Style chrome_draw = chrome_style;
+        chrome_draw.background_rgb = row_bg;
+        if (entry.running) {
+            chrome_draw.foreground_rgb = ui_pulse_rgb(kUiSecondaryText, kUiSessionActiveBar, spinner_ms_);
+        }
+
+        const std::string status =
+            entry.running ? ui_braille_spinner_frame(spinner_ms_, static_cast<int>(entry_index))
+                          : (entry.failed ? "✗" : "✓");
+        tuinator::Style status_style =
             entry.running ? active_style_ : (entry.failed ? failed_style_ : done_style_);
-        ctx.canvas.draw_text({2, y}, status, status_style);
+        if (entry.running) {
+            status_style.background_rgb = kActivityRunningBadgeBg;
+            status_style.foreground_rgb = kUiSessionActiveBar;
+            status_style.bold = false;
+        } else if (!entry.failed) {
+            status_style.background_rgb = row_bg;
+            status_style.foreground_rgb = kUiSectionHeading;
+            status_style.bold = false;
+            if (entry.flash_ms > 0) {
+                const double t = 1.0 - static_cast<double>(entry.flash_ms) / static_cast<double>(kUiAnimFadeMs);
+                status_style.foreground_rgb =
+                    ui_fade_toward(tuinator::rgb(255, 255, 255), kUiSectionHeading, t);
+            }
+        }
+        paint_activity_tree_prefix(ctx, stream_x, y, "├─", status, chrome_draw, status_style, row_bg);
 
         const std::string header = header_text(entry);
-        const tuinator::Style& header_style =
+        tuinator::Style header_style =
             entry.running ? active_style_ : (entry.failed ? failed_style_ : body_style_);
-        const int max_columns = std::max(0, bounds_.width - kHeaderIndent);
+        if (entry.running) {
+            header_style = activity_on_panel(header_style);
+            header_style.background_rgb = kUiMainBackground;
+            header_style.foreground_rgb = kUiSectionHeading;
+            header_style.bold = false;
+        } else if (entry.failed) {
+            header_style = activity_draw_style(header_style);
+        } else {
+            header_style = activity_on_panel(header_style);
+            header_style.background_rgb = row_bg;
+            if (entry.settle_ms > 0) {
+                const double t = 1.0 - static_cast<double>(entry.settle_ms) / static_cast<double>(kUiAnimFadeMs);
+                const tuinator::Rgb bright = tuinator::rgb(245, 242, 255);
+                const tuinator::Rgb target = tuinator::rgb(220, 225, 240);
+                header_style.foreground_rgb = ui_fade_toward(bright, target, t);
+            }
+        }
+        const int max_columns = std::max(0, bounds_.width - stream_x - kTreeTextCol);
         const std::size_t bytes = tuinator::text_byte_length_for_width(header, max_columns);
         if (bytes > 0) {
-            ctx.canvas.draw_text({kHeaderIndent, y}, header.substr(0, bytes), header_style);
+            const std::string clipped = header.substr(0, bytes);
+            const bool skill_scope = entry.scope == Scope::Skill;
+            const std::string skill_token =
+                skill_highlight_token(entry.skill_name, entry.name, entry.args, skill_scope);
+            paint_activity_header_text(ctx, stream_x + kTreeTextCol, y, clipped, header_style, skill_token);
         }
         ++y;
 
@@ -1174,14 +1428,19 @@ void ActivityLog::paint(tuinator::PaintContext& ctx) const {
             if (y >= bounds_.height) {
                 break;
             }
+            paint_activity_row_bg(ctx, y, bounds_.width);
             if (line.bar) {
-                const tuinator::Style& bar_style = entry.failed ? failed_body_style_ : bar_style_;
-                ctx.canvas.draw_text({kBodyBarCol, y}, "│", bar_style);
+                tuinator::Style bar_style = entry.failed ? failed_body_style_ : bar_style_;
+                if (entry.running) {
+                    bar_style.foreground_rgb = ui_pulse_rgb(kUiSecondaryText, kUiSessionActiveBar, spinner_ms_);
+                }
+                paint_text_with_background(ctx, stream_x + kBodyBarCol, y, "│", bar_style);
             }
-            const int body_columns = std::max(0, bounds_.width - kBodyIndent);
+            const int body_columns = std::max(0, bounds_.width - stream_x - kBodyIndent);
             const std::size_t body_bytes = tuinator::text_byte_length_for_width(line.text, body_columns);
             if (body_bytes > 0) {
-                ctx.canvas.draw_text({kBodyIndent, y}, line.text.substr(0, body_bytes), line.style);
+                paint_text_with_background(ctx, stream_x + kBodyIndent, y, line.text.substr(0, body_bytes),
+                                           line.style);
             }
             ++y;
         }
@@ -1189,6 +1448,22 @@ void ActivityLog::paint(tuinator::PaintContext& ctx) const {
         if (entry.spacer_after && y < bounds_.height) {
             ++y;
         }
+    }
+
+    if (generating_tail_ && y < bounds_.height) {
+        paint_activity_row_bg(ctx, y, bounds_.width, kUiMainBackground);
+        tuinator::Style branch = muted_style_;
+        branch.background_rgb = kUiMainBackground;
+        tuinator::Style spin = muted_style_;
+        spin.background_rgb = kUiMainBackground;
+        spin.foreground_rgb = kUiSessionActiveBar;
+        spin.bold = false;
+        paint_activity_tree_prefix(ctx, stream_x, y, "├─", ui_braille_spinner_frame(spinner_ms_, 3), branch, spin,
+                                   kUiMainBackground);
+        tuinator::Style label = activity_on_panel(body_style_);
+        label.background_rgb = kUiMainBackground;
+        label.foreground_rgb = kUiSectionHeading;
+        paint_text_with_background(ctx, stream_x + kTreeTextCol, y, generating_label_, label);
     }
 }
 

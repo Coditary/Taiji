@@ -1,5 +1,8 @@
 #include "turn_metrics_note.hpp"
 
+#include "ui_chat_column.hpp"
+#include "ui_theme.hpp"
+
 #include <tuinator/render/text.hpp>
 
 #include <algorithm>
@@ -7,7 +10,6 @@
 
 namespace {
 
-constexpr int kMetricsIndent = 0;
 constexpr int kActionGapCols = 2;
 constexpr int kVersionGapCols = 3;
 constexpr int kNavGapCols = 1;
@@ -135,12 +137,25 @@ int TurnMetricsNote::actions_cluster_width() const {
     return width;
 }
 
+ChatStreamLayout TurnMetricsNote::chat_stream_layout() const {
+    const int width = bounds_.width > 0 ? bounds_.width : (wrap_width_hint_ > 0 ? wrap_width_hint_ : 72);
+    return chat_stream_layout_in_widget(width);
+}
+
+int TurnMetricsNote::content_right_x() const {
+    const ChatStreamLayout column = chat_stream_layout();
+    if (bounds_.width > 0) {
+        return std::min(bounds_.width, column.offset_x + column.content_width);
+    }
+    return column.offset_x + column.content_width;
+}
+
 int TurnMetricsNote::actions_cluster_start_x() const {
     const int cluster_width = actions_cluster_width();
     if (cluster_width <= 0) {
-        return bounds_.width;
+        return content_right_x();
     }
-    return std::max(0, bounds_.width - right_inset_ - cluster_width);
+    return std::max(0, content_right_x() - right_inset_ - cluster_width);
 }
 
 int TurnMetricsNote::redo_x() const {
@@ -155,7 +170,7 @@ int TurnMetricsNote::copy_x() const {
 }
 
 int TurnMetricsNote::next_x() const {
-    return std::max(0, bounds_.width - right_inset_ - glyph_width(kNextGlyph));
+    return std::max(0, content_right_x() - right_inset_ - glyph_width(kNextGlyph));
 }
 
 int TurnMetricsNote::version_label_x() const {
@@ -168,11 +183,12 @@ int TurnMetricsNote::prev_x() const {
 }
 
 int TurnMetricsNote::metrics_x() const {
-    return kMetricsIndent;
+    return chat_stream_layout().offset_x;
 }
 
 int TurnMetricsNote::metrics_max_width() const {
-    const int cluster_start = actions_cluster_width() > 0 ? actions_cluster_start_x() : bounds_.width - right_inset_;
+    const int cluster_start =
+        actions_cluster_width() > 0 ? actions_cluster_start_x() : content_right_x() - right_inset_;
     return std::max(0, cluster_start - kActionGapCols - metrics_x());
 }
 
@@ -182,7 +198,8 @@ tuinator::Size TurnMetricsNote::preferred_size() const {
         return {0, 0};
     }
     const int line_count = std::max(1, static_cast<int>(lines.empty() ? 1 : lines.size()));
-    const int width = bounds_.width > 0 ? bounds_.width : (wrap_width_hint_ > 0 ? wrap_width_hint_ : 48);
+    const int width =
+        chat_stream_row_preferred_width(bounds_.width > 0 ? bounds_.width : wrap_width_hint_);
     return {std::max(16, width), line_count};
 }
 
@@ -196,9 +213,9 @@ void TurnMetricsNote::paint(tuinator::PaintContext& ctx) const {
         return;
     }
 
-    tuinator::Style body_style = theme_.label;
-    body_style.bold = false;
-    body_style.dim = true;
+    ui_fill_widget_bounds(ctx, *this, kUiMainBackground);
+
+    tuinator::Style body_style = ui_resolve_main_text(ui_secondary_style(theme_));
 
     const int max_columns = metrics_max_width();
     for (std::size_t i = 0; i < lines.size() && static_cast<int>(i) < bounds_.height; ++i) {
@@ -212,7 +229,7 @@ void TurnMetricsNote::paint(tuinator::PaintContext& ctx) const {
     }
 
     if (visible_) {
-        tuinator::Style action_style = theme_.accent;
+        tuinator::Style action_style = ui_resolve_main_text(theme_.accent);
         action_style.bold = true;
         ctx.canvas.draw_text({redo_x(), 0}, kRedoGlyph, action_style);
         ctx.canvas.draw_text({copy_x(), 0}, kCopyGlyph, action_style);
@@ -222,11 +239,10 @@ void TurnMetricsNote::paint(tuinator::PaintContext& ctx) const {
         return;
     }
 
-    tuinator::Style nav_style = theme_.accent;
+    tuinator::Style nav_style = ui_resolve_main_text(theme_.accent);
     nav_style.bold = true;
 
-    tuinator::Style disabled_style = theme_.muted;
-    disabled_style.bold = false;
+    tuinator::Style disabled_style = ui_resolve_main_text(ui_secondary_style(theme_));
 
     const bool has_prev = version_index_ > 0;
     const bool has_next = version_index_ + 1 < version_count_;
@@ -235,7 +251,7 @@ void TurnMetricsNote::paint(tuinator::PaintContext& ctx) const {
 
     const std::string label = version_label();
     if (!label.empty()) {
-        tuinator::Style label_style = theme_.muted;
+        tuinator::Style label_style = ui_resolve_main_text(ui_secondary_style(theme_));
         ctx.canvas.draw_text({version_label_x(), 0}, label, label_style);
     }
 

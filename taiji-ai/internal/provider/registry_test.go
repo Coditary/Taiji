@@ -13,7 +13,7 @@ func TestRegistryUnknownType(t *testing.T) {
 			"x": {Type: "unknown"},
 		},
 	}
-	_, err := NewRegistry(context.Background(), cfg)
+	_, err := NewRegistry(context.Background(), cfg, false)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -25,7 +25,7 @@ func TestRegistryOpenAIRequiresKey(t *testing.T) {
 			"x": {Type: "openai", Model: "gpt-4o"},
 		},
 	}
-	_, err := NewRegistry(context.Background(), cfg)
+	_, err := NewRegistry(context.Background(), cfg, false)
 	if err == nil {
 		t.Fatal("expected error")
 	}

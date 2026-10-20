@@ -8,6 +8,7 @@ import (
 	"time"
 
 	taijicfg "github.com/coditary/taiji/internal/config"
+	"github.com/coditary/taiji/internal/modelref"
 	"github.com/coditary/taiji/internal/wujipath"
 	"github.com/coditary/wuji-core/chatformat"
 )
@@ -94,10 +95,12 @@ func (p *wujiProvider) Complete(ctx context.Context, req CompletionRequest) (*Co
 	if len(req.Tools) > 0 {
 		messages = fromChatformatMessages(chatformat.SanitizeMessages(toChatformatMessages(messages)))
 	}
+	model := firstNonEmpty(req.Model, p.model)
+	model = modelref.Expand(model, modelref.Candidates(nil, p.id, p.model, model))
 	reqBody := map[string]any{
 		"messages":    messages,
 		"tools":       req.Tools,
-		"model":       firstNonEmpty(req.Model, p.model),
+		"model":       model,
 		"max_tokens":  firstPositive(req.MaxTokens, p.maxTokens),
 		"temperature": firstPositiveFloat(req.Temperature, p.temperature),
 		"stream":      req.OnDelta != nil,

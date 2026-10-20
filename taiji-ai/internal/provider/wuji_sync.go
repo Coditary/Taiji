@@ -76,13 +76,15 @@ func RefreshProvidersFromWuji(ctx context.Context, cfg *taijicfg.Config) (SyncRe
 			driverID = id
 		}
 		next := taijicfg.ProviderConfig{
-			Type:       "wuji",
-			Endpoint:   endpoint,
-			WujiRoot:   strings.TrimSpace(cfg.Wuji.WujiRoot),
-			ProviderID: driverID,
-			Model:      summary.Model,
-			Synced:     true,
-			Pinned:     existing.Pinned,
+			Type:        "wuji",
+			Endpoint:    endpoint,
+			WujiRoot:    strings.TrimSpace(cfg.Wuji.WujiRoot),
+			ProviderID:  driverID,
+			Model:       summary.Model,
+			WujiKind:    strings.TrimSpace(summary.Kind),
+			DisplayName: strings.TrimSpace(summary.Name),
+			Synced:      true,
+			Pinned:      existing.Pinned,
 		}
 		if !hasExisting {
 			cfg.Providers[id] = next
@@ -117,7 +119,9 @@ func providerConfigChanged(before, after taijicfg.ProviderConfig) bool {
 		before.ProviderID != after.ProviderID ||
 		before.Model != after.Model ||
 		before.Endpoint != after.Endpoint ||
-		before.WujiRoot != after.WujiRoot
+		before.WujiRoot != after.WujiRoot ||
+		before.WujiKind != after.WujiKind ||
+		before.DisplayName != after.DisplayName
 }
 
 func resolveTaijiWujiEndpoint(cfg *taijicfg.Config) string {

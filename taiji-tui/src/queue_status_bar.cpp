@@ -1,5 +1,8 @@
 #include "queue_status_bar.hpp"
 
+#include "ui_chat_column.hpp"
+#include "ui_theme.hpp"
+
 #include <tuinator/render/text.hpp>
 
 #include <sstream>
@@ -102,20 +105,28 @@ void QueueStatusBar::paint(tuinator::PaintContext& ctx) const {
         return;
     }
 
-    paint_bounds_background(ctx, theme_.muted);
+    paint_bounds_background(ctx, ui_main_panel_style());
+
+    const ChatStreamLayout column = chat_stream_layout_in_widget(bounds_.width);
+    const int x0 = column.offset_x;
+    const int inner_w = column.content_width;
 
     const std::string text = display_text();
     if (!text.empty()) {
-        ctx.canvas.draw_text({0, 0}, text, theme_.accent);
+        tuinator::Style line = ui_resolve_main_text(theme_.accent);
+        ctx.canvas.draw_text({x0, 0}, text, line);
     }
 
-    tuinator::Style promote_style = theme_.accent;
+    tuinator::Style promote_style = ui_resolve_main_text(theme_.accent);
     promote_style.bold = true;
-    ctx.canvas.draw_text({promote_x(), 0}, kPromoteGlyph, promote_style);
+    const int delete_col = x0 + std::max(0, inner_w - tuinator::text_display_width(kDeleteGlyph));
+    const int promote_col =
+        delete_col - kGapCols - tuinator::text_display_width(kPromoteGlyph);
+    ctx.canvas.draw_text({promote_col, 0}, kPromoteGlyph, promote_style);
 
-    tuinator::Style delete_style = theme_.danger;
+    tuinator::Style delete_style = ui_resolve_main_text(theme_.danger);
     delete_style.bold = true;
-    ctx.canvas.draw_text({delete_x(), 0}, kDeleteGlyph, delete_style);
+    ctx.canvas.draw_text({delete_col, 0}, kDeleteGlyph, delete_style);
 }
 
 bool QueueStatusBar::handle_event(const tuinator::Event& event) {

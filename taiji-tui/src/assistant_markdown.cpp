@@ -1,5 +1,11 @@
 #include "assistant_markdown.hpp"
 
+#include "ui_anim.hpp"
+#include "ui_chat_column.hpp"
+#include "ui_theme.hpp"
+
+#include <tuinator/render/text.hpp>
+
 #include <algorithm>
 
 namespace {
@@ -36,7 +42,16 @@ void AssistantMarkdown::append(std::string_view chunk) {
         return;
     }
     view_.append(chunk);
+    stream_glow_ms_ = 90;
     relayout_content();
+}
+
+void AssistantMarkdown::tick_stream_glow(int dt_ms) {
+    if (stream_glow_ms_ <= 0) {
+        return;
+    }
+    stream_glow_ms_ = std::max(0, stream_glow_ms_ - dt_ms);
+    mark_dirty();
 }
 
 void AssistantMarkdown::set_markdown(std::string text) {
@@ -137,18 +152,20 @@ tuinator::Size AssistantMarkdown::preferred_size() const {
     if (view_.source().empty()) {
         return {0, 0};
     }
-    const int width = wrap_width_hint_ > 0 ? wrap_width_hint_ : 72;
+    const int width =
+        chat_stream_row_preferred_width(bounds_.width > 0 ? bounds_.width : (wrap_width_hint_ > 0 ? wrap_width_hint_ : 72));
     refresh_measure_cache(width);
     return {width, std::max(1, view_.content_height())};
 }
 
 void AssistantMarkdown::layout(tuinator::Rect bounds) {
     bounds_ = bounds;
-    if (bounds.width > 0) {
-        refresh_measure_cache(bounds.width);
+    const ChatStreamLayout column = chat_stream_layout_in_widget(bounds.width);
+    const int inner_width = std::max(1, column.content_width - content_indent_);
+    if (inner_width > 0) {
+        refresh_measure_cache(inner_width);
     }
 
-    const int inner_width = std::max(1, bounds.width - content_indent_);
     const int height =
         cached_height_ > 0 ? cached_height_ : (bounds.height > 0 ? bounds.height : view_.content_height());
     view_.layout({0, 0, inner_width, std::max(1, height)});
@@ -158,5 +175,40 @@ void AssistantMarkdown::paint(tuinator::PaintContext& ctx) const {
     if (bounds_.width <= 0 || bounds_.height <= 0) {
         return;
     }
-    view_.paint(ctx);
+    ui_fill_widget_bounds(ctx, *this, kUiMainBackground);
+    const ChatStreamLayout column = chat_stream_layout_in_widget(bounds_.width);
+    const tuinator::Rect local{column.offset_x, 0, column.content_width, bounds_.height};
+    const int inner_width = column.content_width;
+    ctx.with_clip(local, [&](tuinator::PaintContext& child_ctx) {
+        view_.paint(child_ctx);
+        if (stream_glow_ms_ <= 0 || view_.source().empty()) {
+            return;
+        }
+        const int last_row = std::min(bounds_.height - 1, view_.content_height() - 1);
+        if (last_row < 0) {
+            return;
+        }
+        const std::string& src = view_.source();
+        const std::size_t end = src.find_last_not_of(" \n\r\t");
+        if (end == std::string::npos) {
+            return;
+        }
+        std::size_t start = src.find_last_of(" \n\r\t", end);
+        if (start == std::string::npos) {
+            start = 0;
+        } else {
+            ++start;
+        }
+        const std::string tail = src.substr(start, end - start + 1);
+        if (tail.empty()) {
+            return;
+        }
+        tuinator::Style glow;
+        glow.background_rgb = kUiMainBackground;
+        glow.foreground_rgb = ui_fade_toward(tuinator::rgb(255, 255, 255), tuinator::rgb(220, 225, 240),
+                                             1.0 - static_cast<double>(stream_glow_ms_) / 90.0);
+        const int tail_w = tuinator::text_display_width(tail);
+        const int x = std::max(content_indent_, inner_width - tail_w);
+        child_ctx.canvas.draw_text({x, last_row}, tail, glow);
+    });
 }

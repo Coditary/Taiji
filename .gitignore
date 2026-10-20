@@ -16,8 +16,13 @@ taiji-ai/agent.test
 # Frontend (taiji-tui) — TUI binary + embedded Go archive
 taiji-tui/build/
 taiji-tui/build/taiji-tui
+taiji-tui/fuzzy/target/
+taiji-tui/highlight/target/
 **/libtaiji.a
 **/libtaiji.h
+
+# Local clone of the Wuji CLI (separate repo; not vendored in Taiji)
+/wuji-ai/
 
 # Go
 *.exe

@@ -16,6 +16,8 @@ class AssistantMarkdown : public tuinator::Widget {
     bool is_empty() const;
     void set_wrap_width(int width);
     void sync_from(const std::string& text, bool clear_first);
+    void tick_stream_glow(int dt_ms);
+    bool has_stream_animation() const { return stream_glow_ms_ > 0; }
 
     std::string_view widget_type_name() const override { return "AssistantMarkdown"; }
 
@@ -32,4 +34,5 @@ class AssistantMarkdown : public tuinator::Widget {
     int content_indent_ = 2;
     mutable int cached_width_ = 0;
     mutable int cached_height_ = 1;
+    int stream_glow_ms_ = 0;
 };

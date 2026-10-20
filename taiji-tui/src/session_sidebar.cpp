@@ -1,5 +1,8 @@
 #include "session_sidebar.hpp"
 
+#include "ui_layout.hpp"
+#include "ui_theme.hpp"
+
 #include <libtaiji.h>
 
 #include <tuinator/render/text.hpp>
@@ -115,7 +118,7 @@ std::vector<std::string> json_split_objects(const std::string& array_json) {
     return out;
 }
 
-constexpr char kProjectNewGlyph[] = "+";
+constexpr const char* kProjectNewGlyph = u8"󰐕";
 
 } // namespace
 
@@ -222,7 +225,7 @@ void SessionSidebar::refresh(uint64_t taiji_handle) {
             item.created_at = json_extract_string(session_json, "created_at");
             item.active = !current_session.empty() && item.session_id == current_session;
             if (item.name.empty()) {
-                item.name = "Neue Session";
+                item.name = "New Session";
             }
             group.sessions.push_back(std::move(item));
         }
@@ -263,7 +266,6 @@ void SessionSidebar::toggle_project_collapsed(const std::string& project_root) {
 
 void SessionSidebar::rebuild_rows() {
     rows_.clear();
-    rows_.push_back(Row{.kind = Row::Kind::NewChat, .label = "Neuer Chat"});
     for (const ProjectGroup& project : projects_) {
         rows_.push_back(Row{.kind = Row::Kind::ProjectHeader, .project_root = project.root, .label = project.name});
         if (is_project_collapsed(project.root)) {
@@ -317,7 +319,7 @@ std::string SessionSidebar::format_relative_time(const std::string& iso_time) co
 
     char buf[16];
     if (diff < 60) {
-        std::snprintf(buf, sizeof(buf), "jetzt");
+        std::snprintf(buf, sizeof(buf), "now");
     } else if (diff < 3600) {
         std::snprintf(buf, sizeof(buf), "%dm", static_cast<int>(diff / 60));
     } else if (diff < 86400) {
@@ -351,23 +353,23 @@ tuinator::Size SessionSidebar::preferred_size() const {
 
 void SessionSidebar::layout(tuinator::Rect bounds) {
     bounds_ = bounds;
-    const int visible_rows = std::max(1, bounds_.height);
-    if (static_cast<int>(rows_.size()) > visible_rows) {
-        scroll_offset_ = std::min(scroll_offset_, static_cast<int>(rows_.size()) - visible_rows);
+    const int content_height = std::max(1, bounds_.height - 2);
+    if (static_cast<int>(rows_.size()) > content_height) {
+        scroll_offset_ = std::min(scroll_offset_, static_cast<int>(rows_.size()) - content_height);
     } else {
         scroll_offset_ = 0;
     }
 }
 
 int SessionSidebar::row_at_y(int local_y) const {
-    if (local_y < 0 || local_y >= bounds_.height) {
+    if (local_y < 1 || local_y >= bounds_.height - 1) {
         return -1;
     }
-    return scroll_offset_ + local_y;
+    return scroll_offset_ + (local_y - 1);
 }
 
 int SessionSidebar::project_new_button_x() const {
-    return std::max(0, bounds_.width - tuinator::text_display_width(kProjectNewGlyph));
+    return std::max(kUiPadX, bounds_.width - kUiPadX - tuinator::text_display_width(kProjectNewGlyph));
 }
 
 bool SessionSidebar::is_project_new_click(int local_x, int local_y) const {
@@ -387,56 +389,98 @@ void SessionSidebar::paint(tuinator::PaintContext& ctx) const {
         return;
     }
 
-    paint_bounds_background(ctx, theme_.muted);
+    paint_bounds_background(ctx, ui_sidebar_panel_style());
 
-    const int visible_rows = std::min(bounds_.height, static_cast<int>(rows_.size()) - scroll_offset_);
+    const int pad = kUiPadX;
+    ctx.canvas.fill_rect({0, 0, bounds_.width, 1}, ' ', ui_sidebar_panel_style());
+    tuinator::Style header_style = theme_.heading;
+    header_style.bold = true;
+    header_style.background_rgb = kUiSidebarBackground;
+    ctx.canvas.draw_text({pad, 0}, "PROJECTS", ui_resolve_sidebar_text(ctx, *this, header_style));
+
+    const int content_height = std::max(0, bounds_.height - 2);
+    const int visible_rows = std::min(content_height, static_cast<int>(rows_.size()) - scroll_offset_);
     for (int y = 0; y < visible_rows; ++y) {
         const int row_index = scroll_offset_ + y;
+        const int paint_y = y + 1;
         if (row_index < 0 || row_index >= static_cast<int>(rows_.size())) {
             break;
         }
         const Row& row = rows_[static_cast<std::size_t>(row_index)];
 
+        tuinator::Style row_fill = ui_sidebar_panel_style();
         tuinator::Style style = theme_.label;
-        if (row.kind == Row::Kind::NewChat) {
-            style = theme_.accent;
-            style.bold = true;
-        } else if (row.kind == Row::Kind::ProjectHeader) {
+        style.background_rgb = kUiSidebarBackground;
+        if (row.kind == Row::Kind::ProjectHeader) {
             style = theme_.heading;
             style.bold = true;
+            style.background_rgb = kUiSidebarBackground;
         } else if (row.active) {
-            style = theme_.accent;
+            style = theme_.label;
+            style.bold = true;
+            style.foreground_rgb = tuinator::rgb(255, 255, 255);
+            style.background_rgb = kUiSessionActiveBackground;
+            row_fill.background_rgb = kUiSessionActiveBackground;
         } else if (row_index == hovered_row_) {
-            style.background_rgb = tuinator::rgb(48, 42, 68);
+            style.background_rgb = tuinator::rgb(36, 39, 52);
+            row_fill.background_rgb = tuinator::rgb(36, 39, 52);
         }
+        ctx.canvas.fill_rect({0, paint_y, bounds_.width, 1}, ' ', row_fill);
 
         std::string text;
         if (row.kind == Row::Kind::ProjectHeader) {
             const char* chevron = is_project_collapsed(row.project_root) ? "▸" : "▾";
             text = std::string(chevron) + " " + row.label;
-        } else if (row.kind == Row::Kind::Session) {
-            text = "  • " + row.label;
+        } else if (row.active) {
+            text = row.label;
         } else {
-            text = "+ " + row.label;
+            text = "    " + row.label;
         }
 
         const int new_btn_cols =
             row.kind == Row::Kind::ProjectHeader ? tuinator::text_display_width(kProjectNewGlyph) + 1 : 0;
         const int suffix_cols = row.suffix.empty() ? 0 : tuinator::text_display_width(row.suffix) + 1;
-        const int label_cols = std::max(4, bounds_.width - suffix_cols - new_btn_cols);
+        const int active_prefix_cols =
+            row.active ? tuinator::text_display_width("  ▎ ") : (row.kind == Row::Kind::ProjectHeader ? 0 : 4);
+        const int label_cols =
+            std::max(4, bounds_.width - pad * 2 - suffix_cols - new_btn_cols - active_prefix_cols);
         text = truncate_label(text, label_cols);
 
-        ctx.canvas.draw_text({0, y}, text, style);
+        const tuinator::Style draw_style = ui_resolve_sidebar_text(ctx, *this, style);
+        if (row.active) {
+            tuinator::Style indent = draw_style;
+            ctx.canvas.draw_text({pad, paint_y}, "  ", indent);
+            tuinator::Style bar = draw_style;
+            bar.foreground_rgb = kUiSessionActiveBar;
+            bar.bold = true;
+            const int bar_x = pad + tuinator::text_display_width("  ");
+            ctx.canvas.draw_text({bar_x, paint_y}, "▎", bar);
+            const int label_x = bar_x + tuinator::text_display_width("▎") + 1;
+            ctx.canvas.draw_text({label_x, paint_y}, text, draw_style);
+        } else {
+            ctx.canvas.draw_text({pad, paint_y}, text, draw_style);
+        }
         if (row.kind == Row::Kind::ProjectHeader) {
             tuinator::Style plus_style = theme_.accent;
             plus_style.bold = true;
-            ctx.canvas.draw_text({project_new_button_x(), y}, kProjectNewGlyph, plus_style);
+            ctx.canvas.draw_text({project_new_button_x(), paint_y}, kProjectNewGlyph,
+                                 ui_resolve_sidebar_text(ctx, *this, plus_style));
         }
         if (!row.suffix.empty()) {
-            const int suffix_x = std::max(0, bounds_.width - new_btn_cols - tuinator::text_display_width(row.suffix));
-            tuinator::Style suffix_style = theme_.muted;
-            ctx.canvas.draw_text({suffix_x, y}, row.suffix, suffix_style);
+            const int suffix_x =
+                std::max(pad, bounds_.width - pad - new_btn_cols - tuinator::text_display_width(row.suffix));
+            tuinator::Style suffix_style = ui_secondary_style(theme_);
+            ctx.canvas.draw_text({suffix_x, paint_y}, row.suffix, ui_resolve_sidebar_text(ctx, *this, suffix_style));
         }
+    }
+
+    if (bounds_.height > 0) {
+        const int hint_y = bounds_.height - 1;
+        ctx.canvas.fill_rect({0, hint_y, bounds_.width, 1}, ' ', ui_sidebar_panel_style());
+        const char* hint = "R-Click: menu";
+        tuinator::Style hint_style = ui_secondary_style(theme_);
+        hint_style.background_rgb = kUiSidebarBackground;
+        ctx.canvas.draw_text({pad, hint_y}, hint, ui_resolve_sidebar_text(ctx, *this, hint_style));
     }
 }
 
@@ -481,12 +525,6 @@ bool SessionSidebar::handle_event(const tuinator::Event& event) {
             }
             const Row& row = rows_[static_cast<std::size_t>(row_index)];
 
-            if (row.kind == Row::Kind::NewChat) {
-                if (on_new_) {
-                    on_new_("");
-                }
-                return true;
-            }
             if (row.kind == Row::Kind::ProjectHeader) {
                 if (is_project_new_click(local.x, local.y)) {
                     if (on_new_) {

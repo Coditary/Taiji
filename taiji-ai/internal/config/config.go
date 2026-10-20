@@ -25,6 +25,7 @@ type Config struct {
 	Skills          SkillsConfig              `yaml:"skills"`
 	Hooks           HooksConfig               `yaml:"hooks"`
 	UI              UIConfig                  `yaml:"ui"`
+	STT             STTConfig                 `yaml:"stt"`
 	Root            string                    `yaml:"-"`
 }
 
@@ -85,6 +86,11 @@ type ProviderConfig struct {
 	Synced bool `yaml:"synced,omitempty"`
 	// Pinned prevents refresh from overwriting this entry.
 	Pinned bool `yaml:"pinned,omitempty"`
+
+	// WujiKind is set by taiji providers refresh: driver | api | catalog | provider.
+	WujiKind string `yaml:"wuji_kind,omitempty"`
+	// DisplayName is a human label from Wuji (catalog name, etc.).
+	DisplayName string `yaml:"display_name,omitempty"`
 }
 
 // MCPConfig references MCP server definitions.
@@ -197,7 +203,8 @@ func defaultConfig(root string) *Config {
 		Skills: SkillsConfig{
 			Dirs: DefaultSkillsDirs(root),
 		},
-		UI: DefaultUIConfig(),
+		UI:  DefaultUIConfig(),
+		STT: DefaultSTTConfig(),
 	}
 }
 
@@ -298,6 +305,7 @@ type fileConfig struct {
 	MCP             MCPConfig                 `yaml:"mcp,omitempty"`
 	Skills          SkillsConfig              `yaml:"skills,omitempty"`
 	UI              UIConfig                  `yaml:"ui,omitempty"`
+	STT             STTConfig                 `yaml:"stt,omitempty"`
 }
 
 // Save writes .taiji/config.yaml.
@@ -319,6 +327,8 @@ func (c *Config) Save() error {
 		Memory:          c.Memory,
 		MCP:             c.MCP,
 		Skills:          c.Skills,
+		UI:              c.UI,
+		STT:             c.STT,
 	}
 	raw, err := yaml.Marshal(fc)
 	if err != nil {

@@ -16,6 +16,7 @@ class ChatMessage : public tuinator::Widget {
     void set_style(tuinator::Style style);
     void set_wrap_width(int width);
     void set_variant(Variant variant);
+    void set_time_label(std::string time_label);
 
     std::string_view widget_type_name() const override { return "ChatMessage"; }
 
@@ -35,4 +36,5 @@ class ChatMessage : public tuinator::Widget {
     Align align_;
     Variant variant_ = Variant::Plain;
     int wrap_width_hint_ = 0;
+    std::string time_label_;
 };

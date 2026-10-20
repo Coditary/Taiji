@@ -4,8 +4,22 @@ import "strings"
 
 // UIConfig controls Taiji TUI presentation.
 type UIConfig struct {
-	TurnMetrics TurnMetricsUIConfig  `yaml:"turn_metrics"`
-	ToolLabels  ToolLabelsUIConfig   `yaml:"tool_labels"`
+	TurnMetrics TurnMetricsUIConfig `yaml:"turn_metrics"`
+	ToolLabels  ToolLabelsUIConfig  `yaml:"tool_labels"`
+	// Theme is "dark" or "high_contrast" (terminal palettes).
+	Theme string `yaml:"theme,omitempty"`
+	// CornerStyle is "square", "rounded", or "flat" (fill only, no outline) for composer and user bubbles.
+	CornerStyle string `yaml:"corner_style,omitempty"`
+	// CodeBlockWrap enables soft-wrapping inside fenced code blocks.
+	CodeBlockWrap *bool `yaml:"code_block_wrap,omitempty"`
+	// ChatMaxWidth limits message column width in cells (0 = use full pane).
+	ChatMaxWidth int `yaml:"chat_max_width,omitempty"`
+	// ReduceMotion is reserved for future animations (stored preference).
+	ReduceMotion *bool `yaml:"reduce_motion,omitempty"`
+	// MessageTimestamps shows send time on user message bubbles in the TUI.
+	MessageTimestamps *bool `yaml:"message_timestamps,omitempty"`
+	// MessageTimeClock is "24h" or "12h" (AM/PM).
+	MessageTimeClock string `yaml:"message_time_clock,omitempty"`
 }
 
 // TurnMetricsUIConfig selects which per-turn timing fields appear under assistant replies.
@@ -24,7 +38,11 @@ type TurnMetricsUIConfig struct {
 func DefaultUIConfig() UIConfig {
 	enabled := true
 	showActions := true
+	messageTimestamps := true
 	return UIConfig{
+		Theme:               "dark",
+		MessageTimestamps:   &messageTimestamps,
+		MessageTimeClock:    "24h",
 		TurnMetrics: TurnMetricsUIConfig{
 			Enabled:          &enabled,
 			ShowActions:      &showActions,
@@ -40,6 +58,29 @@ func DefaultUIConfig() UIConfig {
 		ToolLabels: ToolLabelsUIConfig{
 			Locale: "en",
 		},
+	}
+}
+
+// MessageTimestampsOrDefault reports whether user message send times are shown.
+func (c UIConfig) MessageTimestampsOrDefault() bool {
+	if c.MessageTimestamps == nil {
+		return true
+	}
+	return *c.MessageTimestamps
+}
+
+// CornersRoundedOrDefault reports whether framed UI chrome uses rounded box corners.
+func (c UIConfig) CornersRoundedOrDefault() bool {
+	return strings.EqualFold(strings.TrimSpace(c.CornerStyle), "rounded")
+}
+
+// MessageTimeClockOrDefault returns "24h" or "12h".
+func (c UIConfig) MessageTimeClockOrDefault() string {
+	switch strings.ToLower(strings.TrimSpace(c.MessageTimeClock)) {
+	case "12h", "12", "am_pm", "ampm":
+		return "12h"
+	default:
+		return "24h"
 	}
 }
 

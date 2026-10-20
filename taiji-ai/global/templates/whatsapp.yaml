@@ -1,0 +1,10 @@
+id: whatsapp
+name: WhatsApp Chat
+description: Short messenger-style replies, minimal formatting.
+settings:
+  preset: whatsapp
+  presentation: whatsapp
+  chain_of_thought: off
+  max_steps: 12
+  turn_metrics_preset: minimal
+  system_prompt_extra: "Antworte wie in einem Chat. Keine Überschriften, maximal wenige kurze Absätze."

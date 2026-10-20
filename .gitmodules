@@ -1,0 +1,3 @@
+[submodule "wuji-core"]
+	path = wuji-core
+	url = https://github.com/Coditary/wuji-core.git

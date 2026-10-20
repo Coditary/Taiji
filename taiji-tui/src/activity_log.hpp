@@ -35,10 +35,14 @@ class ActivityLog : public tuinator::Widget {
 
     bool has_entries() const { return !entries_.empty(); }
     bool has_running() const;
+    bool has_live_spinner() const;
     std::string running_label() const;
     void tick(int dt_ms);
+    bool needs_animation_tick() const;
     void set_wrap_width(int width);
     void set_taiji_handle(uint64_t handle);
+    void set_pipeline_title(std::string title);
+    void set_generating_tail(bool show, std::string label = "Generating response…");
 
     tuinator::Size preferred_size() const override;
     void layout(tuinator::Rect bounds) override;
@@ -72,6 +76,8 @@ class ActivityLog : public tuinator::Widget {
         bool has_duration = false;
         int64_t duration_ms = 0;
         std::chrono::steady_clock::time_point started_at{};
+        int settle_ms = 0;
+        int flash_ms = 0;
     };
 
     static std::string scope_label(Scope scope);
@@ -114,5 +120,8 @@ class ActivityLog : public tuinator::Widget {
     int spinner_ms_ = 0;
     int wrap_width_hint_ = 0;
     uint64_t taiji_handle_ = 0;
+    std::string pipeline_title_;
+    bool generating_tail_ = false;
+    std::string generating_label_ = "Generating response…";
     // bounds_ is inherited from tuinator::Widget (hit-testing relies on it).
 };

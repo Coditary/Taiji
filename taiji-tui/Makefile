@@ -21,4 +21,4 @@ run start: build
 	cd ../taiji-ai && exec ../taiji-tui/$(BUILD_DIR)/taiji-tui
 
 clean:
-	rm -rf $(BUILD_DIR) highlight/target
+	rm -rf $(BUILD_DIR) highlight/target fuzzy/target

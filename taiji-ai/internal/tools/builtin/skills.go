@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/coditary/taiji/internal/session"
 	"github.com/coditary/taiji/internal/skills"
 	"github.com/coditary/taiji/internal/tools"
 )
@@ -50,7 +51,7 @@ func (t InvokeSkill) Run(ctx context.Context, args map[string]any) (string, erro
 	return res.Text, err
 }
 
-func (t InvokeSkill) RunWithMetadata(_ context.Context, args map[string]any) (tools.RunResult, error) {
+func (t InvokeSkill) RunWithMetadata(ctx context.Context, args map[string]any) (tools.RunResult, error) {
 	names := skills.ParseInvokeNames(args)
 	if len(names) == 0 {
 		return tools.RunResult{}, fmt.Errorf("name or names is required")
@@ -61,6 +62,13 @@ func (t InvokeSkill) RunWithMetadata(_ context.Context, args map[string]any) (to
 	}
 	parts := make([]string, 0, len(names))
 	loaded := make([]string, 0, len(names))
+	if rt, ok := session.RunContextFrom(ctx); ok {
+		for _, name := range names {
+			if !rt.SkillAllowed(name) {
+				return tools.RunResult{}, fmt.Errorf("skill %q is not allowed in this chat", name)
+			}
+		}
+	}
 	for _, name := range names {
 		skill, ok := skills.Find(all, name)
 		if !ok {

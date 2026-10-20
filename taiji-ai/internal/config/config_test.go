@@ -201,6 +201,32 @@ func TestApplyGlobalMCPDefaults(t *testing.T) {
 	}
 }
 
+func TestConfigSavePersistsUI(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(dir)
+
+	cfg := defaultConfig(dir)
+	cfg.UI.CornerStyle = "rounded"
+	cfg.UI.Theme = "high_contrast"
+	if err := cfg.Save(); err != nil {
+		t.Fatal(err)
+	}
+
+	loaded, err := Load(LoadOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.UI.CornerStyle != "rounded" {
+		t.Fatalf("corner_style: %q", loaded.UI.CornerStyle)
+	}
+	if loaded.UI.Theme != "high_contrast" {
+		t.Fatalf("theme: %q", loaded.UI.Theme)
+	}
+}
+
 func TestAutoNameSessionsEnabledDefault(t *testing.T) {
 	if !(AgentConfig{}).AutoNameSessionsEnabled() {
 		t.Fatal("expected auto naming enabled by default")

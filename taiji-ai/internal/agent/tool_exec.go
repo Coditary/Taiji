@@ -2,12 +2,14 @@ package agent
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/coditary/taiji/internal/hooks"
 	"github.com/coditary/taiji/internal/question"
 	"github.com/coditary/taiji/internal/provider"
+	"github.com/coditary/taiji/internal/session"
 	"github.com/coditary/taiji/internal/tools"
 )
 
@@ -52,6 +54,12 @@ func runToolCall(ctx context.Context, hookRunner *hooks.Runner, reg *tools.Regis
 		toolData, err = hookRunner.RunToolBefore(ctx, toolData)
 		if err != nil {
 			return toolExecOutcome{err: err, durationMs: 0}
+		}
+	}
+
+	if rt, ok := session.RunContextFrom(ctx); ok {
+		if server, isMCP := mcpServerOf(reg, toolData.Tool); isMCP && !rt.MCPServerAllowed(server) {
+			return toolExecOutcome{err: fmt.Errorf("mcp server %q is disabled for this chat", server), durationMs: 0}
 		}
 	}
 

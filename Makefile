@@ -12,14 +12,20 @@ ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 TAIJI_DIR := $(ROOT)/taiji-ai
 TUI_DIR := $(ROOT)/taiji-tui
 TUI_BIN := $(TUI_DIR)/build/taiji-tui
+TAIJI_CLI_BIN := $(TAIJI_DIR)/bin/taiji
 EMBED_ARCHIVE := $(TUI_DIR)/build/libtaiji.a
 
 LLAMA_DRIVER_SRC := $(HOME)/Dev/Coditary/plugins/wuji/llama
 LLAMA_DRIVER_BIN := $(LLAMA_DRIVER_SRC)/bin/wuji-driver-llama
 
-INSTALL_BIN := $(HOME)/.local/bin/taiji-tui
+INSTALL_DIR := $(HOME)/.local/opt/beta-bin
+INSTALL_BIN_DIR := $(HOME)/.local/bin
+INSTALL_CLI := $(INSTALL_DIR)/taiji
+INSTALL_TUI := $(INSTALL_DIR)/taiji-tui
+INSTALL_CLI_BIN := $(INSTALL_BIN_DIR)/taiji
+INSTALL_TUI_BIN := $(INSTALL_BIN_DIR)/taiji-tui
 
-.PHONY: all build rebuild build-taiji build-tui ensure-wuji-driver clean run tui install help
+.PHONY: all build rebuild build-taiji build-tui ensure-wuji-driver clean run tui install uninstall help
 
 all: build
 
@@ -27,7 +33,8 @@ help:
 	@echo "Taiji"
 	@echo ""
 	@echo "  make run      Build and start taiji-tui"
-	@echo "  make install  Install taiji-tui to ~/.local/bin"
+	@echo "  make install    Install taiji + taiji-tui to ~/.local/opt/beta-bin and ~/.local/bin"
+	@echo "  make uninstall  Remove beta install from ~/.local/opt/beta-bin"
 	@echo "  make build    Build Taiji CLI + TUI"
 	@echo "  make rebuild  clean + build"
 	@echo "  make clean    Remove build artifacts"
@@ -59,6 +66,15 @@ run tui: build-tui ensure-wuji-driver
 	cd $(TAIJI_DIR) && PATH="$(HOME)/.local/bin:$(HOME)/go/bin:$(PATH)" exec $(TUI_BIN)
 
 install: build-tui
-	mkdir -p "$(HOME)/.local/bin"
-	install -m 755 "$(TUI_BIN)" "$(INSTALL_BIN)"
-	@echo "Installed $(INSTALL_BIN)"
+	mkdir -p "$(INSTALL_DIR)" "$(INSTALL_BIN_DIR)"
+	install -m 755 "$(TAIJI_CLI_BIN)" "$(INSTALL_CLI)"
+	install -m 755 "$(TUI_BIN)" "$(INSTALL_TUI)"
+	install -m 755 "$(TAIJI_CLI_BIN)" "$(INSTALL_CLI_BIN)"
+	install -m 755 "$(TUI_BIN)" "$(INSTALL_TUI_BIN)"
+	@echo "Installed $(INSTALL_CLI) and $(INSTALL_TUI)"
+	@echo "Installed $(INSTALL_CLI_BIN) and $(INSTALL_TUI_BIN)"
+
+uninstall:
+	rm -f "$(INSTALL_CLI)" "$(INSTALL_TUI)" "$(INSTALL_CLI_BIN)" "$(INSTALL_TUI_BIN)"
+	@rmdir "$(INSTALL_DIR)" 2>/dev/null || true
+	@echo "Removed install from $(INSTALL_DIR) and $(INSTALL_BIN_DIR)"

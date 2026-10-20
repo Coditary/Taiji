@@ -18,6 +18,28 @@ set(TAIJI_EMBED_ARCHIVE "${CMAKE_CURRENT_BINARY_DIR}/libtaiji.a")
 set(TAIJI_EMBED_HEADER "${CMAKE_CURRENT_BINARY_DIR}/libtaiji.h")
 
 find_program(GO_EXECUTABLE go REQUIRED)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+
+set(TAIJI_FUZZY_CRATE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/fuzzy")
+set(TAIJI_FUZZY_ARCHIVE "${TAIJI_FUZZY_CRATE_DIR}/target/release/libtaiji_fuzzy.a")
+
+add_custom_command(
+    OUTPUT "${TAIJI_FUZZY_ARCHIVE}"
+    COMMAND ${CMAKE_COMMAND} -E env "CARGO_TARGET_DIR=${TAIJI_FUZZY_CRATE_DIR}/target"
+            ${CARGO_EXECUTABLE} build --release --manifest-path "${TAIJI_FUZZY_CRATE_DIR}/Cargo.toml"
+    WORKING_DIRECTORY "${TAIJI_FUZZY_CRATE_DIR}"
+    COMMENT "Building taiji-fuzzy (skim staticlib)"
+    VERBATIM
+)
+
+add_custom_target(taiji_fuzzy_build DEPENDS "${TAIJI_FUZZY_ARCHIVE}")
+
+add_library(taiji_fuzzy STATIC IMPORTED GLOBAL)
+add_dependencies(taiji_fuzzy taiji_fuzzy_build)
+set_target_properties(taiji_fuzzy PROPERTIES
+    IMPORTED_LOCATION "${TAIJI_FUZZY_ARCHIVE}"
+    INTERFACE_INCLUDE_DIRECTORIES "${TAIJI_FUZZY_CRATE_DIR}/include"
+)
 
 file(GLOB_RECURSE TAIJI_GO_SOURCES CONFIGURE_DEPENDS
     "${TAIJI_AI_DIR}/*.go"
@@ -81,12 +103,39 @@ add_executable(taiji-tui
     src/activity_log.cpp
     src/thinking_indicator.cpp
     src/chat_input.cpp
+    src/composer_attachments.cpp
+    src/composer_palette.cpp
+    src/composer_workspace.cpp
+    src/message_composer.cpp
     src/question_composer.cpp
     src/status_footer.cpp
+    src/ui_layout.cpp
+    src/ui_theme.cpp
+    src/ui_message_time.cpp
+    src/ui_anim.cpp
+    src/context_panel.cpp
+    src/sidebar_kv_row.cpp
+    src/mcp_server_list.cpp
+    src/chat_session_header.cpp
+    src/chat_empty_state.cpp
+    src/taiji_block_logo.cpp
+    src/ui_panel_box.cpp
+    src/ui_chat_column.cpp
+    src/chat_middle_pane.cpp
+    src/sidebar_footer.cpp
+    src/sidebar_divider.cpp
+    src/settings_modal.cpp
+    src/settings_modal_ui.cpp
+    src/settings_modal_extras.cpp
+    src/skim_fuzzy.cpp
+    src/settings_gear.cpp
+    src/chat_input_bar.cpp
+    src/speech_mic_button.cpp
 )
 
-add_dependencies(taiji-tui taiji_embed_build)
-target_link_libraries(taiji-tui PRIVATE tuinator::tuinator taiji_embed)
+add_dependencies(taiji-tui taiji_embed_build taiji_fuzzy_build)
+target_include_directories(taiji-tui PRIVATE "${TAIJI_FUZZY_CRATE_DIR}/include")
+target_link_libraries(taiji-tui PRIVATE tuinator::tuinator taiji_embed taiji_fuzzy)
 
 if(UNIX AND NOT APPLE)
     target_link_libraries(taiji-tui PRIVATE pthread dl m resolv)

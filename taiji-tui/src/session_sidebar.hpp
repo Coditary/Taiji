@@ -46,7 +46,7 @@ class SessionSidebar : public tuinator::Widget {
 
   private:
     struct Row {
-        enum class Kind { NewChat, ProjectHeader, Session } kind = Kind::Session;
+        enum class Kind { ProjectHeader, Session } kind = Kind::Session;
         std::string project_root;
         std::string session_id;
         std::string label;

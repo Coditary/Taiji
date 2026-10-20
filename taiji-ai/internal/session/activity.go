@@ -2,6 +2,7 @@ package session
 
 import (
 	"strings"
+	"time"
 
 	"github.com/coditary/taiji/internal/events"
 	"github.com/coditary/taiji/internal/provider"
@@ -23,8 +24,26 @@ func TurnsWithActivity(messages []provider.Message, all []events.Event) []ChatTu
 		if m := metricsFromEvents(groups[i]); m != nil {
 			turns[i].Metrics = m
 		}
+		if sent := userSentAtFromEvents(groups[i]); !sent.IsZero() {
+			turns[i].UserSentAt = sent
+		}
 	}
 	return turns
+}
+
+func userSentAtFromEvents(evts []events.Event) time.Time {
+	for _, ev := range evts {
+		switch ev.Type {
+		case events.TypeStep, events.TypeThoughtStart, events.TypeToolCall:
+			if !ev.Timestamp.IsZero() {
+				return ev.Timestamp
+			}
+		}
+	}
+	if len(evts) > 0 && !evts[0].Timestamp.IsZero() {
+		return evts[0].Timestamp
+	}
+	return time.Time{}
 }
 
 func metricsFromEvents(evts []events.Event) *TurnMetrics {

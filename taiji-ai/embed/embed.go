@@ -11,6 +11,10 @@ typedef struct taiji_session_stats_t {
 	int32_t input_tokens;
 	int32_t output_tokens;
 	double estimated_cost_usd;
+	int32_t usage_system_tokens;
+	int32_t usage_tools_tokens;
+	int32_t usage_skills_tokens;
+	int32_t usage_conversation_tokens;
 } taiji_session_stats_t;
 
 typedef struct taiji_turn_metrics_t {
@@ -64,6 +68,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 	"unicode"
 	"unsafe"
 
@@ -71,6 +76,8 @@ import (
 	taijicfg "github.com/coditary/taiji/internal/config"
 	"github.com/coditary/taiji/internal/decisions"
 	"github.com/coditary/taiji/internal/events"
+	"github.com/coditary/taiji/internal/modelref"
+	"github.com/coditary/taiji/internal/provider"
 	"github.com/coditary/taiji/internal/question"
 	"github.com/coditary/taiji/internal/runtime"
 	"github.com/coditary/taiji/internal/session"
@@ -79,6 +86,11 @@ import (
 
 type runtimeHandle struct {
 	rt        *runtime.Runtime
+	rtMu      sync.RWMutex
+	rtReady   bool
+	rtInitErr error
+	rtInitDone chan struct{}
+
 	cfg       *taijicfg.Config
 	session   *session.Session
 	workDir   string
@@ -90,6 +102,11 @@ type runtimeHandle struct {
 	activeSkills    []string
 	onEvent         C.taiji_event_cb
 	onEventUser     unsafe.Pointer
+
+	sttMu            sync.Mutex
+	sttStreamCancel  context.CancelFunc
+	sttStreamDone    chan struct{}
+	sttAccum         string
 }
 
 var (
@@ -142,22 +159,9 @@ func taiji_init(workDir *C.char, localMode C.int, errorOut **C.char) C.uint64_t 
 		return 0
 	}
 
-	rt, err := runtime.New(context.Background(), cfg, runtime.Options{Local: localMode != 0})
-	if err != nil {
-		setInitError(err.Error())
-		if errorOut != nil {
-			*errorOut = C.CString(err.Error())
-		}
-		return 0
-	}
-	if rt.Questions != nil {
-		rt.Questions.SetPrompter(nil)
-	}
-
 	providerID := strings.TrimSpace(cfg.DefaultProvider)
 	sess, resumed, err := resolveEmbedSession(cfg.Root, dir, providerID)
 	if err != nil {
-		rt.Close()
 		setInitError(err.Error())
 		if errorOut != nil {
 			*errorOut = C.CString(err.Error())
@@ -166,7 +170,6 @@ func taiji_init(workDir *C.char, localMode C.int, errorOut **C.char) C.uint64_t 
 	}
 	if !resumed {
 		if err := session.SaveDirBinding(cfg.Root, dir, sess.State.ID); err != nil {
-			rt.Close()
 			setInitError(err.Error())
 			if errorOut != nil {
 				*errorOut = C.CString(err.Error())
@@ -178,7 +181,6 @@ func taiji_init(workDir *C.char, localMode C.int, errorOut **C.char) C.uint64_t 
 	_ = taijicfg.RegisterProject(cfg.Root, localMode != 0)
 
 	h := &runtimeHandle{
-		rt:           rt,
 		cfg:          cfg,
 		session:      sess,
 		workDir:      dir,
@@ -191,7 +193,41 @@ func taiji_init(workDir *C.char, localMode C.int, errorOut **C.char) C.uint64_t 
 	nextHandle++
 	handles[id] = h
 	handlesMu.Unlock()
+
+	h.startRuntimeInit(localMode != 0)
 	return C.uint64_t(id)
+}
+
+//export taiji_runtime_ready
+func taiji_runtime_ready(handle C.uint64_t) C.int {
+	handlesMu.Lock()
+	h, ok := handles[uint64(handle)]
+	handlesMu.Unlock()
+	if !ok || h == nil {
+		return 0
+	}
+	if h.runtimeReady() {
+		return 1
+	}
+	return 0
+}
+
+//export taiji_runtime_error
+func taiji_runtime_error(handle C.uint64_t) *C.char {
+	handlesMu.Lock()
+	h, ok := handles[uint64(handle)]
+	handlesMu.Unlock()
+	if !ok || h == nil {
+		return C.CString("invalid taiji handle")
+	}
+	err := h.runtimeInitError()
+	if err == nil {
+		return C.CString("")
+	}
+	if errors.Is(err, errRuntimeStarting) {
+		return C.CString("")
+	}
+	return C.CString(err.Error())
 }
 
 //export taiji_close
@@ -211,9 +247,7 @@ func taiji_close(handle C.uint64_t) {
 		h.cancel = nil
 	}
 	h.mu.Unlock()
-	if h.rt != nil {
-		h.rt.Close()
-	}
+	h.closeRuntime()
 }
 
 //export taiji_set_event_callback
@@ -285,7 +319,7 @@ func taiji_chat(handle C.uint64_t, goal *C.char, provider *C.char, onDelta C.tai
 		providerID = strings.TrimSpace(h.cfg.DefaultProvider)
 	}
 	if providerID == "" && h.session != nil {
-		providerID = h.session.State.Provider
+		providerID = h.session.ResolveProviderID(h.cfg)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -327,21 +361,29 @@ func taiji_chat(handle C.uint64_t, goal *C.char, provider *C.char, onDelta C.tai
 		C.free(unsafe.Pointer(cJSON))
 	}
 
+	rt, rtErr := h.getRuntime()
+	if rtErr != nil {
+		cErr := C.CString(rtErr.Error())
+		C.call_done(onDone, 0, cErr, nil, userData)
+		C.free(unsafe.Pointer(cErr))
+		return 0
+	}
+
 	result, err := agent.Run(ctx, agent.RunRequest{
 		Goal:       goalText,
 		ProviderID: providerID,
 		Session:    h.session,
-		Providers:  h.rt.Providers,
-		Tools:      h.rt.Tools,
-		Skills:        h.rt.Skills,
-		SkillsCatalog: h.rt.SkillsCatalog,
+		Providers:  rt.Providers,
+		Tools:      rt.Tools,
+		Skills:        rt.Skills,
+		SkillsCatalog: rt.SkillsCatalog,
 		Config:        h.cfg,
-		RAG:        h.rt.RAG,
-		Memory:     h.rt.Memory,
-		MCP:                h.rt.MCP,
-		DecisionProfiles:   h.rt.DecisionProfiles,
-		Hooks:              h.rt.Hooks,
-		Questions:          h.rt.Questions,
+		RAG:        rt.RAG,
+		Memory:     rt.Memory,
+		MCP:                rt.MCP,
+		DecisionProfiles:   rt.DecisionProfiles,
+		Hooks:              rt.Hooks,
+		Questions:          rt.Questions,
 		WorkDir:    h.workDir,
 		EventHandler: func(ev events.Event) {
 			if ev.Type == events.TypeObservation && ev.IsSkill && !strings.HasPrefix(strings.TrimSpace(ev.Text), "error:") {
@@ -440,7 +482,11 @@ func maybeAutoNameSession(ctx context.Context, h *runtimeHandle, userMessage, pr
 	if h.session == nil || !h.session.NeedsAutoName() {
 		return
 	}
-	_, _ = session.AutoName(ctx, h.session, h.rt.Providers, providerID, userMessage)
+	rt, err := h.getRuntime()
+	if err != nil {
+		return
+	}
+	_, _ = session.AutoName(ctx, h.session, rt.Providers, providerID, userMessage)
 }
 
 //export taiji_session_label
@@ -517,11 +563,16 @@ func formatModelName(h *runtimeHandle) string {
 		return ""
 	}
 	providerID := activeProviderID(h)
+	if h.session != nil {
+		if model := strings.TrimSpace(h.session.State.Settings.Model); model != "" {
+			return modelref.Display(model)
+		}
+	}
 	pc, ok := h.cfg.Providers[providerID]
 	if !ok {
 		return ""
 	}
-	return strings.TrimSpace(pc.Model)
+	return modelref.Display(strings.TrimSpace(pc.Model))
 }
 
 func capitalizeLabel(value string) string {
@@ -568,20 +619,27 @@ func taiji_provider_label(handle C.uint64_t) *C.char {
 }
 
 func formatMCPStatus(h *runtimeHandle) string {
-	if h == nil || h.rt == nil || h.rt.MCP == nil {
-		return "(nicht verbunden)"
+	if h == nil {
+		return "(not connected)"
 	}
-	connected := h.rt.MCP.ConnectedServers()
+	rt, err := h.getRuntime()
+	if errors.Is(err, errRuntimeStarting) {
+		return "(connecting…)"
+	}
+	if err != nil || rt == nil || rt.MCP == nil {
+		return "(not connected)"
+	}
+	connected := rt.MCP.ConnectedServers()
 	if len(connected) == 0 {
 		if h.cfg != nil && len(h.cfg.MCP.Servers) > 0 {
-			return "(nicht verbunden)"
+			return "(not connected)"
 		}
-		return "(nicht konfiguriert)"
+		return "(not configured)"
 	}
 	sort.Strings(connected)
 	lines := make([]string, 0, len(connected))
 	for _, name := range connected {
-		lines = append(lines, name+" Connected")
+		lines = append(lines, name)
 	}
 	return strings.Join(lines, "\n")
 }
@@ -605,10 +663,14 @@ func taiji_mcp_servers(handle C.uint64_t) *C.char {
 	handlesMu.Lock()
 	h, ok := handles[uint64(handle)]
 	handlesMu.Unlock()
-	if !ok || h == nil || h.rt == nil || h.rt.MCP == nil {
+	if !ok || h == nil {
 		return C.CString("")
 	}
-	connected := h.rt.MCP.ConnectedServers()
+	rt, err := h.getRuntime()
+	if err != nil || rt == nil || rt.MCP == nil {
+		return C.CString("")
+	}
+	connected := rt.MCP.ConnectedServers()
 	sort.Strings(connected)
 	return C.CString(strings.Join(connected, "\n"))
 }
@@ -671,10 +733,17 @@ func taiji_decisions_list(handle C.uint64_t) *C.char {
 }
 
 func formatDecisionsList(h *runtimeHandle) string {
-	if h == nil || h.rt == nil || h.rt.DecisionProfiles == nil {
+	if h == nil {
 		return "Keine gespeicherten Decisions konfiguriert."
 	}
-	all, err := h.rt.DecisionProfiles.LoadAll()
+	rt, rtErr := h.getRuntime()
+	if errors.Is(rtErr, errRuntimeStarting) {
+		return "Decisions werden geladen…"
+	}
+	if rtErr != nil || rt == nil || rt.DecisionProfiles == nil {
+		return "Keine gespeicherten Decisions konfiguriert."
+	}
+	all, err := rt.DecisionProfiles.LoadAll()
 	if err != nil {
 		return "Decisions laden fehlgeschlagen: " + err.Error()
 	}
@@ -682,10 +751,17 @@ func formatDecisionsList(h *runtimeHandle) string {
 }
 
 func formatSkillsList(h *runtimeHandle) string {
-	if h == nil || h.rt == nil || h.rt.Skills == nil {
+	if h == nil {
 		return "Keine Skills konfiguriert."
 	}
-	all, err := h.rt.Skills.LoadAll()
+	rt, rtErr := h.getRuntime()
+	if errors.Is(rtErr, errRuntimeStarting) {
+		return "Skills werden geladen…"
+	}
+	if rtErr != nil || rt == nil || rt.Skills == nil {
+		return "Keine Skills konfiguriert."
+	}
+	all, err := rt.Skills.LoadAll()
 	if err != nil {
 		return "Skills laden fehlgeschlagen: " + err.Error()
 	}
@@ -740,7 +816,8 @@ func taiji_format_turn_metrics(handle C.uint64_t, out *C.taiji_turn_metrics_t, m
 	if !ok || h == nil || h.cfg == nil {
 		return C.CString("")
 	}
-	lines := taijicfg.FormatTurnMetricsLines(turnMetricsValuesFromC(out), h.cfg.UI.TurnMetrics, int(maxWidth))
+	ui := effectiveUI(h)
+	lines := taijicfg.FormatTurnMetricsLines(turnMetricsValuesFromC(out), ui.TurnMetrics, int(maxWidth))
 	return C.CString(strings.Join(lines, "\n"))
 }
 
@@ -752,7 +829,10 @@ func taiji_tool_display_title(handle C.uint64_t, toolName *C.char) *C.char {
 	if !ok || h == nil || h.cfg == nil {
 		return C.CString("")
 	}
-	return C.CString(h.cfg.ToolDisplayTitle(C.GoString(toolName)))
+	ui := effectiveUI(h)
+	cfgCopy := *h.cfg
+	cfgCopy.UI = ui
+	return C.CString(cfgCopy.ToolDisplayTitle(C.GoString(toolName)))
 }
 
 //export taiji_tool_scope_label
@@ -763,7 +843,10 @@ func taiji_tool_scope_label(handle C.uint64_t, scope *C.char) *C.char {
 	if !ok || h == nil || h.cfg == nil {
 		return C.CString("Tool")
 	}
-	return C.CString(h.cfg.ToolScopeLabel(C.GoString(scope)))
+	ui := effectiveUI(h)
+	cfgCopy := *h.cfg
+	cfgCopy.UI = ui
+	return C.CString(cfgCopy.ToolScopeLabel(C.GoString(scope)))
 }
 
 //export taiji_turn_metrics_show_actions
@@ -774,7 +857,8 @@ func taiji_turn_metrics_show_actions(handle C.uint64_t) C.int {
 	if !ok || h == nil || h.cfg == nil {
 		return 1
 	}
-	if h.cfg.UI.TurnMetrics.ShowActionsOrDefault() {
+	ui := effectiveUI(h)
+	if ui.TurnMetrics.ShowActionsOrDefault() {
 		return 1
 	}
 	return 0
@@ -845,6 +929,32 @@ func taiji_session_stats(handle C.uint64_t, out *C.taiji_session_stats_t) C.int 
 	out.input_tokens = C.int32_t(snap.InputTokens)
 	out.output_tokens = C.int32_t(snap.OutputTokens)
 	out.estimated_cost_usd = C.double(snap.EstimatedCostUSD)
+
+	usage := session.ContextUsageBreakdown{}
+	if rt, rtErr := h.getRuntime(); rtErr == nil && rt != nil {
+		h.mu.Lock()
+		activeSkills := append([]string(nil), h.activeSkills...)
+		h.mu.Unlock()
+		usage = agent.EstimateContextUsage(agent.RunRequest{
+			Session:          h.session,
+			Config:           h.cfg,
+			Tools:            rt.Tools,
+			Skills:           rt.Skills,
+			SkillsCatalog:    rt.SkillsCatalog,
+			RAG:              rt.RAG,
+			Memory:           rt.Memory,
+			MCP:              rt.MCP,
+			DecisionProfiles: rt.DecisionProfiles,
+			WorkDir:          h.workDir,
+		}, activeSkills)
+	}
+	if snap.ContextTokens > 0 {
+		usage = session.ScaleUsageBreakdown(usage, snap.ContextTokens)
+	}
+	out.usage_system_tokens = C.int32_t(usage.SystemTokens)
+	out.usage_tools_tokens = C.int32_t(usage.ToolsTokens)
+	out.usage_skills_tokens = C.int32_t(usage.SkillsTokens)
+	out.usage_conversation_tokens = C.int32_t(usage.ConversationTokens)
 	return 1
 }
 
@@ -895,19 +1005,24 @@ func (h *runtimeHandle) reloadRuntime(ctx context.Context, root string) error {
 	if h == nil {
 		return fmt.Errorf("runtime handle is nil")
 	}
-	if h.rt != nil {
-		h.rt.Close()
-	}
+	h.closeRuntime()
 	cfg, err := taijicfg.LoadAt(root)
 	if err != nil {
 		return err
 	}
-	rt, err := runtime.New(ctx, cfg, runtime.Options{Local: h.localMode})
+	rt, err := runtime.New(ctx, cfg, runtime.Options{Local: h.localMode, Quiet: true})
 	if err != nil {
 		return err
 	}
+	if rt.Questions != nil {
+		rt.Questions.SetPrompter(nil)
+	}
 	h.cfg = cfg
+	h.rtMu.Lock()
 	h.rt = rt
+	h.rtInitErr = nil
+	h.rtReady = true
+	h.rtMu.Unlock()
 	return nil
 }
 
@@ -1112,7 +1227,11 @@ func taiji_question_reply(handle C.uint64_t, requestID *C.char, answersJSON *C.c
 	handlesMu.Lock()
 	h, ok := handles[uint64(handle)]
 	handlesMu.Unlock()
-	if !ok || h == nil || h.rt == nil || h.rt.Questions == nil {
+	if !ok || h == nil {
+		return 0
+	}
+	rt, err := h.getRuntime()
+	if err != nil || rt == nil || rt.Questions == nil {
 		return 0
 	}
 	id := strings.TrimSpace(C.GoString(requestID))
@@ -1127,7 +1246,7 @@ func taiji_question_reply(handle C.uint64_t, requestID *C.char, answersJSON *C.c
 	if err := json.Unmarshal([]byte(raw), &answers); err != nil {
 		return 0
 	}
-	if err := h.rt.Questions.Reply(question.ReplyInput{RequestID: id, Answers: answers}); err != nil {
+	if err := rt.Questions.Reply(question.ReplyInput{RequestID: id, Answers: answers}); err != nil {
 		return 0
 	}
 	return 1
@@ -1138,15 +1257,129 @@ func taiji_question_reject(handle C.uint64_t, requestID *C.char) C.int {
 	handlesMu.Lock()
 	h, ok := handles[uint64(handle)]
 	handlesMu.Unlock()
-	if !ok || h == nil || h.rt == nil || h.rt.Questions == nil {
+	if !ok || h == nil {
+		return 0
+	}
+	rt, err := h.getRuntime()
+	if err != nil || rt == nil || rt.Questions == nil {
 		return 0
 	}
 	id := strings.TrimSpace(C.GoString(requestID))
 	if id == "" {
 		return 0
 	}
-	if err := h.rt.Questions.Reject(id); err != nil {
+	if err := rt.Questions.Reject(id); err != nil {
 		return 0
 	}
 	return 1
+}
+
+//export taiji_settings_get
+func taiji_settings_get(handle C.uint64_t, scope *C.char) *C.char {
+	handlesMu.Lock()
+	h, ok := handles[uint64(handle)]
+	handlesMu.Unlock()
+	if !ok || h == nil {
+		return C.CString("{}")
+	}
+	if h.cfg != nil {
+		res, err := provider.RefreshProvidersFromWuji(context.Background(), h.cfg)
+		if err == nil && res.Connected && (res.Added > 0 || res.Updated > 0) {
+			_ = h.cfg.Save()
+		}
+	}
+	payload := buildSettingsPayload(h, C.GoString(scope))
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return C.CString("{}")
+	}
+	return C.CString(string(raw))
+}
+
+//export taiji_settings_apply
+func taiji_settings_apply(handle C.uint64_t, jsonPayload *C.char) C.int {
+	handlesMu.Lock()
+	h, ok := handles[uint64(handle)]
+	handlesMu.Unlock()
+	if !ok || h == nil {
+		return 0
+	}
+	var payload settingsPayload
+	if err := json.Unmarshal([]byte(C.GoString(jsonPayload)), &payload); err != nil {
+		return 0
+	}
+	if err := applySettingsPayload(h, payload); err != nil {
+		return 0
+	}
+	return 1
+}
+
+func (h *runtimeHandle) emitSTTPartial(text string) {
+	if h == nil || strings.TrimSpace(text) == "" {
+		return
+	}
+	h.mu.Lock()
+	onEvent := h.onEvent
+	onEventUser := h.onEventUser
+	h.mu.Unlock()
+	if onEvent == nil {
+		return
+	}
+	raw, err := json.Marshal(map[string]string{
+		"type": "stt_partial",
+		"text": text,
+	})
+	if err != nil {
+		return
+	}
+	cJSON := C.CString(string(raw))
+	C.call_event(onEvent, cJSON, onEventUser)
+	C.free(unsafe.Pointer(cJSON))
+}
+
+//export taiji_stt_toggle
+func taiji_stt_toggle(handle C.uint64_t) *C.char {
+	handlesMu.Lock()
+	h, ok := handles[uint64(handle)]
+	handlesMu.Unlock()
+	if !ok || h == nil {
+		return C.CString(`{"error":"runtime not ready"}`)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	out := h.sttToggle(ctx)
+	raw, err := json.Marshal(out)
+	if err != nil {
+		return C.CString(`{"error":"encode result"}`)
+	}
+	return C.CString(string(raw))
+}
+
+//export taiji_template_apply
+func taiji_template_apply(handle C.uint64_t, templateID *C.char) C.int {
+	handlesMu.Lock()
+	h, ok := handles[uint64(handle)]
+	handlesMu.Unlock()
+	if !ok || h == nil || h.cfg == nil || h.session == nil {
+		return 0
+	}
+	id := strings.TrimSpace(C.GoString(templateID))
+	if id == "" {
+		return 0
+	}
+	if err := session.ApplyChatTemplate(h.session, h.cfg.Root, id); err != nil {
+		return 0
+	}
+	return 1
+}
+
+//export taiji_presentation_mode
+func taiji_presentation_mode(handle C.uint64_t) *C.char {
+	handlesMu.Lock()
+	h, ok := handles[uint64(handle)]
+	handlesMu.Unlock()
+	if !ok || h == nil || h.session == nil {
+		return C.CString("markdown")
+	}
+	return C.CString(h.session.PresentationMode())
 }

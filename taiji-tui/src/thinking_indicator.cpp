@@ -1,5 +1,7 @@
 #include "thinking_indicator.hpp"
 
+#include "ui_theme.hpp"
+
 ThinkingIndicator::ThinkingIndicator(tuinator::Style throbber_style, tuinator::Style label_style)
     : tuinator::HBox(tuinator::BoxOptions{.gap = 1, .padding = 0}) {
     auto throbber = std::make_unique<tuinator::Throbber>("dots", throbber_style);
@@ -47,5 +49,6 @@ void ThinkingIndicator::paint(tuinator::PaintContext& ctx) const {
     if (!active_) {
         return;
     }
+    ui_fill_widget_bounds(ctx, *this, kUiMainBackground);
     tuinator::HBox::paint(ctx);
 }
