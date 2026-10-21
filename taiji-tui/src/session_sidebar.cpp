@@ -1,6 +1,7 @@
 #include "session_sidebar.hpp"
 
 #include "ui_layout.hpp"
+#include "ui_locale.hpp"
 #include "ui_theme.hpp"
 
 #include <libtaiji.h>
@@ -123,11 +124,12 @@ constexpr const char* kProjectNewGlyph = u8"󰐕";
 } // namespace
 
 SessionSidebar::SessionSidebar(tuinator::Theme theme, SessionSelectHandler on_select, NewSessionHandler on_new,
-                               SessionContextHandler on_context)
+                               SessionContextHandler on_context, std::function<void()> on_settings)
     : theme_(theme),
       on_select_(std::move(on_select)),
       on_new_(std::move(on_new)),
-      on_context_(std::move(on_context)) {}
+      on_context_(std::move(on_context)),
+      on_settings_(std::move(on_settings)) {}
 
 void SessionSidebar::set_width_hint(int cols) {
     width_hint_ = std::max(18, cols);
@@ -225,7 +227,8 @@ void SessionSidebar::refresh(uint64_t taiji_handle) {
             item.created_at = json_extract_string(session_json, "created_at");
             item.active = !current_session.empty() && item.session_id == current_session;
             if (item.name.empty()) {
-                item.name = "New Session";
+                const std::string fallback = ui_shell("sidebar.new_session");
+                item.name = fallback.empty() ? "New Session" : fallback;
             }
             group.sessions.push_back(std::move(item));
         }
@@ -372,6 +375,20 @@ int SessionSidebar::project_new_button_x() const {
     return std::max(kUiPadX, bounds_.width - kUiPadX - tuinator::text_display_width(kProjectNewGlyph));
 }
 
+std::string SessionSidebar::settings_label() const {
+    const std::string settings_word = ui_tr("common", "app.sidebar_settings");
+    return std::string(kNfSettings) + " " + (settings_word.empty() ? "Settings" : settings_word);
+}
+
+bool SessionSidebar::is_settings_click(int local_x, int local_y) const {
+    if (!on_settings_ || local_y != footer_y()) {
+        return false;
+    }
+    const int pad = kUiPadX;
+    const int settings_w = tuinator::text_display_width(settings_label());
+    return local_x >= pad && local_x < pad + settings_w;
+}
+
 bool SessionSidebar::is_project_new_click(int local_x, int local_y) const {
     const int row_index = row_at_y(local_y);
     if (row_index < 0 || row_index >= static_cast<int>(rows_.size())) {
@@ -397,7 +414,9 @@ void SessionSidebar::paint(tuinator::PaintContext& ctx) const {
     header_style.bold = true;
     header_style.foreground_rgb = ui_section_heading();
     header_style.background_rgb = ui_sidebar_bg();
-    ctx.canvas.draw_text({pad, 0}, "PROJECTS", ui_resolve_sidebar_text(ctx, *this, header_style));
+    const std::string projects_title = ui_shell("sidebar.projects");
+    ctx.canvas.draw_text({pad, 0}, projects_title.empty() ? "PROJECTS" : projects_title,
+                         ui_resolve_sidebar_text(ctx, *this, header_style));
 
     const int content_height = std::max(0, bounds_.height - 2);
     const int visible_rows = std::min(content_height, static_cast<int>(rows_.size()) - scroll_offset_);
@@ -476,12 +495,24 @@ void SessionSidebar::paint(tuinator::PaintContext& ctx) const {
     }
 
     if (bounds_.height > 0) {
-        const int hint_y = bounds_.height - 1;
+        const int hint_y = footer_y();
         ctx.canvas.fill_rect({0, hint_y, bounds_.width, 1}, ' ', ui_sidebar_panel_style());
-        const char* hint = "R-Click: menu";
+        if (on_settings_) {
+            tuinator::Style settings = ui_accent_on_sidebar();
+            if (settings_hover_) {
+                settings.bold = true;
+            }
+            ctx.canvas.draw_text({pad, hint_y}, settings_label(), ui_resolve_sidebar_text(ctx, *this, settings));
+        }
+        const std::string hint_text = ui_shell("sidebar.projects_menu_hint");
+        const char* hint = hint_text.empty() ? "R-Click: menu" : hint_text.c_str();
         tuinator::Style hint_style = ui_secondary_style(theme_);
         hint_style.background_rgb = ui_sidebar_bg();
-        ctx.canvas.draw_text({pad, hint_y}, hint, ui_resolve_sidebar_text(ctx, *this, hint_style));
+        const int hint_w = tuinator::text_display_width(hint);
+        const int hint_x = std::max(pad, bounds_.width - pad - hint_w);
+        if (!on_settings_ || hint_x > pad + tuinator::text_display_width(settings_label()) + 1) {
+            ctx.canvas.draw_text({hint_x, hint_y}, hint, ui_resolve_sidebar_text(ctx, *this, hint_style));
+        }
     }
 }
 
@@ -491,7 +522,11 @@ bool SessionSidebar::handle_event(const tuinator::Event& event) {
         const tuinator::Point local{mouse->position.x - bounds_.x, mouse->position.y - bounds_.y};
         if (mouse->action == tuinator::MouseAction::Move) {
             hovered_row_ = row_at_y(local.y);
-            mark_dirty();
+            const bool in_settings = is_settings_click(local.x, local.y);
+            if (in_settings != settings_hover_) {
+                settings_hover_ = in_settings;
+                mark_dirty();
+            }
             return bounds_.contains(mouse->position);
         }
         if (mouse->action == tuinator::MouseAction::Press || mouse->action == tuinator::MouseAction::Click ||
@@ -517,6 +552,13 @@ bool SessionSidebar::handle_event(const tuinator::Event& event) {
             }
 
             if (mouse->action != tuinator::MouseAction::Release) {
+                return true;
+            }
+
+            if (is_settings_click(local.x, local.y)) {
+                if (on_settings_) {
+                    on_settings_();
+                }
                 return true;
             }
 
@@ -552,7 +594,8 @@ bool SessionSidebar::handle_event(const tuinator::Event& event) {
             return true;
         }
         if (key->key == tuinator::Key::Down) {
-            const int max_offset = std::max(0, static_cast<int>(rows_.size()) - bounds_.height);
+            const int viewport = std::max(1, bounds_.height - 2);
+            const int max_offset = std::max(0, static_cast<int>(rows_.size()) - viewport);
             scroll_offset_ = std::min(max_offset, scroll_offset_ + 1);
             mark_dirty();
             return true;

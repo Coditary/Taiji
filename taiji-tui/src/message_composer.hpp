@@ -49,11 +49,16 @@ class MessageComposer : public tuinator::Widget {
     void close_theme_picker(bool commit);
     bool is_theme_picker_open() const { return theme_picker_.is_open(); }
     bool is_composer_overlay_open() const { return palette_.is_open() || theme_picker_.is_open(); }
+    /// Theme-picker list navigation (also used from global key preprocess while the overlay is open).
+    bool route_theme_picker_key(const tuinator::KeyPress& key);
+    static bool theme_picker_navigation_key(const tuinator::KeyPress& key);
 
     void tick(int dt_ms);
     void clear_after_send();
     void sync_field_styles(tuinator::Style normal, tuinator::Style focused);
     void notify_input_changed(const std::string& value);
+    /// Updates default input placeholder from the active UI locale (skips theme-picker filter mode).
+    void refresh_locale_strings();
 
     std::string_view widget_type_name() const override { return "MessageComposer"; }
 
@@ -64,8 +69,9 @@ class MessageComposer : public tuinator::Widget {
     tuinator::Widget* hit_test(tuinator::Point point) override;
     tuinator::Widget* hit_test_focusable(tuinator::Point point) override;
     void collect_focusable(std::vector<tuinator::Widget*>& out) override;
+    bool has_focused_descendant() const override;
     bool wants_initial_focus() const override { return true; }
-    bool captures_keyboard() const override { return palette_.is_open() || theme_picker_.is_open(); }
+    bool captures_keyboard() const override { return palette_.is_open(); }
 
   private:
     void open_palette_with_trigger(const std::string& filter);
@@ -79,7 +85,7 @@ class MessageComposer : public tuinator::Widget {
     bool plus_hit(tuinator::Point local) const;
     tuinator::Rect plus_bounds() const;
     void sync_trigger_from_input();
-    bool handle_theme_picker_key(const tuinator::KeyPress& key);
+    void confirm_theme_picker_selection();
     void restore_stashed_input();
     std::string read_file_snippet(const std::string& rel_path) const;
     tuinator::Rect stream_bounds(const tuinator::Rect& bounds) const;

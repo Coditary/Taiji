@@ -1,0 +1,37 @@
+{
+  "composer": {
+    "placeholder": "输入消息..."
+  },
+  "app": {
+    "settings_title": "设置",
+    "sidebar_settings": "设置",
+    "settings_apply_hint": "Ctrl+S 应用  ·  Esc 关闭",
+    "settings_footer_help": " Esc：关闭   Tab：面板   Space/Enter：更改   <-/->：切换",
+    "settings_footer_apply": " Ctrl+S：应用 "
+  },
+  "theme_picker": {
+    "title": "配色主题",
+    "filter_placeholder": "筛选配色主题...",
+    "filter_placeholder_draft": "筛选主题 — Esc 恢复消息",
+    "no_matches": "（无匹配）",
+    "draft_saved": "草稿已保存 — Esc 恢复消息"
+  },
+  "locale_names": {
+    "en": "英语",
+    "de": "Deutsch",
+    "es": "Español",
+    "fr": "Français",
+    "it": "Italiano",
+    "pt": "Português",
+    "nl": "Nederlands",
+    "pl": "Polski",
+    "ru": "Russian",
+    "ja": "Japanese",
+    "zh": "简体中文",
+    "tr": "Türkçe",
+    "hi": "Hindi",
+    "ar": "Arabic",
+    "id": "Indonesian",
+    "vi": "Vietnamese"
+  }
+}

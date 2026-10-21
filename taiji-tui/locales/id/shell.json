@@ -1,0 +1,94 @@
+{
+  "sidebar": {
+    "projects": "PROYEK",
+    "projects_menu_hint": "Klik kanan: menu",
+    "new_session": "Sesi Baru",
+    "agent_laya": "...",
+    "skills": "Keterampilan",
+    "decisions": "Keputusan",
+    "lsp": "...",
+    "connected": "Terhubung",
+    "empty_none": "tidak ada",
+    "empty_inactive": "tidak aktif",
+    "mcp_title": "...",
+    "mcp_title_count": "...",
+    "mcp_not_connected": "tidak terhubung"
+  },
+  "context": {
+    "title": "KONTEKS",
+    "skills": "Keterampilan",
+    "system_prompt": "Pesan sistem",
+    "tools_mcp": "Definisi alat & MCP",
+    "conversation": "Percakapan"
+  },
+  "empty": {
+    "hint_send": "Kirim pesan untuk memulai",
+    "quick_index_codebase": "Kode sumber indeks",
+    "quick_generate_tests": "Buat tes",
+    "quick_analyze_git": "Menganalisis git diff",
+    "uncommitted_one": "{count} perubahan yang belum disimpan",
+    "uncommitted_many": "{count} perubahan yang belum disimpan"
+  },
+  "session_menu": {
+    "open": "Buka",
+    "delete": "Hapus"
+  },
+  "footer": {
+    "shortcuts_default": "Tab: fokus · Shift+Enter: baris baru · Enter: kirim · Esc: hentikan"
+  },
+  "chat": {
+    "author_you": "Kamu",
+    "author_summary": "ringkasan",
+    "thinking": "Berpikir"
+  },
+  "composer_menu": {
+    "skills": "Keterampilan",
+    "skills_hint": "Memaksakan suatu keterampilan",
+    "mcp_servers": "Server MCP"
+  },
+  "question": {
+    "custom_placeholder": "Jawaban khusus...",
+    "custom_label": "Jawaban khusus",
+    "footer_apply": "Enter: terapkan  ·  Esc: kembali"
+  },
+  "activity": {
+    "mcp": "...",
+    "thinking": "Berpikir",
+    "tool": "Alat",
+    "skill": "Keterampilan",
+    "decision": "Keputusan",
+    "question": "Pertanyaan",
+    "generating_response": "Sedang memproses respons..."
+  },
+  "metrics": {
+    "tok_per_sec": "..."
+  },
+  "status": {
+    "starting": "Dimulai...",
+    "starting_agent": "Memulai agen...",
+    "agent_failed_prefix": "Agen gagal: ",
+    "init_failed_prefix": "Inisialisasi gagal: ",
+    "answer_question": "Jawab pertanyaan  ·  Esc: batalkan",
+    "composer_submit": "[ Kirim ↵ ]  ·  Shift+Enter: baris baru  ·  Esc: hentikan",
+    "could_not_send_answer": "Tidak dapat mengirim jawaban",
+    "agent_still_starting": "Agen masih dalam proses memulai...",
+    "voice_input_off": "Masukan suara dinonaktifkan (Pengaturan -> Audio).",
+    "speech_input": "Masukan suara...",
+    "wait_before_compact": "Tunggu hingga balasan saat ini diterima sebelum melakukan pemadatan.",
+    "compacting": "Meringkas percakapan...",
+    "generating_with_queue": "Sedang diproses...  ·  {count} sedang dalam antrian",
+    "generating_esc_stop": "Sedang memproses...  ·  Tekan Esc untuk menghentikan",
+    "enter_queues_message": "Masukkan pesan lain ke dalam antrian",
+    "response_copied": "Tanggapan telah disalin",
+    "failed_switch_session_prefix": "Gagal mengganti sesi: ",
+    "failed_delete_session_prefix": "Gagal menghapus sesi: ",
+    "failed_create_session_prefix": "Gagal membuat sesi: ",
+    "request_failed": "Permintaan gagal",
+    "transcription_inserted": "Transkripsi telah disisipkan.",
+    "recording_hint": "Merekam... pembaruan teks saat Anda berbicara. Tekan \"Berhenti\" setelah selesai.",
+    "compacted_ok": "Percakapan diringkas.",
+    "compaction_failed": "Proses pemadatan gagal.",
+    "could_not_load_skills": "Tidak dapat memuat keterampilan.",
+    "could_not_load_decisions": "Tidak dapat memuat keputusan."
+  }
+}

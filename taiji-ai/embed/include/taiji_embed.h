@@ -69,6 +69,7 @@ int taiji_session_stats(uint64_t handle, taiji_session_stats_t* out);
 int taiji_last_turn_metrics(uint64_t handle, taiji_turn_metrics_t* out);
 char* taiji_format_turn_metrics(uint64_t handle, taiji_turn_metrics_t* metrics, int32_t max_width);
 int taiji_turn_metrics_show_actions(uint64_t handle);
+int taiji_ui_set_display_locales(uint64_t handle, char* ui_locale, char* tool_labels_locale);
 char* taiji_tool_display_title(uint64_t handle, char* tool_name);
 char* taiji_tool_scope_label(uint64_t handle, char* scope);
 char* taiji_projects_list(uint64_t handle);

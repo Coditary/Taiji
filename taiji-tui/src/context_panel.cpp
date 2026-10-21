@@ -2,6 +2,7 @@
 
 #include "ui_anim.hpp"
 #include "ui_layout.hpp"
+#include "ui_locale.hpp"
 #include "ui_theme.hpp"
 
 #include <tuinator/render/text.hpp>
@@ -224,7 +225,8 @@ void ContextPanel::paint(tuinator::PaintContext& ctx) const {
 
     int y = 0;
     const std::string chevron = usage_expanded_ ? "▾ " : "▸ ";
-    const std::string title = chevron + "CONTEXT";
+    const std::string context_title = ui_shell("context.title");
+    const std::string title = chevron + (context_title.empty() ? "CONTEXT" : context_title);
     ctx.canvas.draw_text({pad, y}, title, ui_resolve_sidebar_text(ctx, *this, heading));
 
     char pct_buf[16];
@@ -250,9 +252,10 @@ void ContextPanel::paint(tuinator::PaintContext& ctx) const {
             std::string line = format_token_compact(tokens_);
             line += "  ·  ";
             if (use_speed_metric_) {
-                char buf[24];
-                std::snprintf(buf, sizeof(buf), "%.1f tok/s", speed_tok_per_sec_);
-                line += buf;
+                char value_buf[24];
+                std::snprintf(value_buf, sizeof(value_buf), "%.1f", speed_tok_per_sec_);
+                const std::string pattern = ui_shell("metrics.tok_per_sec");
+                line += ui_format(pattern.empty() ? "{value} tok/s" : pattern, "value", value_buf);
                 const std::string spark = ui_sparkline_glyph(speed_samples_, speed_tok_per_sec_);
                 if (!spark.empty()) {
                     line += " ";
@@ -267,19 +270,26 @@ void ContextPanel::paint(tuinator::PaintContext& ctx) const {
     }
 
     if (y < bounds_.height) {
-        std::string skills_label = "Skills";
+        const std::string skills_base = ui_shell("context.skills");
+        std::string skills_label = skills_base.empty() ? "Skills" : skills_base;
         if (!skills_summary_.empty()) {
             skills_label += " (" + skills_summary_ + ")";
         }
-        paint_category_row(ctx, y++, ui_secondary_text(), "System prompt", usage_.system_tokens, label);
+        const std::string system_prompt = ui_shell("context.system_prompt");
+        paint_category_row(ctx, y++, ui_secondary_text(), system_prompt.empty() ? "System prompt" : system_prompt,
+                           usage_.system_tokens, label);
         if (y < bounds_.height) {
-            paint_category_row(ctx, y++, ui_accent(), "Tool definitions & MCP", usage_.tools_tokens, label);
+            const std::string tools_mcp = ui_shell("context.tools_mcp");
+            paint_category_row(ctx, y++, ui_accent(), tools_mcp.empty() ? "Tool definitions & MCP" : tools_mcp,
+                               usage_.tools_tokens, label);
         }
         if (y < bounds_.height) {
             paint_category_row(ctx, y++, ui_status_warn(), skills_label, usage_.skills_tokens, label);
         }
         if (y < bounds_.height) {
-            paint_category_row(ctx, y++, ui_session_active_bar(), "Conversation", usage_.conversation_tokens, label);
+            const std::string conversation = ui_shell("context.conversation");
+            paint_category_row(ctx, y++, ui_session_active_bar(), conversation.empty() ? "Conversation" : conversation,
+                               usage_.conversation_tokens, label);
         }
     }
 
@@ -298,9 +308,10 @@ void ContextPanel::paint(tuinator::PaintContext& ctx) const {
     if (y < bounds_.height) {
         std::string footer;
         if (use_speed_metric_) {
-            char buf[24];
-            std::snprintf(buf, sizeof(buf), "%.1f tok/s", speed_tok_per_sec_);
-            footer = buf;
+            char value_buf[24];
+            std::snprintf(value_buf, sizeof(value_buf), "%.1f", speed_tok_per_sec_);
+            const std::string pattern = ui_shell("metrics.tok_per_sec");
+            footer = ui_format(pattern.empty() ? "{value} tok/s" : pattern, "value", value_buf);
         } else if (show_cost_) {
             footer = format_cost_compact(cost_usd_);
         }

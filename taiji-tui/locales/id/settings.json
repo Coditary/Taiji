@@ -1,0 +1,341 @@
+{
+  "categories": {
+    "general": "Umum & Obrolan",
+    "general_short": "Umum",
+    "model": "...",
+    "agent": "Agen & Perilaku",
+    "agent_short": "Agen",
+    "tools": "Alat & Keterampilan",
+    "tools_short": "Alat",
+    "audio": "Audio & Ucapan",
+    "audio_short": "...",
+    "appearance": "Penampilan",
+    "appearance_short": "Lihat",
+    "shortcuts": "Pintasan Keyboard",
+    "shortcuts_short": "Kunci"
+  },
+  "nav": {
+    "categories": "Kategori"
+  },
+  "scope": {
+    "save_to": "Simpan ke:",
+    "project": "Proyek",
+    "chat": "Obrolan"
+  },
+  "values": {
+    "empty": "(kosong)",
+    "driver_default": "(pengemudi default)",
+    "default_paren": "...",
+    "unlimited": "0 (tak terbatas)",
+    "silence_off": "0 (mati)",
+    "chars_suffix": "{count} karakter",
+    "capture_device_default": "...",
+    "enum_sep": "..."
+  },
+  "sections": {
+    "execution": "Pelaksanaan",
+    "thinking": "Berpikir",
+    "prompt": "Perintah",
+    "mcp_servers": "Server MCP",
+    "skills": "Keterampilan",
+    "speech_to_text": "Pengubahan suara menjadi teks (Wuji)",
+    "theme": "Tema",
+    "agent_chat": "Agen & Obrolan",
+    "your_messages": "Pesan-pesan Anda",
+    "assistant_messages": "Pesan asisten",
+    "labels_motion": "Label & Gerakan",
+    "global": "...",
+    "language": "Bahasa"
+  },
+  "empty": {
+    "mcp_none": "(tidak ada yang terhubung)",
+    "skills_none": "(belum dimuat)"
+  },
+  "rows": {
+    "session_name": {
+      "label": "Nama obrolan",
+      "hint": "Nama tampilan untuk sesi obrolan ini."
+    },
+    "preset_combo": {
+      "label": "Pengaturan awal & templat",
+      "hint": "Pengaturan siklus, templat YAML, dan gaya tampilan."
+    },
+    "provider": {
+      "label": "Penyedia",
+      "hint": "Masukkan: fuzzy picker  <-/->: penyedia siklus."
+    },
+    "project_provider": {
+      "label": "Penyedia default",
+      "hint": "Masukkan: fuzzy picker  <-/->: penyedia siklus."
+    },
+    "model": {
+      "label": "...",
+      "hint": "Enter/Spasi: pilih model. Klik (?): detail katalog Wuji."
+    },
+    "temperature": {
+      "label": "Suhu",
+      "hint": "Suhu pengambilan sampel; semakin rendah, semakin deterministik."
+    },
+    "max_tokens": {
+      "label": "Jumlah maksimum token",
+      "hint": "Jumlah token maksimum per respons model."
+    },
+    "context_window": {
+      "label": "Jendela konteks",
+      "hint": "Masukkan: batas jumlah token. <-/->: sesuaikan secara bertahap."
+    },
+    "context_window_fixed": {
+      "label": "Jendela konteks",
+      "hint": "Jendela konteks ditentukan oleh katalog model."
+    },
+    "max_steps": {
+      "label": "Jumlah langkah maksimum",
+      "hint": "Jumlah langkah pemanggilan alat otonom maksimum per permintaan."
+    },
+    "decisions_enabled": {
+      "label": "Keputusan",
+      "hint": "Izinkan agen untuk mencatat keputusan terkait proyek."
+    },
+    "memory_enabled": {
+      "label": "Memori",
+      "hint": "Aktifkan penyimpanan jangka panjang untuk obrolan ini."
+    },
+    "chain_of_thought": {
+      "label": "Rangkaian pemikiran",
+      "hint": "Bagaimana proses penalaran terungkap ({modes})."
+    },
+    "thought_max_chars": {
+      "label": "Perkiraan jumlah karakter maksimum",
+      "hint": "Batasi panjang rantai pemikiran yang terlihat (0 = tak terbatas)."
+    },
+    "system_prompt_extra": {
+      "label": "Perintah tambahan dari sistem",
+      "hint": "Petunjuk sistem tambahan telah ditambahkan untuk obrolan ini."
+    },
+    "stt_enabled": {
+      "label": "Masukan suara diaktifkan",
+      "hint": "Tombol mikrofon di kolom obrolan (|O|)."
+    },
+    "stt_driver": {
+      "label": "Pengemudi STT",
+      "hint": "Driver Wuji untuk teks wuji --audio (misalnya, llama). Menyimpan berkas capability_drivers.text saat diterapkan."
+    },
+    "stt_model": {
+      "label": "Model STT",
+      "hint": "ID model yang diteruskan ke driver STT (kosong = pengaturan default driver)."
+    },
+    "stt_language": {
+      "label": "Bahasa transkripsi",
+      "hint": "Petunjuk bahasa untuk transkripsi; {auto_lang} menggunakan deteksi otomatis."
+    },
+    "stt_quality": {
+      "label": "Kualitas transkripsi",
+      "hint": "Pengaturan kecepatan versus akurasi untuk transkripsi (tergantung pada pengemudi)."
+    },
+    "stt_trim_silence": {
+      "label": "Keheningan yang sunyi",
+      "hint": "Hapus jeda diam di awal dan akhir rekaman audio sebelum pemrosesan STT."
+    },
+    "stt_silence_level": {
+      "label": "Tingkat keheningan",
+      "hint": "Ambang batas volume untuk mendeteksi keheningan saat fitur pemotongan aktif."
+    },
+    "stt_capture_device": {
+      "label": "Perangkat perekam",
+      "hint": "Nama atau jalur perangkat masukan audio (kosong = pengaturan default sistem)."
+    },
+    "stt_sample_rate": {
+      "label": "Laju sampel",
+      "hint": "Laju pengambilan sampel dalam Hz (8.000–48.000)."
+    },
+    "ui_theme": {
+      "label": "Tema warna",
+      "hint": "Masukkan: tema pencarian fuzzy. <-/->: putar. Tema pengguna: ~/.config/taiji/themes/"
+    },
+    "ui_corners": {
+      "label": "Gaya sudut",
+      "hint": "Bingkai persegi atau bulat, atau pengisian datar tanpa batas luar."
+    },
+    "ui_locale": {
+      "label": "Bahasa antarmuka",
+      "hint": "Bahasa yang digunakan untuk label pengaturan dan teks antarmuka pengguna umum."
+    },
+    "tool_call_density": {
+      "label": "Kepadatan panggilan alat",
+      "hint": "Baris panggilan alat yang ringkas atau terperinci dalam log aktivitas."
+    },
+    "turn_metrics_preset": {
+      "label": "Metrik putaran",
+      "hint": "Tingkat detail metrik per giliran dalam riwayat obrolan."
+    },
+    "turn_metrics_show_actions": {
+      "label": "Tindakan putar",
+      "hint": "Tampilkan tombol \"Ulangi\" dan \"Salin\" di bawah giliran yang telah selesai."
+    },
+    "presentation": {
+      "label": "Presentasi",
+      "hint": "Bagaimana pesan asisten ditampilkan dalam obrolan ini."
+    },
+    "user_message_style": {
+      "label": "Gaya pesan",
+      "hint": "Gunakan efek gelembung krom untuk peran ini ({examples}, ...)."
+    },
+    "user_message_align": {
+      "label": "Penyelarasan",
+      "hint": "Penempatan horizontal; {auto} berada di sebelah peran tersebut (Anda: kanan, asisten: kiri)."
+    },
+    "user_message_max_width_pct": {
+      "label": "Lebar maksimum",
+      "hint": "<-/-> atau klik bilah tersebut untuk mengatur lebar gelembung maksimum (40–100%)."
+    },
+    "user_message_fill_background": {
+      "label": "Isi latar belakang",
+      "hint": "{on}: latar belakang berwarna solid di belakang bingkai pesan Anda (termasuk garis tepi). {off}: hanya garis luar pada latar belakang obrolan."
+    },
+    "assistant_message_style": {
+      "label": "Gaya pesan",
+      "hint": "Gunakan efek gelembung krom untuk peran ini ({examples}, ...)."
+    },
+    "assistant_message_align": {
+      "label": "Penyelarasan",
+      "hint": "Penempatan horizontal; {auto} berada di sebelah peran tersebut (Anda: kanan, asisten: kiri)."
+    },
+    "assistant_message_max_width_pct": {
+      "label": "Lebar maksimum",
+      "hint": "<-/-> atau klik bilah tersebut untuk mengatur lebar gelembung maksimum (40–100%)."
+    },
+    "assistant_message_fill_background": {
+      "label": "Isi latar belakang",
+      "hint": "{on}: latar belakang berwarna solid di belakang bingkai pesan Anda (termasuk garis tepi). {off}: hanya garis luar pada latar belakang obrolan."
+    },
+    "message_timestamps": {
+      "label": "Cap waktu",
+      "hint": "Tampilkan waktu pengiriman pada gelembung pesan Anda."
+    },
+    "sticky_user_message": {
+      "label": "Prompt yang tetap muncul",
+      "hint": "Sematkan bagian atas prompt yang terakhir Anda gulir saat membaca balasan yang panjang."
+    },
+    "auto_compact_context_pct": {
+      "label": "Kompresi otomatis",
+      "hint": "Ketika konteks memenuhi % dari jendela ini, rangkum giliran-giliran sebelumnya secara otomatis."
+    },
+    "message_time_clock": {
+      "label": "Format jam",
+      "hint": "Jam 24 jam atau jam 12 jam dengan AM/PM."
+    },
+    "chat_width": {
+      "label": "Lebar obrolan",
+      "hint": "Lebar maksimum kolom obrolan (sel terminal)."
+    },
+    "code_block_wrap": {
+      "label": "Pembungkusan kode",
+      "hint": "Bungkus baris-baris panjang di dalam blok kode yang dibatasi."
+    },
+    "tool_labels_locale": {
+      "label": "Label alat",
+      "hint": "Bahasa yang digunakan untuk label status alat di antarmuka pengguna."
+    },
+    "reduce_motion": {
+      "label": "Kurangi gerakan",
+      "hint": "Kurangi pergerakan antarmuka (disediakan untuk animasi di masa mendatang)."
+    },
+    "key_open_theme_picker": {
+      "label": "Pintasan pemilih tema",
+      "hint": "Kombinasi tombol global untuk membuka pemilih tema warna (misalnya, Ctrl+T)."
+    },
+    "mcp_toggle": {
+      "label": "",
+      "hint": "Ruang: aktifkan server untuk obrolan ini. Enter: perluas atau tutup alat."
+    },
+    "mcp_tool_toggle": {
+      "label": "",
+      "hint": "Kolom: izinkan atau blokir alat ini untuk obrolan."
+    },
+    "skill_toggle": {
+      "label": "",
+      "hint": "Batasi keterampilan hanya pada daftar yang diizinkan, atau izinkan semuanya."
+    }
+  },
+  "options": {
+    "bool": {
+      "on": "Pada",
+      "off": "Mati"
+    },
+    "chain_of_thought": {
+      "off": "Mati",
+      "prompt": "Perintah",
+      "full": "Asli"
+    },
+    "turn_metrics_preset": {
+      "off": "Mati",
+      "compact": "Ringkas",
+      "dev": "..."
+    },
+    "ui_corners": {
+      "square": "Persegi",
+      "rounded": "Berbentuk bulat",
+      "flat": "Datar"
+    },
+    "tool_call_density": {
+      "compact": "Ringkas",
+      "detailed": "Terperinci"
+    },
+    "presentation": {
+      "markdown": "...",
+      "whatsapp": "Percakapan",
+      "story": "Cerita",
+      "minimal": "...",
+      "bubbles": "Gelembung",
+      "narrative": "Narasi"
+    },
+    "message_style": {
+      "chat": "Obrolan",
+      "cornered": "Terpojok",
+      "block": "Blok",
+      "plain": "Polos",
+      "header": "Judul",
+      "terminal": "...",
+      "log": "...",
+      "card": "Kartu",
+      "section": "Bagian"
+    },
+    "message_align": {
+      "auto": "Otomatis",
+      "left": "Kiri",
+      "right": "Benar",
+      "center": "Tengah"
+    },
+    "auto_compact": {
+      "off": "Mati"
+    },
+    "chat_width": {
+      "auto": "Otomatis",
+      "narrow": "Sempit",
+      "medium": "Sedang",
+      "wide": "Lebar"
+    },
+    "message_time_clock": {
+      "24h": "24 jam",
+      "12h": "12 jam (pagi/sore)"
+    },
+    "stt_language": {
+      "auto": "Deteksi otomatis"
+    },
+    "stt_quality": {
+      "default": "...",
+      "fast": "Cepat",
+      "balanced": "Seimbang",
+      "careful": "Hati-hati"
+    },
+    "skill_state": {
+      "auto": "Standar",
+      "pinned": "Ditandai",
+      "off": "Diblokir"
+    },
+    "mcp_tool_state": {
+      "allowed": "Diperbolehkan",
+      "blocked": "Diblokir"
+    }
+  }
+}

@@ -1,5 +1,6 @@
 #include "settings_modal.hpp"
 
+#include "ui_locale.hpp"
 #include "ui_theme.hpp"
 
 #include <libtaiji.h>
@@ -12,17 +13,36 @@
 
 namespace {
 
+std::string settings_section_label(const char* key, const std::string& fallback) {
+    const std::string translated = ui_tr("settings", std::string("sections.") + key);
+    return translated.empty() ? fallback : translated;
+}
+
+std::string settings_empty_label(const char* key, const std::string& fallback) {
+    const std::string translated = ui_tr("settings", std::string("empty.") + key);
+    return translated.empty() ? fallback : translated;
+}
+
+std::string settings_value_label(const char* key, const std::string& fallback) {
+    const std::string translated = ui_tr("settings", std::string("values.") + key);
+    return translated.empty() ? fallback : translated;
+}
+
 std::string clip(std::string text, int max_cols) {
-    if (max_cols <= 0) {
-        return "";
+    if (max_cols <= 0 || text.empty()) {
+        return {};
     }
-    if (static_cast<int>(text.size()) <= max_cols) {
+    if (tuinator::text_display_width(text) <= max_cols) {
         return text;
     }
     if (max_cols <= 1) {
-        return text.substr(0, static_cast<std::size_t>(max_cols));
+        return "…";
     }
-    return text.substr(0, static_cast<std::size_t>(max_cols - 1)) + "…";
+    const std::size_t bytes = tuinator::text_byte_length_for_width(text, max_cols - 1);
+    if (bytes == 0) {
+        return "…";
+    }
+    return text.substr(0, bytes) + "…";
 }
 
 std::string format_float(double value) {
@@ -38,11 +58,94 @@ std::string format_float(double value) {
     return s;
 }
 
-std::string cot_label(const std::string& mode) {
-    if (mode == "full") {
-        return "native";
+std::string settings_bool_label(bool on) {
+    return ui_settings_option("bool", on ? "on" : "off", on ? "on" : "off");
+}
+
+std::string settings_message_style_label(const std::string& style) {
+    std::string key = style;
+    if (key == "messenger") {
+        key = "chat";
     }
-    return mode.empty() ? "off" : mode;
+    if (key.empty()) {
+        key = "plain";
+    }
+    return ui_settings_option("message_style", key, style.empty() ? "plain" : style);
+}
+
+std::string settings_message_align_label(const std::string& align) {
+    const std::string key = align.empty() ? "auto" : align;
+    return ui_settings_option("message_align", key, key);
+}
+
+std::string settings_cot_label(const std::string& mode) {
+    const std::string key = mode.empty() ? "off" : mode;
+    return ui_settings_option("chain_of_thought", key, key);
+}
+
+std::string settings_stt_language_label(const std::string& code) {
+    if (code == "auto" || code.empty()) {
+        return ui_settings_option("stt_language", "auto", "auto");
+    }
+    const std::string name = ui_tr("common", "locale_names." + code);
+    return name.empty() ? code : name;
+}
+
+std::string settings_presentation_label(const std::string& mode_id) {
+    if (mode_id.empty()) {
+        return {};
+    }
+    return ui_settings_option("presentation", mode_id, mode_id);
+}
+
+std::string settings_template_label(const SettingsModal::Draft& draft, const std::string& template_id) {
+    for (const SettingsModal::TemplateOption& option : draft.templates) {
+        if (option.id == template_id && !option.name.empty()) {
+            return option.name;
+        }
+    }
+    return template_id;
+}
+
+std::string join_settings_options(const std::string& group, const std::vector<const char*>& ids) {
+    const std::string sep = settings_value_label("enum_sep", ", ");
+    std::string out;
+    for (const char* id : ids) {
+        if (id == nullptr || *id == '\0') {
+            continue;
+        }
+        if (!out.empty()) {
+            out += sep;
+        }
+        out += ui_settings_option(group, id, id);
+    }
+    return out;
+}
+
+std::string apply_settings_hint_placeholders(std::string hint) {
+    if (hint.empty()) {
+        return hint;
+    }
+    if (hint.find("{examples}") != std::string::npos) {
+        hint = ui_format(hint, "examples",
+                         join_settings_options("message_style", {"chat", "cornered", "block", "header"}));
+    }
+    if (hint.find("{modes}") != std::string::npos) {
+        hint = ui_format(hint, "modes", join_settings_options("chain_of_thought", {"off", "prompt", "full"}));
+    }
+    if (hint.find("{auto}") != std::string::npos) {
+        hint = ui_format(hint, "auto", ui_settings_option("message_align", "auto", "auto"));
+    }
+    if (hint.find("{auto_lang}") != std::string::npos) {
+        hint = ui_format(hint, "auto_lang", ui_settings_option("stt_language", "auto", "auto"));
+    }
+    if (hint.find("{on}") != std::string::npos) {
+        hint = ui_format(hint, "on", ui_settings_option("bool", "on", "on"));
+    }
+    if (hint.find("{off}") != std::string::npos) {
+        hint = ui_format(hint, "off", ui_settings_option("bool", "off", "off"));
+    }
+    return hint;
 }
 
 struct PercentBarLayout {
@@ -119,6 +222,7 @@ void SettingsModal::reload_from_backend() {
     if (chat_only_) {
         draft_.scope = "chat";
     }
+    ui_set_locale(draft_.ui_locale);
     refresh_model_catalog_hints();
     rebuild_rows();
 }
@@ -194,19 +298,25 @@ void SettingsModal::set_category(Category cat) {
 std::string SettingsModal::category_title(Category cat, bool short_nav) const {
     switch (cat) {
         case Category::General:
-            return short_nav ? "General" : "General & Chat";
+            return short_nav ? ui_tr("settings", "categories.general_short")
+                             : ui_tr("settings", "categories.general");
         case Category::Model:
-            return "Model";
+            return ui_tr("settings", "categories.model");
         case Category::AgentBehaviour:
-            return short_nav ? "Agent" : "Agent & Behaviour";
+            return short_nav ? ui_tr("settings", "categories.agent_short")
+                             : ui_tr("settings", "categories.agent");
         case Category::ToolsSkills:
-            return short_nav ? "Tools" : "Tools & Skills";
+            return short_nav ? ui_tr("settings", "categories.tools_short")
+                             : ui_tr("settings", "categories.tools");
         case Category::Audio:
-            return short_nav ? "Audio" : "Audio & Speech";
+            return short_nav ? ui_tr("settings", "categories.audio_short")
+                             : ui_tr("settings", "categories.audio");
         case Category::Appearance:
-            return "Appearance";
+            return short_nav ? ui_tr("settings", "categories.appearance_short")
+                             : ui_tr("settings", "categories.appearance");
         case Category::Shortcuts:
-            return short_nav ? "Keys" : "Keyboard Shortcuts";
+            return short_nav ? ui_tr("settings", "categories.shortcuts_short")
+                             : ui_tr("settings", "categories.shortcuts");
         default:
             return "";
     }
@@ -216,9 +326,36 @@ std::string SettingsModal::category_subtitle() const {
     return category_title(category_, false);
 }
 
+void SettingsModal::localize_settings_row(Row& row) {
+    if (!row.enum_key.empty()) {
+        row.label = ui_settings_row_label(row.enum_key, row.label);
+    }
+}
+
+void SettingsModal::refresh_translated_content() {
+    rebuild_rows();
+    mark_layout_dirty();
+    mark_dirty();
+}
+
 void SettingsModal::rebuild_rows() {
+    std::string keep_enum_key;
+    if (selected_row_ >= 0 && selected_row_ < static_cast<int>(rows_.size())) {
+        keep_enum_key = rows_[static_cast<std::size_t>(selected_row_)].enum_key;
+    }
     sync_context_from_catalog();
     rows_ = rows_for_category();
+    for (Row& row : rows_) {
+        localize_settings_row(row);
+    }
+    if (!keep_enum_key.empty()) {
+        for (int i = 0; i < static_cast<int>(rows_.size()); ++i) {
+            if (rows_[static_cast<std::size_t>(i)].enum_key == keep_enum_key) {
+                selected_row_ = i;
+                break;
+            }
+        }
+    }
     if (selected_row_ >= static_cast<int>(rows_.size())) {
         selected_row_ = std::max(0, static_cast<int>(rows_.size()) - 1);
     }
@@ -434,7 +571,7 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
         case Category::AgentBehaviour: {
             Row sec1;
             sec1.kind = Row::Kind::Section;
-            sec1.label = "Execution";
+            sec1.label = settings_section_label("execution", "Execution");
             rows.push_back(sec1);
             Row steps;
             steps.label = "Max Steps";
@@ -458,7 +595,7 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             rows.push_back(gap1);
             Row sec2;
             sec2.kind = Row::Kind::Section;
-            sec2.label = "Thinking";
+            sec2.label = settings_section_label("thinking", "Thinking");
             rows.push_back(sec2);
             Row cot;
             cot.label = "Chain of Thought";
@@ -480,7 +617,7 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             rows.push_back(gap2);
             Row sec3;
             sec3.kind = Row::Kind::Section;
-            sec3.label = "Prompt";
+            sec3.label = settings_section_label("prompt", "Prompt");
             rows.push_back(sec3);
             Row extra;
             extra.label = "System Prompt Extra";
@@ -492,18 +629,39 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
         case Category::ToolsSkills: {
             Row sec_mcp;
             sec_mcp.kind = Row::Kind::Section;
-            sec_mcp.label = "MCP Servers";
+            sec_mcp.label = settings_section_label("mcp_servers", "MCP Servers");
             rows.push_back(sec_mcp);
             for (std::size_t i = 0; i < draft_.mcp_available.size(); ++i) {
+                const std::string& server = draft_.mcp_available[i];
+                bool has_tools = false;
+                for (const Draft::MCPToolEntry& tool : draft_.mcp_tools) {
+                    if (tool.server == server) {
+                        has_tools = true;
+                        break;
+                    }
+                }
                 Row row;
-                row.label = draft_.mcp_available[i];
+                row.label = server;
                 row.kind = Row::Kind::MCPToggle;
                 row.mcp_index = static_cast<int>(i);
                 rows.push_back(row);
+                if (has_tools && mcp_server_expanded(server)) {
+                    for (const Draft::MCPToolEntry& tool : draft_.mcp_tools) {
+                        if (tool.server != server) {
+                            continue;
+                        }
+                        Row tool_row;
+                        tool_row.label = tool.name;
+                        tool_row.kind = Row::Kind::MCPToolToggle;
+                        tool_row.mcp_tool_server = server;
+                        tool_row.mcp_tool_name = tool.name;
+                        rows.push_back(tool_row);
+                    }
+                }
             }
             if (draft_.mcp_available.empty()) {
                 Row hint;
-                hint.label = "(none connected)";
+                hint.label = settings_empty_label("mcp_none", "(none connected)");
                 hint.kind = Row::Kind::Text;
                 hint.enum_key = "none";
                 rows.push_back(hint);
@@ -513,7 +671,7 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             rows.push_back(gap_sk);
             Row sec_sk;
             sec_sk.kind = Row::Kind::Section;
-            sec_sk.label = "Skills";
+            sec_sk.label = settings_section_label("skills", "Skills");
             rows.push_back(sec_sk);
             for (std::size_t i = 0; i < draft_.skills_available.size(); ++i) {
                 Row row;
@@ -524,7 +682,7 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             }
             if (draft_.skills_available.empty()) {
                 Row hint;
-                hint.label = "(none loaded)";
+                hint.label = settings_empty_label("skills_none", "(none loaded)");
                 hint.kind = Row::Kind::Text;
                 hint.enum_key = "none";
                 rows.push_back(hint);
@@ -534,7 +692,7 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
         case Category::Audio: {
             Row sec;
             sec.kind = Row::Kind::Section;
-            sec.label = "Speech-to-text (Wuji)";
+            sec.label = settings_section_label("speech_to_text", "Speech-to-text (Wuji)");
             rows.push_back(sec);
             Row enabled;
             enabled.label = "Voice input enabled";
@@ -599,9 +757,20 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             break;
         }
         case Category::Appearance: {
+            Row sec_lang;
+            sec_lang.kind = Row::Kind::Section;
+            sec_lang.label = settings_section_label("language", "Language");
+            rows.push_back(sec_lang);
+            Row ui_locale;
+            ui_locale.label = "Interface language";
+            ui_locale.kind = Row::Kind::EnumCycle;
+            ui_locale.enum_key = "ui_locale";
+            ui_locale.enum_values = ui_locale_ids();
+            rows.push_back(ui_locale);
+
             Row sec_theme;
             sec_theme.kind = Row::Kind::Section;
-            sec_theme.label = "Theme";
+            sec_theme.label = settings_section_label("theme", "Theme");
             rows.push_back(sec_theme);
             Row theme;
             theme.label = "Color theme";
@@ -626,7 +795,7 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             rows.push_back(gap0);
             Row sec_agent;
             sec_agent.kind = Row::Kind::Section;
-            sec_agent.label = "Agent & Chat";
+            sec_agent.label = settings_section_label("agent_chat", "Agent & Chat");
             rows.push_back(sec_agent);
             Row tool_density;
             tool_density.label = "Tool call density";
@@ -653,7 +822,7 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             rows.push_back(presentation);
             Row sec_you;
             sec_you.kind = Row::Kind::Section;
-            sec_you.label = "Your messages";
+            sec_you.label = settings_section_label("your_messages", "Your messages");
             rows.push_back(sec_you);
             Row user_msg_style;
             user_msg_style.label = "Style";
@@ -683,7 +852,7 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             rows.push_back(user_fill);
             Row sec_asst;
             sec_asst.kind = Row::Kind::Section;
-            sec_asst.label = "Assistant messages";
+            sec_asst.label = settings_section_label("assistant_messages", "Assistant messages");
             rows.push_back(sec_asst);
             Row asst_style;
             asst_style.label = "Style";
@@ -752,14 +921,8 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             rows.push_back(gap1);
             Row sec_typo;
             sec_typo.kind = Row::Kind::Section;
-            sec_typo.label = "Labels & Motion";
+            sec_typo.label = settings_section_label("labels_motion", "Labels & Motion");
             rows.push_back(sec_typo);
-            Row locale;
-            locale.label = "Tool labels";
-            locale.kind = Row::Kind::EnumCycle;
-            locale.enum_key = "tool_labels_locale";
-            locale.enum_values = {"en", "de"};
-            rows.push_back(locale);
             Row motion;
             motion.label = "Reduce motion";
             motion.kind = Row::Kind::BoolToggle;
@@ -770,7 +933,7 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
         case Category::Shortcuts: {
             Row sec;
             sec.kind = Row::Kind::Section;
-            sec.label = "Global";
+            sec.label = settings_section_label("global", "Global");
             rows.push_back(sec);
             Row theme_key;
             theme_key.label = "Open theme picker";
@@ -801,43 +964,102 @@ std::string SettingsModal::provider_display_id() const {
     return draft_.provider;
 }
 
+bool SettingsModal::row_bool_toggle_on(const Row& row) const {
+    if (row.kind == Row::Kind::MCPToggle) {
+        if (row.mcp_index < 0 || row.mcp_index >= static_cast<int>(draft_.mcp_available.size())) {
+            return false;
+        }
+        const std::string& name = draft_.mcp_available[static_cast<std::size_t>(row.mcp_index)];
+        return std::find(draft_.mcp_enabled.begin(), draft_.mcp_enabled.end(), name) != draft_.mcp_enabled.end();
+    }
+    if (row.kind == Row::Kind::MCPToolToggle) {
+        return !mcp_tool_denied(row.mcp_tool_server, row.mcp_tool_name);
+    }
+    if (row.enum_key == "decisions_enabled") {
+        return draft_.decisions_enabled;
+    }
+    if (row.enum_key == "memory_enabled") {
+        return draft_.memory_enabled;
+    }
+    if (row.enum_key == "turn_metrics_show_actions") {
+        return draft_.turn_metrics_show_actions;
+    }
+    if (row.enum_key == "code_block_wrap") {
+        return draft_.code_block_wrap;
+    }
+    if (row.enum_key == "sticky_user_message") {
+        return draft_.sticky_user_message;
+    }
+    if (row.enum_key == "user_message_fill_background") {
+        return draft_.user_message_fill_background;
+    }
+    if (row.enum_key == "assistant_message_fill_background") {
+        return draft_.assistant_message_fill_background;
+    }
+    if (row.enum_key == "reduce_motion") {
+        return draft_.reduce_motion;
+    }
+    if (row.enum_key == "message_timestamps") {
+        return draft_.message_timestamps;
+    }
+    if (row.enum_key == "stt_enabled") {
+        return draft_.stt_enabled;
+    }
+    if (row.enum_key == "stt_trim_silence") {
+        return draft_.stt_trim_silence;
+    }
+    return false;
+}
+
 std::string SettingsModal::row_value_text(const Row& row) const {
     switch (row.kind) {
         case Row::Kind::Section:
             return "";
-        case Row::Kind::ScopeToggle:
-            return draft_.scope == "project" ? "Project" : "Chat";
+        case Row::Kind::ScopeToggle: {
+            if (draft_.scope == "project") {
+                const std::string label = ui_tr("settings", "scope.project");
+                return label.empty() ? "Project" : label;
+            }
+            const std::string label = ui_tr("settings", "scope.chat");
+            return label.empty() ? "Chat" : label;
+        }
         case Row::Kind::Text:
             if (editing_text_ && text_edit_target_ == row.enum_key) {
                 return text_edit_buffer_ + "|";
             }
             if (row.enum_key == "session_name") {
-                return draft_.session_name.empty() ? "(empty)" : draft_.session_name;
+                return draft_.session_name.empty() ? settings_value_label("empty", "(empty)") : draft_.session_name;
             }
             if (row.enum_key == "model") {
                 const std::string model = draft_.model.empty() ? draft_.model_default : draft_.model;
-                return model.empty() ? "(empty)" : model_display_text(model);
+                return model.empty() ? settings_value_label("empty", "(empty)") : model_display_text(model);
             }
             if (row.enum_key == "stt_model") {
-                return draft_.stt_model.empty() ? "(driver default)" : draft_.stt_model;
+                return draft_.stt_model.empty() ? settings_value_label("driver_default", "(driver default)")
+                                                 : draft_.stt_model;
             }
             if (row.enum_key == "stt_capture_device") {
-                return draft_.stt_capture_device.empty() ? "default" : draft_.stt_capture_device;
+                return draft_.stt_capture_device.empty()
+                           ? settings_value_label("capture_device_default", "default")
+                           : draft_.stt_capture_device;
             }
             if (row.enum_key == "key_open_theme_picker") {
                 return draft_.key_open_theme_picker.empty() ? "Ctrl+T" : draft_.key_open_theme_picker;
             }
             if (row.enum_key == "system_prompt_extra") {
                 if (draft_.system_prompt_extra.empty()) {
-                    return "(empty)";
+                    return settings_value_label("empty", "(empty)");
                 }
                 const std::size_t n = draft_.system_prompt_extra.size();
-                std::string preview = draft_.system_prompt_extra.substr(0, std::min<std::size_t>(n, 28));
-                if (n > 28) {
-                    preview += "…";
+                std::string preview = draft_.system_prompt_extra;
+                if (tuinator::text_display_width(preview) > 28) {
+                    const std::size_t bytes = tuinator::text_byte_length_for_width(preview, 27);
+                    preview = bytes > 0 ? preview.substr(0, bytes) + "…" : "…";
                 }
                 std::replace(preview.begin(), preview.end(), '\n', ' ');
-                return preview + " (" + std::to_string(n) + " chars)";
+                return preview + " (" + ui_format(settings_value_label("chars_suffix", "{count} chars"), "count",
+                                                   std::to_string(n)) +
+                       ")";
             }
             return "";
         case Row::Kind::ProviderCycle: {
@@ -867,7 +1089,8 @@ std::string SettingsModal::row_value_text(const Row& row) const {
             }
             if (row.enum_key == "context_window") {
                 if (!draft_.context_window_set) {
-                    return format_context_window(draft_.context_window_default) + " (default)";
+                    return format_context_window(draft_.context_window_default) + " " +
+                           settings_value_label("default_paren", "(default)");
                 }
                 return format_context_window(draft_.context_window);
             }
@@ -876,7 +1099,8 @@ std::string SettingsModal::row_value_text(const Row& row) const {
             }
             if (row.enum_key == "max_tokens") {
                 if (!draft_.max_tokens_set) {
-                    return std::to_string(draft_.max_tokens_default) + " (default)";
+                    return std::to_string(draft_.max_tokens_default) + " " +
+                           settings_value_label("default_paren", "(default)");
                 }
                 return std::to_string(draft_.max_tokens);
             }
@@ -885,7 +1109,7 @@ std::string SettingsModal::row_value_text(const Row& row) const {
             }
             if (row.enum_key == "thought_max_chars") {
                 if (draft_.thought_max_chars <= 0) {
-                    return "0 (unlimited)";
+                    return settings_value_label("unlimited", "0 (unlimited)");
                 }
                 return std::to_string(draft_.thought_max_chars);
             }
@@ -904,132 +1128,142 @@ std::string SettingsModal::row_value_text(const Row& row) const {
             }
             if (row.enum_key == "stt_silence_level") {
                 if (draft_.stt_silence_level <= 0.f) {
-                    return "0 (off)";
+                    return settings_value_label("silence_off", "0 (off)");
                 }
                 return format_float(draft_.stt_silence_level);
             }
             if (!draft_.temperature_set) {
-                return format_float(draft_.temperature_default) + " (default)";
+                return format_float(draft_.temperature_default) + " " +
+                       settings_value_label("default_paren", "(default)");
             }
             return format_float(draft_.temperature);
         case Row::Kind::EnumCycle:
             if (row.enum_key == "chain_of_thought") {
-                return cot_label(draft_.chain_of_thought);
+                return settings_cot_label(draft_.chain_of_thought);
             }
             if (row.enum_key == "turn_metrics_preset") {
-                return normalize_metrics(draft_.turn_metrics_preset);
+                const std::string preset = normalize_metrics(draft_.turn_metrics_preset);
+                return ui_settings_option("turn_metrics_preset", preset, preset);
             }
             if (row.enum_key == "tool_labels_locale") {
-                return draft_.tool_labels_locale;
+                const std::string name = ui_locale_display_name(draft_.tool_labels_locale);
+                return name.empty() ? draft_.tool_labels_locale : name;
             }
             if (row.enum_key == "ui_theme") {
                 return draft_.ui_theme;
             }
+            if (row.enum_key == "ui_locale") {
+                const std::string name = ui_locale_display_name(draft_.ui_locale);
+                return name.empty() ? draft_.ui_locale : name;
+            }
             if (row.enum_key == "ui_corners") {
-                if (draft_.ui_corners == "rounded" || draft_.ui_corners == "flat") {
-                    return draft_.ui_corners;
-                }
-                return "square";
+                const std::string corners =
+                    (draft_.ui_corners == "rounded" || draft_.ui_corners == "flat") ? draft_.ui_corners : "square";
+                return ui_settings_option("ui_corners", corners, corners);
             }
             if (row.enum_key == "tool_call_density") {
-                return draft_.tool_call_density;
+                return ui_settings_option("tool_call_density", draft_.tool_call_density, draft_.tool_call_density);
             }
             if (row.enum_key == "presentation") {
-                return draft_.presentation;
+                return settings_presentation_label(draft_.presentation);
             }
             if (row.enum_key == "user_message_style") {
-                if (draft_.user_message_style == "messenger") {
-                    return "chat";
-                }
-                return draft_.user_message_style;
+                return settings_message_style_label(draft_.user_message_style);
             }
             if (row.enum_key == "assistant_message_style") {
-                if (draft_.assistant_message_style == "messenger") {
-                    return "chat";
-                }
-                return draft_.assistant_message_style;
+                return settings_message_style_label(draft_.assistant_message_style);
             }
             if (row.enum_key == "user_message_align") {
-                return draft_.user_message_align.empty() ? "auto" : draft_.user_message_align;
+                return settings_message_align_label(draft_.user_message_align);
             }
             if (row.enum_key == "assistant_message_align") {
-                return draft_.assistant_message_align.empty() ? "auto" : draft_.assistant_message_align;
+                return settings_message_align_label(draft_.assistant_message_align);
             }
             if (row.enum_key == "auto_compact_context_pct") {
                 if (draft_.auto_compact_context_pct <= 0) {
-                    return "off";
+                    return ui_settings_option("auto_compact", "off", "off");
                 }
                 return std::to_string(draft_.auto_compact_context_pct) + "%";
             }
             if (row.enum_key == "chat_width") {
-                return draft_.chat_width;
+                return ui_settings_option("chat_width", draft_.chat_width, draft_.chat_width);
             }
             if (row.enum_key == "message_time_clock") {
-                return draft_.message_time_clock == "12h" ? "12h (AM/PM)" : "24h";
+                const std::string clock = draft_.message_time_clock == "12h" ? "12h" : "24h";
+                return ui_settings_option("message_time_clock", clock, clock);
             }
             if (row.enum_key == "stt_driver") {
                 return stt_driver_display();
             }
             if (row.enum_key == "stt_language") {
-                return draft_.stt_language;
+                return settings_stt_language_label(draft_.stt_language);
             }
             if (row.enum_key == "stt_quality") {
-                return draft_.stt_quality.empty() ? "(default)" : draft_.stt_quality;
+                if (draft_.stt_quality.empty()) {
+                    return ui_settings_option("stt_quality", "default", "(default)");
+                }
+                return ui_settings_option("stt_quality", draft_.stt_quality, draft_.stt_quality);
             }
             return "";
         case Row::Kind::BoolToggle:
             if (row.enum_key == "decisions_enabled") {
-                return draft_.decisions_enabled ? "on" : "off";
+                return settings_bool_label(draft_.decisions_enabled);
             }
             if (row.enum_key == "memory_enabled") {
-                return draft_.memory_enabled ? "on" : "off";
+                return settings_bool_label(draft_.memory_enabled);
             }
             if (row.enum_key == "turn_metrics_show_actions") {
-                return draft_.turn_metrics_show_actions ? "on" : "off";
+                return settings_bool_label(draft_.turn_metrics_show_actions);
             }
             if (row.enum_key == "code_block_wrap") {
-                return draft_.code_block_wrap ? "on" : "off";
+                return settings_bool_label(draft_.code_block_wrap);
             }
             if (row.enum_key == "sticky_user_message") {
-                return draft_.sticky_user_message ? "on" : "off";
+                return settings_bool_label(draft_.sticky_user_message);
             }
             if (row.enum_key == "user_message_fill_background") {
-                return draft_.user_message_fill_background ? "on" : "off";
+                return settings_bool_label(draft_.user_message_fill_background);
             }
             if (row.enum_key == "assistant_message_fill_background") {
-                return draft_.assistant_message_fill_background ? "on" : "off";
+                return settings_bool_label(draft_.assistant_message_fill_background);
             }
             if (row.enum_key == "reduce_motion") {
-                return draft_.reduce_motion ? "on" : "off";
+                return settings_bool_label(draft_.reduce_motion);
             }
             if (row.enum_key == "message_timestamps") {
-                return draft_.message_timestamps ? "on" : "off";
+                return settings_bool_label(draft_.message_timestamps);
             }
             if (row.enum_key == "stt_enabled") {
-                return draft_.stt_enabled ? "on" : "off";
+                return settings_bool_label(draft_.stt_enabled);
             }
             if (row.enum_key == "stt_trim_silence") {
-                return draft_.stt_trim_silence ? "on" : "off";
+                return settings_bool_label(draft_.stt_trim_silence);
             }
-            return "off";
+            return settings_bool_label(false);
         case Row::Kind::MCPToggle: {
             const std::string& name = draft_.mcp_available[row.mcp_index];
             const bool on =
                 std::find(draft_.mcp_enabled.begin(), draft_.mcp_enabled.end(), name) != draft_.mcp_enabled.end();
-            return on ? "on" : "off";
+            return settings_bool_label(on);
+        }
+        case Row::Kind::MCPToolToggle: {
+            const bool allowed = !mcp_tool_denied(row.mcp_tool_server, row.mcp_tool_name);
+            return ui_settings_option("mcp_tool_state", allowed ? "allowed" : "blocked",
+                                      allowed ? "allowed" : "blocked");
         }
         case Row::Kind::SkillAllowToggle: {
             const std::string& name = draft_.skills_available[row.skill_index];
-            return skill_state(name);
+            const std::string state = skill_state(name);
+            return ui_settings_option("skill_state", state, state);
         }
         case Row::Kind::PresetCombo: {
             if (!draft_.preset.empty()) {
-                return draft_.preset;
+                return settings_presentation_label(draft_.preset);
             }
             if (!draft_.template_id.empty()) {
-                return draft_.template_id;
+                return settings_template_label(draft_, draft_.template_id);
             }
-            return draft_.presentation;
+            return settings_presentation_label(draft_.presentation);
         }
         default:
             return "";
@@ -1040,139 +1274,23 @@ std::string SettingsModal::row_hint_text(const Row& row) const {
     if (row.kind == Row::Kind::Section) {
         return "";
     }
-    if (row.enum_key == "session_name") {
-        return "Display name for this chat session.";
-    }
-    if (row.enum_key == "preset_combo") {
-        return "Cycle presets, YAML templates, and presentation styles.";
-    }
-    if (row.enum_key == "provider" || row.enum_key == "project_provider") {
-        return "Enter: fuzzy picker  <-/->: cycle provider.";
-    }
-    if (row.enum_key == "model") {
-        return "Enter/Space: pick model. Click (?): Wuji catalog details.";
-    }
-    if (row.enum_key == "temperature") {
-        return "Sampling temperature; lower is more deterministic.";
-    }
-    if (row.enum_key == "max_tokens") {
-        return "Maximum tokens per model response.";
-    }
-    if (row.enum_key == "context_window") {
-        if (model_context_limit_fixed()) {
-            return "Context window is fixed by the model catalog.";
-        }
-        return "Enter: type token limit. <-/->: adjust in steps.";
-    }
-    if (row.enum_key == "stt_driver") {
-        return "Wuji driver for wuji text --audio (e.g. llama). Saves capability_drivers.text on apply.";
-    }
-    if (row.enum_key == "stt_enabled") {
-        return "Microphone button in the chat input (|O|).";
-    }
-    if (row.enum_key == "stt_model") {
-        return "Model id passed to the STT driver (empty = driver default).";
-    }
-    if (row.enum_key == "stt_language") {
-        return "Hint language for transcription; auto lets the model detect.";
-    }
-    if (row.enum_key == "stt_quality") {
-        return "Speed vs accuracy preset for transcription (driver-dependent).";
-    }
-    if (row.enum_key == "stt_trim_silence") {
-        return "Drop leading/trailing silence from recorded audio before STT.";
-    }
-    if (row.enum_key == "stt_silence_level") {
-        return "Volume threshold for silence detection when trim is on.";
-    }
-    if (row.enum_key == "stt_capture_device") {
-        return "Audio input device name or path (empty = system default).";
-    }
-    if (row.enum_key == "stt_sample_rate") {
-        return "Capture sample rate in Hz (8000–48000).";
-    }
-    if (row.enum_key == "max_steps") {
-        return "Maximum autonomous tool-call steps per request.";
-    }
-    if (row.enum_key == "decisions_enabled") {
-        return "Allow the agent to record project decisions.";
-    }
-    if (row.enum_key == "memory_enabled") {
-        return "Enable long-term memory for this chat.";
-    }
-    if (row.enum_key == "chain_of_thought") {
-        return "How reasoning is exposed (off / prompt / native).";
-    }
-    if (row.enum_key == "thought_max_chars") {
-        return "Cap visible chain-of-thought length (0 = unlimited).";
-    }
-    if (row.enum_key == "system_prompt_extra") {
-        return "Extra system instructions appended for this chat.";
-    }
-    if (row.enum_key == "turn_metrics_preset") {
-        return "Verbosity of per-turn metrics in the chat log.";
-    }
-    if (row.enum_key == "tool_labels_locale") {
-        return "Language for tool status labels in the UI.";
-    }
-    if (row.enum_key == "ui_theme") {
-        return "Enter: fuzzy search themes. <-/->: cycle. User themes: ~/.config/taiji/themes/";
-    }
-    if (row.enum_key == "ui_corners") {
-        return "Square or rounded frame, or flat fill without an outer border.";
-    }
-    if (row.enum_key == "tool_call_density") {
-        return "Compact or detailed tool-call lines in the activity log.";
-    }
-    if (row.enum_key == "presentation") {
-        return "How assistant messages are rendered in this chat.";
-    }
-    if (row.enum_key == "chat_width") {
-        return "Maximum width of the chat column (terminal cells).";
-    }
-    if (row.enum_key == "turn_metrics_show_actions") {
-        return "Show redo/copy controls under finished turns.";
-    }
-    if (row.enum_key == "code_block_wrap") {
-        return "Wrap long lines inside fenced code blocks.";
-    }
-    if (row.enum_key == "reduce_motion") {
-        return "Minimize interface motion (reserved for future animations).";
-    }
-    if (row.enum_key == "message_timestamps") {
-        return "Show send time on your message bubbles.";
-    }
-    if (row.enum_key == "sticky_user_message") {
-        return "Pin the top of your last scrolled prompt while reading long replies.";
-    }
-    if (row.enum_key == "user_message_fill_background" || row.enum_key == "assistant_message_fill_background") {
-        return "On: solid fill behind your message frame (border included). Off: outline only on the chat background.";
-    }
-    if (row.enum_key == "user_message_style" || row.enum_key == "assistant_message_style") {
-        return "Bubble chrome for this role (chat, cornered, block, header, …).";
-    }
-    if (row.enum_key == "user_message_align" || row.enum_key == "assistant_message_align") {
-        return "Horizontal placement; auto follows the role (you: right, assistant: left).";
-    }
-    if (row.enum_key == "auto_compact_context_pct") {
-        return "When context fills this % of the window, summarize older turns automatically.";
-    }
-    if (row.enum_key == "user_message_max_width_pct" || row.enum_key == "assistant_message_max_width_pct") {
-        return "←/→ or click the bar to set max bubble width (40–100%).";
-    }
-    if (row.enum_key == "message_time_clock") {
-        return "24-hour clock or 12-hour with AM/PM.";
+    if (row.enum_key == "context_window" && model_context_limit_fixed()) {
+        return apply_settings_hint_placeholders(ui_settings_row_hint("context_window_fixed", ""));
     }
     if (row.kind == Row::Kind::MCPToggle) {
-        return "Enable or disable this MCP server for the chat.";
+        return apply_settings_hint_placeholders(ui_settings_row_hint("mcp_toggle", ""));
+    }
+    if (row.kind == Row::Kind::MCPToolToggle) {
+        const std::string desc = mcp_tool_description(row.mcp_tool_server, row.mcp_tool_name);
+        if (!desc.empty()) {
+            return desc;
+        }
+        return apply_settings_hint_placeholders(ui_settings_row_hint("mcp_tool_toggle", ""));
     }
     if (row.kind == Row::Kind::SkillAllowToggle) {
-        return "Restrict skills to an allowlist, or allow all.";
+        return apply_settings_hint_placeholders(ui_settings_row_hint("skill_toggle", ""));
     }
-    if (row.enum_key == "key_open_theme_picker") {
-        return "Global shortcut to open the color theme picker (e.g. Ctrl+T).";
-    }
-    return "";
+    return apply_settings_hint_placeholders(ui_settings_row_hint(row.enum_key, ""));
 }
 
 void SettingsModal::begin_value_edit(int row) {
@@ -1434,6 +1552,9 @@ void SettingsModal::activate_row(int row, int direction) {
             } else if (r.enum_key == "ui_theme") {
                 field = &draft_.ui_theme;
                 current = draft_.ui_theme;
+            } else if (r.enum_key == "ui_locale") {
+                field = &draft_.ui_locale;
+                current = draft_.ui_locale;
             } else if (r.enum_key == "ui_corners") {
                 field = &draft_.ui_corners;
                 if (draft_.ui_corners == "rounded" || draft_.ui_corners == "flat") {
@@ -1506,8 +1627,14 @@ void SettingsModal::activate_row(int row, int direction) {
                 if ((r.enum_key == "user_message_style" || r.enum_key == "assistant_message_style") && *field == "chat") {
                     *field = "messenger";
                 }
-                if ((r.enum_key == "chat_width" || r.enum_key == "message_time_clock" || r.enum_key == "ui_corners" ||
-                     r.enum_key == "ui_theme" || r.enum_key == "user_message_style" ||
+                if (r.enum_key == "ui_locale") {
+                    ui_set_locale(draft_.ui_locale);
+                    draft_.tool_labels_locale = draft_.ui_locale;
+                    refresh_translated_content();
+                }
+                if ((r.enum_key == "ui_locale" || r.enum_key == "tool_labels_locale" || r.enum_key == "chat_width" ||
+                     r.enum_key == "message_time_clock" ||
+                     r.enum_key == "ui_corners" || r.enum_key == "ui_theme" || r.enum_key == "user_message_style" ||
                      r.enum_key == "assistant_message_style" || r.enum_key == "user_message_align" ||
                      r.enum_key == "assistant_message_align") &&
                     on_preview_) {
@@ -1624,6 +1751,9 @@ void SettingsModal::activate_row(int row, int direction) {
             }
             break;
         }
+        case Row::Kind::MCPToolToggle:
+            toggle_mcp_tool_denied(r.mcp_tool_server, r.mcp_tool_name);
+            break;
         case Row::Kind::SkillAllowToggle: {
             const std::string& name = draft_.skills_available[r.skill_index];
             cycle_skill_state(name);
@@ -1709,17 +1839,48 @@ void SettingsModal::paint_content_row(tuinator::Canvas& clipped, const Row& row,
 
     tuinator::Style sel_bg = ui_overlay_panel_style();
     sel_bg.background_rgb = ui_list_active_bg();
+
+    bool mcp_expandable = false;
+    std::string mcp_server_name;
+    if (row.kind == Row::Kind::MCPToggle && row.mcp_index >= 0 &&
+        row.mcp_index < static_cast<int>(draft_.mcp_available.size())) {
+        mcp_server_name = draft_.mcp_available[static_cast<std::size_t>(row.mcp_index)];
+        mcp_expandable = mcp_server_has_tools(mcp_server_name);
+    }
+    const bool mcp_tool_child = row.kind == Row::Kind::MCPToolToggle;
+    const bool skip_selection_marker = mcp_expandable || mcp_tool_child;
+
     if (selected) {
         const int row_w = std::max(1, value_x + value_w - content_x + 1);
         clipped.fill_rect({content_x - 1, y, row_w, 1}, ' ', sel_bg);
-        tuinator::Style marker = theme.accent;
-        marker.background_rgb = sel_bg.background_rgb;
-        clipped.draw_text({content_x, y}, "▸", marker);
+        if (!skip_selection_marker) {
+            tuinator::Style marker = theme.accent;
+            marker.background_rgb = sel_bg.background_rgb;
+            clipped.draw_text({content_x, y}, "▸", marker);
+        }
         key_style.background_rgb = sel_bg.background_rgb;
         value_style.background_rgb = sel_bg.background_rgb;
     }
 
-    clipped.draw_text({content_x + (selected ? 2 : 0), y}, clip(row.label, key_col_width()), key_style);
+    int label_x = content_x;
+    if (selected && !skip_selection_marker) {
+        label_x += 2;
+    }
+    if (mcp_expandable) {
+        tuinator::Style expand_style = key_style;
+        if (selected) {
+            expand_style = theme.accent;
+            expand_style.background_rgb = sel_bg.background_rgb;
+        }
+        const std::string expand_glyph =
+            mcp_server_expanded(mcp_server_name) ? std::string("▾ ") : std::string("▸ ");
+        clipped.draw_text({label_x, y}, expand_glyph, expand_style);
+        label_x += 2;
+    } else if (mcp_tool_child) {
+        label_x += 2;
+    }
+    const int label_budget = std::max(1, key_col_width() - (label_x - content_x));
+    clipped.draw_text({label_x, y}, clip(row.label, label_budget), key_style);
 
     const std::string value = row_value_text(row);
     const bool dim_value = value.find("(default)") != std::string::npos || value.find("(empty)") != std::string::npos ||
@@ -1730,8 +1891,8 @@ void SettingsModal::paint_content_row(tuinator::Canvas& clipped, const Row& row,
     }
 
     std::string rendered;
-    if (row.kind == Row::Kind::BoolToggle) {
-        const bool on = value == "on";
+    if (row.kind == Row::Kind::BoolToggle || row.kind == Row::Kind::MCPToggle) {
+        const bool on = row_bool_toggle_on(row);
         tuinator::Style toggle = value_style;
         if (on) {
             toggle.foreground_rgb = ui_status_ok();
@@ -1739,33 +1900,41 @@ void SettingsModal::paint_content_row(tuinator::Canvas& clipped, const Row& row,
             toggle.foreground_rgb = ui_toggle_off();
             toggle.dim = true;
         }
-        rendered = on ? "● on" : "○ off";
+        rendered = (on ? "● " : "○ ") + value;
         clipped.draw_text({value_x, y}, clip(rendered, value_w), toggle);
         return;
     }
-    if (row.kind == Row::Kind::MCPToggle) {
-        const bool on = value == "on";
+    if (row.kind == Row::Kind::MCPToolToggle) {
+        const bool allowed = row_bool_toggle_on(row);
         tuinator::Style toggle = value_style;
-        toggle.foreground_rgb = on ? ui_status_ok() : ui_toggle_off();
-        if (!on) {
+        if (allowed) {
+            toggle.foreground_rgb = ui_status_ok();
+            rendered = "● " + value;
+        } else {
+            toggle.foreground_rgb = ui_toggle_off();
             toggle.dim = true;
+            rendered = "○ " + value;
         }
-        rendered = on ? "● on" : "○ off";
         clipped.draw_text({value_x, y}, clip(rendered, value_w), toggle);
         return;
     }
     if (row.kind == Row::Kind::SkillAllowToggle) {
+        if (row.skill_index < 0 || row.skill_index >= static_cast<int>(draft_.skills_available.size())) {
+            return;
+        }
+        const std::string& name = draft_.skills_available[static_cast<std::size_t>(row.skill_index)];
+        const std::string state = skill_state(name);
         tuinator::Style toggle = value_style;
-        if (value == "pinned") {
+        if (state == "pinned") {
             toggle.foreground_rgb = ui_status_ok();
-            rendered = "● pinned";
-        } else if (value == "auto") {
+            rendered = "● " + value;
+        } else if (state == "auto") {
             toggle.foreground_rgb = ui_emphasis();
-            rendered = "● auto";
+            rendered = "● " + value;
         } else {
             toggle.foreground_rgb = ui_toggle_off();
             toggle.dim = true;
-            rendered = "○ off";
+            rendered = "○ " + value;
         }
         clipped.draw_text({value_x, y}, clip(rendered, value_w), toggle);
         return;
@@ -1872,10 +2041,15 @@ void SettingsModal::paint(tuinator::PaintContext& ctx) const {
         paint_frame(clipped, panel);
 
         tuinator::Style title_style = theme.heading;
-        clipped.draw_text({2, 0}, " Settings ", title_style);
+        const std::string settings_title = ui_tr("common", "app.settings_title");
+        clipped.draw_text({2, 0}, " " + (settings_title.empty() ? "Settings" : settings_title) + " ", title_style);
         if (!chat_only_) {
-            const std::string scope_label = draft_.scope == "project" ? "Project" : "Chat";
-            const std::string scope_text = "Save to: ◂ " + scope_label + " ▸";
+            const std::string scope_word = draft_.scope == "project" ? ui_tr("settings", "scope.project")
+                                                                     : ui_tr("settings", "scope.chat");
+            const std::string scope_fallback = draft_.scope == "project" ? "Project" : "Chat";
+            const std::string save_prefix = ui_tr("settings", "scope.save_to");
+            const std::string scope_text = (save_prefix.empty() ? "Save to:" : save_prefix) + " ◂ " +
+                                           (scope_word.empty() ? scope_fallback : scope_word) + " ▸";
             const int scope_w = tuinator::text_display_width(scope_text);
             tuinator::Style scope_style = theme.label;
             scope_style.foreground_rgb = ui_text();
@@ -1896,7 +2070,9 @@ void SettingsModal::paint(tuinator::PaintContext& ctx) const {
             nav_heading.foreground = tuinator::Color::Default;
             nav_heading.bold = true;
         }
-        clipped.draw_text({1, 1}, clip("Categories", nav_w - 1), nav_heading);
+        const std::string nav_categories = ui_tr("settings", "nav.categories");
+        clipped.draw_text({1, 1},
+                          clip(nav_categories.empty() ? "Categories" : nav_categories, nav_w - 1), nav_heading);
 
         tuinator::Style content_heading = theme.muted;
         content_heading.dim = focus_nav_;
@@ -1968,12 +2144,17 @@ void SettingsModal::paint(tuinator::PaintContext& ctx) const {
             clipped.draw_text({content_x, sep_y - 1}, clip(hint, panel.w - content_x - 2), hint_style);
         }
 
-        const std::string footer = " Esc: close   Tab: pane   Space/Enter: change   ←/→: cycle";
+        const std::string footer_help = ui_tr("common", "app.settings_footer_help");
+        const std::string footer =
+            footer_help.empty() ? " Esc: close   Tab: pane   Space/Enter: change   ←/→: cycle" : footer_help;
         clipped.draw_text({2, footer_row}, clip(footer, panel.w - 22), theme.muted);
         if (is_dirty()) {
             tuinator::Style apply_style = theme.accent;
             apply_style.bold = true;
-            clipped.draw_text({panel.w - 18, footer_row}, " Ctrl+S: apply ", apply_style);
+            const std::string apply_label = ui_tr("common", "app.settings_footer_apply");
+            const std::string apply_text = apply_label.empty() ? " Ctrl+S: apply " : apply_label;
+            const int apply_w = tuinator::text_display_width(apply_text);
+            clipped.draw_text({std::max(2, panel.w - apply_w - 2), footer_row}, apply_text, apply_style);
         }
         paint_fuzzy_overlay(clipped, panel);
         paint_model_detail_overlay(clipped, panel);
@@ -2201,6 +2382,18 @@ bool SettingsModal::handle_event(const tuinator::Event& event) {
                 open_model_detail(current_model_id());
                 return true;
             }
+            if (key->key == tuinator::Key::Enter) {
+                if (row_is_interactive(selected_row_)) {
+                    const Row& r = rows_[selected_row_];
+                    if (r.kind == Row::Kind::MCPToggle && r.mcp_index >= 0 &&
+                        r.mcp_index < static_cast<int>(draft_.mcp_available.size())) {
+                        toggle_mcp_server_expanded(draft_.mcp_available[static_cast<std::size_t>(r.mcp_index)]);
+                        rebuild_rows();
+                        note_dirty();
+                        return true;
+                    }
+                }
+            }
             if (key->key == tuinator::Key::Enter || key->character == ' ') {
                 if (row_is_interactive(selected_row_)) {
                     const Row& r = rows_[selected_row_];
@@ -2214,7 +2407,7 @@ bool SettingsModal::handle_event(const tuinator::Event& event) {
                                r.kind == Row::Kind::FloatValue) {
                         begin_value_edit(selected_row_);
                     } else if (r.kind == Row::Kind::BoolToggle || r.kind == Row::Kind::MCPToggle ||
-                               r.kind == Row::Kind::SkillAllowToggle) {
+                               r.kind == Row::Kind::MCPToolToggle || r.kind == Row::Kind::SkillAllowToggle) {
                         activate_row(selected_row_, 1);
                     } else {
                         cycle_row_value(selected_row_, 1);
@@ -2334,6 +2527,17 @@ bool SettingsModal::handle_event(const tuinator::Event& event) {
                             percent_bar_drag_row_ = -1;
                         } else {
                             activate_row(row, 1);
+                        }
+                    } else if (row_is_interactive(row)) {
+                        const Row& r = rows_[row];
+                        if (r.kind == Row::Kind::MCPToggle && r.mcp_index >= 0 &&
+                            r.mcp_index < static_cast<int>(draft_.mcp_available.size())) {
+                            toggle_mcp_server_expanded(
+                                draft_.mcp_available[static_cast<std::size_t>(r.mcp_index)]);
+                            rebuild_rows();
+                            note_dirty();
+                        } else {
+                            mark_dirty();
                         }
                     } else {
                         mark_dirty();

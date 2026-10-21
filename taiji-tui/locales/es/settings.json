@@ -1,0 +1,341 @@
+{
+  "categories": {
+    "general": "General y chat",
+    "general_short": "Etiqueta de interfaz de usuario: General",
+    "model": "Modelo",
+    "agent": "Agente y comportamiento",
+    "agent_short": "Agente",
+    "tools": "Herramientas y skills",
+    "tools_short": "Herramientas",
+    "audio": "Audio y voz",
+    "audio_short": "Etiqueta de interfaz de usuario: Audio",
+    "appearance": "Apariencia",
+    "appearance_short": "Aspecto",
+    "shortcuts": "Atajos de teclado",
+    "shortcuts_short": "Teclas"
+  },
+  "sections": {
+    "execution": "Ejecución",
+    "thinking": "Pensamiento",
+    "prompt": "Avisa",
+    "mcp_servers": "Servidores MCP",
+    "skills": "Competencias",
+    "speech_to_text": "Voz a texto (Wuji)",
+    "theme": "Tema",
+    "agent_chat": "Agente y chat",
+    "your_messages": "Tus mensajes",
+    "assistant_messages": "Mensajes del asistente",
+    "labels_motion": "Etiquetas y movimiento",
+    "global": "Etiqueta de interfaz de usuario: global",
+    "language": "Idioma"
+  },
+  "rows": {
+    "session_name": {
+      "label": "Nombre del chat",
+      "hint": "Mostrar nombre para esta sesión de chat."
+    },
+    "preset_combo": {
+      "label": "Preset y plantilla",
+      "hint": "Ajustes preestablecidos de ciclo, plantillas YAML y estilos de presentación."
+    },
+    "provider": {
+      "label": "Proveedor",
+      "hint": "Introduzca: selector difuso <-/->: proveedor de ciclo."
+    },
+    "model": {
+      "label": "Modelo",
+      "hint": "Introduzca/Espacio: elija el modelo. Click (?): Detalles del catálogo de Wuji."
+    },
+    "temperature": {
+      "label": "Temperatura",
+      "hint": "Temperatura de muestreo; menor es más determinista."
+    },
+    "max_tokens": {
+      "label": "Máx. tokens",
+      "hint": "Respuesta máxima de tokens por modelo."
+    },
+    "context_window": {
+      "label": "Ventana de contexto",
+      "hint": "Introduzca: límite de token de tipo. <-/->: ajuste en pasos."
+    },
+    "max_steps": {
+      "label": "Máx. pasos",
+      "hint": "Máximo de pasos de llamada de herramienta autónoma por solicitud."
+    },
+    "decisions_enabled": {
+      "label": "Decisiones",
+      "hint": "Permitir que el agente registre las decisiones del proyecto."
+    },
+    "memory_enabled": {
+      "label": "Memoria",
+      "hint": "Habilite la memoria a largo plazo para este chat."
+    },
+    "chain_of_thought": {
+      "label": "Cadena de pensamiento",
+      "hint": "Cómo se expone el razonamiento ({modes})."
+    },
+    "thought_max_chars": {
+      "label": "Máx. caracteres de pensamiento",
+      "hint": "Longitud visible de la cadena de pensamiento de la tapa (0 = ilimitada)."
+    },
+    "system_prompt_extra": {
+      "label": "Prompt de sistema extra",
+      "hint": "Instrucciones adicionales del sistema adjuntas para este chat."
+    },
+    "stt_enabled": {
+      "label": "Entrada de voz activada",
+      "hint": "Botón de micrófono en la entrada de chat (|O|)."
+    },
+    "stt_driver": {
+      "label": "Controlador STT",
+      "hint": "Controlador wuji para texto wuji: audio (por ejemplo, llama). Guarda capacity_drivers.text en apply."
+    },
+    "stt_model": {
+      "label": "Modelo STT",
+      "hint": "ID de modelo pasado al controlador STT (vacío = controlador predeterminado)."
+    },
+    "stt_language": {
+      "label": "Idioma de transcripción",
+      "hint": "Lenguaje de pistas para la transcripción; {auto_lang} utiliza detección automática."
+    },
+    "stt_quality": {
+      "label": "Calidad de transcripción",
+      "hint": "Velocidad vs precisión preestablecida para la transcripción (dependiente del conductor)."
+    },
+    "stt_trim_silence": {
+      "label": "Recortar silencio",
+      "hint": "Suelte el silencio inicial/final del audio grabado antes del STT."
+    },
+    "stt_silence_level": {
+      "label": "Umbral de silencio",
+      "hint": "Umbral de volumen para la detección de silencio cuando el ajuste está activado."
+    },
+    "stt_capture_device": {
+      "label": "Dispositivo de captura",
+      "hint": "Nombre o ruta del dispositivo de entrada de audio (vacío = predeterminado del sistema)."
+    },
+    "stt_sample_rate": {
+      "label": "Frecuencia de muestreo",
+      "hint": "Tasa de muestreo de captura en Hz (8000–48000)."
+    },
+    "ui_theme": {
+      "label": "Tema de color",
+      "hint": "Introduzca: temas de búsqueda difusa. <-/->: ciclo. Temas de usuario: ~/.config/taiji/themes/"
+    },
+    "ui_corners": {
+      "label": "Estilo de esquinas",
+      "hint": "Marco cuadrado o redondeado, o relleno plano sin borde exterior."
+    },
+    "ui_locale": {
+      "label": "Idioma de la interfaz",
+      "hint": "Idioma para las etiquetas de configuración y el texto común de la interfaz de usuario."
+    },
+    "tool_call_density": {
+      "label": "Densidad de llamadas a herramientas",
+      "hint": "Líneas de llamada de herramientas compactas o detalladas en el registro de actividades."
+    },
+    "turn_metrics_preset": {
+      "label": "Métricas de turno",
+      "hint": "Verbosidad de las métricas por turno en el registro de chat."
+    },
+    "turn_metrics_show_actions": {
+      "label": "Acciones de turno",
+      "hint": "Mostrar los controles de rehacer/copiar debajo de los turnos terminados."
+    },
+    "presentation": {
+      "label": "Presentación",
+      "hint": "Cómo se representan los mensajes del asistente en este chat."
+    },
+    "user_message_style": {
+      "label": "Estilo de mensaje",
+      "hint": "Burbuja cromada para este rol ({examples}, ...)."
+    },
+    "user_message_align": {
+      "label": "Alineación",
+      "hint": "Colocación horizontal; {auto} sigue al rol (usted: derecha, asistente: izquierda)."
+    },
+    "user_message_max_width_pct": {
+      "label": "Ancho máximo",
+      "hint": "<-/->o haga clic en la barra para establecer el ancho máximo de la burbuja (40–100%)."
+    },
+    "user_message_fill_background": {
+      "label": "Rellenar fondo",
+      "hint": "{on}: relleno sólido detrás del marco de tu mensaje (borde incluido). {off}: esquema solo en el fondo del chat."
+    },
+    "assistant_message_style": {
+      "label": "Estilo de mensaje",
+      "hint": "Burbuja cromada para este rol ({examples}, ...)."
+    },
+    "assistant_message_align": {
+      "label": "Alineación",
+      "hint": "Colocación horizontal; {auto} sigue al rol (usted: derecha, asistente: izquierda)."
+    },
+    "assistant_message_max_width_pct": {
+      "label": "Ancho máximo",
+      "hint": "<-/->o haga clic en la barra para establecer el ancho máximo de la burbuja (40–100%)."
+    },
+    "assistant_message_fill_background": {
+      "label": "Rellenar fondo",
+      "hint": "{on}: relleno sólido detrás del marco de tu mensaje (borde incluido). {off}: esquema solo en el fondo del chat."
+    },
+    "message_timestamps": {
+      "label": "Marcas de tiempo",
+      "hint": "Muestra la hora de envío en tus burbujas de mensajes."
+    },
+    "sticky_user_message": {
+      "label": "Prompt fijado",
+      "hint": "Fije la parte superior de su último mensaje desplazado mientras lee respuestas largas."
+    },
+    "auto_compact_context_pct": {
+      "label": "Auto-compactar",
+      "hint": "Cuando el contexto llene este % de la ventana, resuma automáticamente los turnos anteriores."
+    },
+    "message_time_clock": {
+      "label": "Formato de hora",
+      "hint": "Reloj de 24 horas o 12 horas con AM/PM."
+    },
+    "chat_width": {
+      "label": "Ancho del chat",
+      "hint": "Ancho máximo de la columna de chat (celdas terminales)."
+    },
+    "code_block_wrap": {
+      "label": "Ajuste de código",
+      "hint": "Envolver largas colas dentro de bloques de código vallados."
+    },
+    "tool_labels_locale": {
+      "label": "Etiquetas de herramientas",
+      "hint": "Idioma para las etiquetas de estado de la herramienta en la interfaz de usuario."
+    },
+    "reduce_motion": {
+      "label": "Reducir movimiento",
+      "hint": "Minimizar el movimiento de la interfaz (reservado para futuras animaciones)."
+    },
+    "key_open_theme_picker": {
+      "label": "Atajo del selector de temas",
+      "hint": "Atajo global para abrir el selector de temas de color (por ejemplo, Ctrl+T)."
+    },
+    "project_provider": {
+      "label": "Proveedor de SMS por defecto",
+      "hint": "Introduzca: selector difuso <-/->: proveedor de ciclo."
+    },
+    "context_window_fixed": {
+      "label": "Ventana contextual",
+      "hint": "La ventana de contexto está fijada por el catálogo de modelos."
+    },
+    "mcp_toggle": {
+      "label": "",
+      "hint": "Espacio: habilita el servidor para este chat. Entrar: expandir o contraer herramientas."
+    },
+    "mcp_tool_toggle": {
+      "label": "",
+      "hint": "Espacio: permite o bloquea esta herramienta para el chat."
+    },
+    "skill_toggle": {
+      "label": "",
+      "hint": "Restringir las habilidades a una lista de permitidos o permitirlas todas."
+    }
+  },
+  "nav": {
+    "categories": "Categorías"
+  },
+  "scope": {
+    "save_to": "Guardar en:",
+    "project": "Proyecto",
+    "chat": "Etiqueta de interfaz de usuario: Chat"
+  },
+  "values": {
+    "empty": "(vacío)",
+    "driver_default": "Controlador predeterminado",
+    "default_paren": "(Por defecto)",
+    "unlimited": "Ilimitado (0)",
+    "silence_off": "0 APAGADO (Off)",
+    "chars_suffix": "Caracteres",
+    "capture_device_default": "predeterminado",
+    "enum_sep": ","
+  },
+  "empty": {
+    "mcp_none": "(ninguno conectado)",
+    "skills_none": "(ninguno cargado)"
+  },
+  "options": {
+    "bool": {
+      "on": "Activado",
+      "off": "Apagado"
+    },
+    "chain_of_thought": {
+      "off": "Apagado",
+      "prompt": "Avisa",
+      "full": "Nativo"
+    },
+    "turn_metrics_preset": {
+      "off": "Apagado",
+      "compact": "Compacto",
+      "dev": "Des"
+    },
+    "ui_corners": {
+      "square": "Cuadrado",
+      "rounded": "Redondeado",
+      "flat": "Se mantendrá igual"
+    },
+    "tool_call_density": {
+      "compact": "Compacto",
+      "detailed": "Detallado"
+    },
+    "presentation": {
+      "markdown": "Etiqueta de interfaz de usuario: Markdown",
+      "whatsapp": "Conversación",
+      "story": "Reportaje",
+      "minimal": "Mínima",
+      "bubbles": "Burbujas",
+      "narrative": "Narrativa"
+    },
+    "message_style": {
+      "chat": "Etiqueta de interfaz de usuario: Chat",
+      "cornered": "Arrinconado.",
+      "block": "Bloque",
+      "plain": "Plano",
+      "header": "Encabezado",
+      "terminal": "Etiqueta de interfaz de usuario: Terminal",
+      "log": "Resgistro",
+      "card": "Tarjeta",
+      "section": "Sección"
+    },
+    "message_align": {
+      "auto": "Vehículo",
+      "left": "Izquierda",
+      "right": "Correcto",
+      "center": "Centrado"
+    },
+    "auto_compact": {
+      "off": "Apagado"
+    },
+    "chat_width": {
+      "auto": "Vehículo",
+      "narrow": "Angosto",
+      "medium": "Media",
+      "wide": "Amplios"
+    },
+    "message_time_clock": {
+      "24h": "analítico",
+      "12h": "12 horas (AM/PM)"
+    },
+    "stt_language": {
+      "auto": "Detectar automáticamente"
+    },
+    "stt_quality": {
+      "default": "(Por defecto)",
+      "fast": "Rápido",
+      "balanced": "Equilibrado",
+      "careful": "Cuidadoso"
+    },
+    "skill_state": {
+      "auto": "-",
+      "pinned": "Anclado",
+      "off": "Bloqueado"
+    },
+    "mcp_tool_state": {
+      "allowed": "Permitido",
+      "blocked": "Bloqueado"
+    }
+  }
+}

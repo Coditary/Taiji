@@ -58,8 +58,8 @@ func runToolCall(ctx context.Context, hookRunner *hooks.Runner, reg *tools.Regis
 	}
 
 	if rt, ok := session.RunContextFrom(ctx); ok {
-		if server, isMCP := mcpServerOf(reg, toolData.Tool); isMCP && !rt.MCPServerAllowed(server) {
-			return toolExecOutcome{err: fmt.Errorf("mcp server %q is disabled for this chat", server), durationMs: 0}
+		if server, isMCP := mcpServerOf(reg, toolData.Tool); isMCP && !rt.MCPToolAllowed(server, toolData.Tool) {
+			return toolExecOutcome{err: fmt.Errorf("mcp tool %q (%s) is disabled for this chat", toolData.Tool, server), durationMs: 0}
 		}
 	}
 

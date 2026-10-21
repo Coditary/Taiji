@@ -1,0 +1,341 @@
+{
+  "categories": {
+    "general": "Ogólne i czat",
+    "general_short": "Ogólne informacje",
+    "model": "Przetłumacz tę etykietę z interfejsu użytkownika oprogramowania na język docelowy: \"Model\"",
+    "agent": "Czynnik i zachowanie",
+    "agent_short": "Przetłumacz tę etykietę z interfejsu użytkownika oprogramowania na język docelowy: \"Agent\"",
+    "tools": "Narzędzia i umiejętności",
+    "tools_short": "Narzędzia",
+    "audio": "Dźwięk i mowa",
+    "audio_short": "Dźwięk",
+    "appearance": "Wygląd",
+    "shortcuts": "Skróty klawiaturowe",
+    "shortcuts_short": "Klucze",
+    "appearance_short": "Zobacz"
+  },
+  "rows": {
+    "ui_locale": {
+      "label": "Język interfejsu",
+      "hint": "Język etykiet ustawień i typowych tekstów interfejsu użytkownika."
+    },
+    "session_name": {
+      "label": "Nazwa użytkownika na czacie",
+      "hint": "Nazwa wyświetlana dla tej sesji czatu."
+    },
+    "preset_combo": {
+      "label": "Ustawienia wstępne i szablony",
+      "hint": "Ustawienia cyklu, szablony YAML i style prezentacji."
+    },
+    "provider": {
+      "label": "Dostawca",
+      "hint": "Wprowadź: selektor rozmyty  <-/->: przełączanie dostawców."
+    },
+    "project_provider": {
+      "label": "Domyślny dostawca",
+      "hint": "Wprowadź: selektor rozmyty  <-/->: przełączanie dostawców."
+    },
+    "model": {
+      "label": "Przetłumacz tę etykietę z interfejsu użytkownika oprogramowania na język docelowy: \"Model\"",
+      "hint": "Klawisz Enter/spacja: wybierz model. Kliknij (?): szczegóły z katalogu Wuji."
+    },
+    "temperature": {
+      "label": "Temperatura",
+      "hint": "Temperatura próbkowania; im niższa, tym większa deterministyczność."
+    },
+    "max_tokens": {
+      "label": "Maksymalna liczba tokenów",
+      "hint": "Maksymalna liczba tokenów w odpowiedzi modelu."
+    },
+    "context_window": {
+      "label": "Okno kontekstowe",
+      "hint": "Wprowadź: limit tokenów. <-/->: regulacja w krokach."
+    },
+    "context_window_fixed": {
+      "label": "Okno kontekstowe",
+      "hint": "Okno kontekstowe jest ustalane przez katalog modeli."
+    },
+    "max_steps": {
+      "label": "Maksymalna liczba kroków",
+      "hint": "Maksymalna liczba autonomicznych wywołań narzędzi na jedno żądanie."
+    },
+    "decisions_enabled": {
+      "label": "Decyzje",
+      "hint": "Należy zezwolić agentowi na rejestrowanie decyzji dotyczących projektu."
+    },
+    "memory_enabled": {
+      "label": "Pamięć",
+      "hint": "Włącz pamięć długotrwałą dla tej rozmowy."
+    },
+    "chain_of_thought": {
+      "label": "Łańcuch myśli",
+      "hint": "W jaki sposób ujawnia się proces rozumowania ({modes})."
+    },
+    "thought_max_chars": {
+      "label": "Przewidywana maksymalna liczba znaków",
+      "hint": "Ogranicz widoczną długość łańcucha myśli (0 = nieograniczona)."
+    },
+    "system_prompt_extra": {
+      "label": "Dodatkowy komunikat systemowy",
+      "hint": "Do tej rozmowy dołączono dodatkowe instrukcje dotyczące systemu."
+    },
+    "stt_enabled": {
+      "label": "Włączono wprowadzanie głosowe",
+      "hint": "Przycisk mikrofonu w polu wprowadzania tekstu na czacie (|O|)."
+    },
+    "stt_driver": {
+      "label": "Sterownik STT",
+      "hint": "Sterownik Wuji dla pliku tekstowego wuji --audio (np. llama). Podczas zastosowania zapisuje plik capability_drivers.text."
+    },
+    "stt_model": {
+      "label": "Model STT",
+      "hint": "Identyfikator modelu przekazany do sterownika STT (puste pole = ustawienie domyślne sterownika)."
+    },
+    "stt_language": {
+      "label": "Język transkrypcji",
+      "hint": "Wskazówka dotycząca języka transkrypcji; {auto_lang} korzysta z automatycznego rozpoznawania."
+    },
+    "stt_quality": {
+      "label": "Jakość transkrypcji",
+      "hint": "Ustawienie priorytetu szybkości lub dokładności podczas transkrypcji (zależne od kierowcy)."
+    },
+    "stt_trim_silence": {
+      "label": "Cisza w tle",
+      "hint": "Usuń ciszę na początku i na końcu nagrania przed przetworzeniem tekstu na mowę (STT)."
+    },
+    "stt_silence_level": {
+      "label": "Poziom ciszy",
+      "hint": "Próg głośności do wykrywania ciszy przy włączonej funkcji przycinania."
+    },
+    "stt_capture_device": {
+      "label": "Urządzenie rejestrujące",
+      "hint": "Nazwa lub ścieżka urządzenia wejściowego audio (puste pole = ustawienie domyślne systemu)."
+    },
+    "stt_sample_rate": {
+      "label": "Częstotliwość próbkowania",
+      "hint": "Częstotliwość próbkowania w Hz (8000–48000)."
+    },
+    "ui_theme": {
+      "label": "Schemat kolorów",
+      "hint": "Wprowadź: motywy wyszukiwania przybliżonego. <-/->: przełączanie. Motywy użytkownika: ~/.config/taiji/themes/"
+    },
+    "ui_corners": {
+      "label": "Styl narożny",
+      "hint": "Kwadratowa lub zaokrąglona ramka albo płaskie wypełnienie bez zewnętrznej ramki."
+    },
+    "tool_call_density": {
+      "label": "Gęstość wywołań narzędzi",
+      "hint": "Zwięzłe lub szczegółowe wpisy dotyczące użycia narzędzi w dzienniku działań."
+    },
+    "turn_metrics_preset": {
+      "label": "Wskaźniki obrotu",
+      "hint": "Szczegółowość wskaźników dotyczących poszczególnych tur w dzienniku czatu."
+    },
+    "turn_metrics_show_actions": {
+      "label": "Akcje obrotu",
+      "hint": "Wyświetl przyciski \"Powtórz\" i \"Kopiuj\" pod zakończonymi ruchami."
+    },
+    "presentation": {
+      "label": "Prezentacja",
+      "hint": "Jak wyświetlane są wiadomości asystenta na tym czacie."
+    },
+    "user_message_style": {
+      "label": "Styl wiadomości",
+      "hint": "Chromowane wykończenie typu \"bubble\" dla tej roli ({examples}, ...)."
+    },
+    "user_message_align": {
+      "label": "Wyrównanie",
+      "hint": "Ustawienie poziome; symbol {auto} znajduje się za rolą (ty: po prawej, asystent: po lewej)."
+    },
+    "user_message_max_width_pct": {
+      "label": "Maksymalna szerokość",
+      "hint": "<-/-> lub kliknij pasek, aby ustawić maksymalną szerokość bąbelka (40–100%)."
+    },
+    "user_message_fill_background": {
+      "label": "Wypełnij tło",
+      "hint": "{on}: jednolite wypełnienie za ramką wiadomości (wraz z obramowaniem). {off}: tylko kontur na tle czatu."
+    },
+    "assistant_message_style": {
+      "label": "Styl wiadomości",
+      "hint": "Chromowane wykończenie typu \"bubble\" dla tej roli ({examples}, ...)."
+    },
+    "assistant_message_align": {
+      "label": "Wyrównanie",
+      "hint": "Ustawienie poziome; symbol {auto} znajduje się za rolą (ty: po prawej, asystent: po lewej)."
+    },
+    "assistant_message_max_width_pct": {
+      "label": "Maksymalna szerokość",
+      "hint": "<-/-> lub kliknij pasek, aby ustawić maksymalną szerokość bąbelka (40–100%)."
+    },
+    "assistant_message_fill_background": {
+      "label": "Wypełnij tło",
+      "hint": "{on}: jednolite wypełnienie za ramką wiadomości (wraz z obramowaniem). {off}: tylko kontur na tle czatu."
+    },
+    "message_timestamps": {
+      "label": "Sygnatury czasowe",
+      "hint": "Wyświetlaj godzinę wysłania w dymkach wiadomości."
+    },
+    "sticky_user_message": {
+      "label": "Trwały komunikat",
+      "hint": "Podczas czytania długich odpowiedzi przypnij górną część ostatniego przewiniętego komunikatu."
+    },
+    "auto_compact_context_pct": {
+      "label": "Przetłumacz tę etykietę z interfejsu użytkownika oprogramowania na język docelowy: \"Auto-compact\"",
+      "hint": "Gdy treść zajmie ten procent okna, automatycznie podsumuj starsze wypowiedzi."
+    },
+    "message_time_clock": {
+      "label": "Format godziny",
+      "hint": "Zegar 24-godzinny lub 12-godzinny z oznaczeniami AM/PM."
+    },
+    "chat_width": {
+      "label": "Szerokość czatu",
+      "hint": "Maksymalna szerokość kolumny czatu (komórek terminala)."
+    },
+    "code_block_wrap": {
+      "label": "Zawijanie kodu",
+      "hint": "Długie wiersze należy umieścić w blokach kodu otoczonych nawiasami."
+    },
+    "tool_labels_locale": {
+      "label": "Etykiety narzędzi",
+      "hint": "Język etykiet stanu narzędzi w interfejsie użytkownika."
+    },
+    "reduce_motion": {
+      "label": "Ogranicz ruch",
+      "hint": "Ogranicz ruchy interfejsu (zarezerwowane dla przyszłych animacji)."
+    },
+    "key_open_theme_picker": {
+      "label": "Skrót do wyboru motywu",
+      "hint": "Globalny skrót klawiszowy służący do otwarcia okna wyboru motywu kolorystycznego (np. Ctrl+T)."
+    },
+    "mcp_toggle": {
+      "label": "",
+      "hint": "Przestrzeń: włącz serwer dla tego czatu. Enter: rozwiń lub zwinąć narzędzia."
+    },
+    "mcp_tool_toggle": {
+      "label": "",
+      "hint": "Spacja: zezwól na używanie tego narzędzia na czacie lub zablokuj je."
+    },
+    "skill_toggle": {
+      "label": "",
+      "hint": "Ogranicz umiejętności do listy dozwolonych lub zezwól na wszystkie."
+    }
+  },
+  "nav": {
+    "categories": "Kategorie"
+  },
+  "scope": {
+    "save_to": "Zapisz w:",
+    "project": "Projekt",
+    "chat": "Czat"
+  },
+  "values": {
+    "empty": "(puste)",
+    "driver_default": "(ustawienie domyślne kierowcy)",
+    "default_paren": "(domyślnie)",
+    "unlimited": "0 (nieograniczona liczba)",
+    "silence_off": "0 (wyłączone)",
+    "chars_suffix": "{count} znaków",
+    "capture_device_default": "domyślnie",
+    "enum_sep": ","
+  },
+  "sections": {
+    "execution": "Realizacja",
+    "thinking": "Myślenie",
+    "prompt": "Podpowiedź",
+    "mcp_servers": "Serwery MCP",
+    "skills": "Umiejętności",
+    "speech_to_text": "Przekształcanie mowy na tekst (Wuji)",
+    "theme": "Temat",
+    "agent_chat": "Agent i czat",
+    "your_messages": "Twoje wiadomości",
+    "assistant_messages": "Komunikaty asystenta",
+    "labels_motion": "Etykiety i ruch",
+    "global": "Globalny",
+    "language": "Język"
+  },
+  "empty": {
+    "mcp_none": "(brak połączeń)",
+    "skills_none": "(nie załadowano żadnych)"
+  },
+  "options": {
+    "bool": {
+      "on": "W dniu",
+      "off": "Wyłączone"
+    },
+    "chain_of_thought": {
+      "off": "Wyłączone",
+      "prompt": "Podpowiedź",
+      "full": "Rodzimy"
+    },
+    "turn_metrics_preset": {
+      "off": "Wyłączone",
+      "compact": "Kompaktowy",
+      "dev": "Przetłumacz tę etykietę z interfejsu użytkownika oprogramowania na język docelowy: \"Dev\""
+    },
+    "ui_corners": {
+      "square": "Kwadrat",
+      "rounded": "Zaokrąglone",
+      "flat": "Mieszkanie"
+    },
+    "tool_call_density": {
+      "compact": "Kompaktowy",
+      "detailed": "Szczegółowe"
+    },
+    "presentation": {
+      "markdown": "Przetłumacz tę etykietę z interfejsu użytkownika oprogramowania na język docelowy: \"Markdown\"",
+      "whatsapp": "Konwersacyjny",
+      "story": "Opowieść",
+      "minimal": "Minimalny",
+      "bubbles": "Bąbelki",
+      "narrative": "Opowieść"
+    },
+    "message_style": {
+      "chat": "Czat",
+      "cornered": "W potrzasku",
+      "block": "Blok",
+      "plain": "Zwykły",
+      "header": "Nagłówek",
+      "terminal": "Przetłumacz tę etykietę z interfejsu użytkownika oprogramowania na język docelowy: \"Terminal\"",
+      "log": "Dziennik",
+      "card": "Karta",
+      "section": "Sekcja"
+    },
+    "message_align": {
+      "auto": "Przetłumacz tę etykietę interfejsu użytkownika oprogramowania na język docelowy: \"Auto\"",
+      "left": "Po lewej stronie",
+      "right": "Racja",
+      "center": "Centrum"
+    },
+    "auto_compact": {
+      "off": "Wyłączone"
+    },
+    "chat_width": {
+      "auto": "Przetłumacz tę etykietę interfejsu użytkownika oprogramowania na język docelowy: \"Auto\"",
+      "narrow": "Wąskie",
+      "medium": "Średni",
+      "wide": "Szeroki"
+    },
+    "message_time_clock": {
+      "24h": "24-godzinny",
+      "12h": "12 godzin (rano/wieczorem)"
+    },
+    "stt_language": {
+      "auto": "Automatyczne wykrywanie"
+    },
+    "stt_quality": {
+      "default": "(domyślnie)",
+      "fast": "Szybko",
+      "balanced": "Zrównoważony",
+      "careful": "Ostrożnie"
+    },
+    "skill_state": {
+      "auto": "Domyślnie",
+      "pinned": "Przypięte",
+      "off": "Zablokowane"
+    },
+    "mcp_tool_state": {
+      "allowed": "Dopuszczalne",
+      "blocked": "Zablokowane"
+    }
+  }
+}

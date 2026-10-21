@@ -1,0 +1,341 @@
+{
+  "categories": {
+    "general": "Chung & Trò chuyện",
+    "general_short": "Tổng quan",
+    "model": "Mẫu",
+    "agent": "Tác nhân và hành vi",
+    "agent_short": "Đại lý",
+    "tools": "Công cụ & Kỹ năng",
+    "tools_short": "Công cụ",
+    "audio": "Âm thanh & Giọng nói",
+    "audio_short": "Âm thanh",
+    "appearance": "Hình thức",
+    "appearance_short": "Hãy nhìn xem",
+    "shortcuts": "Phím tắt",
+    "shortcuts_short": "Các phím"
+  },
+  "nav": {
+    "categories": "Danh mục"
+  },
+  "scope": {
+    "save_to": "Lưu vào:",
+    "project": "Dự án",
+    "chat": "Trò chuyện"
+  },
+  "values": {
+    "empty": "(trống)",
+    "driver_default": "(mặc định của trình điều khiển)",
+    "default_paren": "(mặc định)",
+    "unlimited": "0 (không giới hạn)",
+    "silence_off": "0 (tắt)",
+    "chars_suffix": "{count} ký tự",
+    "capture_device_default": "mặc định",
+    "enum_sep": "..."
+  },
+  "sections": {
+    "execution": "Thực thi",
+    "thinking": "Suy nghĩ",
+    "prompt": "Yêu cầu",
+    "mcp_servers": "Máy chủ MCP",
+    "skills": "Kỹ năng",
+    "speech_to_text": "Chuyển đổi giọng nói thành văn bản (Wuji)",
+    "theme": "Chủ đề",
+    "agent_chat": "Tư vấn viên & Trò chuyện",
+    "your_messages": "Tin nhắn của bạn",
+    "assistant_messages": "Thông báo của trợ lý",
+    "labels_motion": "Nhãn & Chuyển động",
+    "global": "Toàn cầu",
+    "language": "Ngôn ngữ"
+  },
+  "empty": {
+    "mcp_none": "(không có thiết bị nào được kết nối)",
+    "skills_none": "(chưa tải)"
+  },
+  "rows": {
+    "session_name": {
+      "label": "Tên trên chat",
+      "hint": "Tên hiển thị cho phiên trò chuyện này."
+    },
+    "preset_combo": {
+      "label": "Cài đặt sẵn & mẫu",
+      "hint": "Các cài đặt sẵn chu kỳ, mẫu YAML và kiểu trình bày."
+    },
+    "provider": {
+      "label": "Nhà cung cấp",
+      "hint": "Nhập: công cụ chọn mờ  <-/->: nhà cung cấp chu kỳ."
+    },
+    "project_provider": {
+      "label": "Nhà cung cấp mặc định",
+      "hint": "Nhập: công cụ chọn mờ  <-/->: nhà cung cấp chu kỳ."
+    },
+    "model": {
+      "label": "Mẫu",
+      "hint": "Phím Enter/Space: chọn mẫu. Nhấp vào (?): Xem chi tiết danh mục Wuji."
+    },
+    "temperature": {
+      "label": "Nhiệt độ",
+      "hint": "Nhiệt độ lấy mẫu; nhiệt độ càng thấp thì tính xác định càng cao."
+    },
+    "max_tokens": {
+      "label": "Số lượng token tối đa",
+      "hint": "Số lượng token tối đa cho mỗi phản hồi của mô hình."
+    },
+    "context_window": {
+      "label": "Cửa sổ bối cảnh",
+      "hint": "Nhập: giới hạn số lần nhập mã. <-/->: điều chỉnh theo từng bước."
+    },
+    "context_window_fixed": {
+      "label": "Cửa sổ bối cảnh",
+      "hint": "Cửa sổ bối cảnh được xác định bởi danh mục mô hình."
+    },
+    "max_steps": {
+      "label": "Số bước tối đa",
+      "hint": "Số bước gọi công cụ tự động tối đa cho mỗi yêu cầu."
+    },
+    "decisions_enabled": {
+      "label": "Các quyết định",
+      "hint": "Cho phép nhân viên ghi lại các quyết định liên quan đến dự án."
+    },
+    "memory_enabled": {
+      "label": "Bộ nhớ",
+      "hint": "Bật tính năng lưu trữ lâu dài cho cuộc trò chuyện này."
+    },
+    "chain_of_thought": {
+      "label": "Dòng suy nghĩ",
+      "hint": "Cách thức suy luận được bộc lộ ({modes})."
+    },
+    "thought_max_chars": {
+      "label": "Số ký tự tối đa dự kiến",
+      "hint": "Giới hạn độ dài chuỗi suy nghĩ hiển thị (0 = không giới hạn)."
+    },
+    "system_prompt_extra": {
+      "label": "Thông báo bổ sung của hệ thống",
+      "hint": "Đã đính kèm các hướng dẫn bổ sung về hệ thống cho cuộc trò chuyện này."
+    },
+    "stt_enabled": {
+      "label": "Đã bật tính năng nhập liệu bằng giọng nói",
+      "hint": "Nút micrô trong ô nhập tin nhắn trò chuyện (|O|)."
+    },
+    "stt_driver": {
+      "label": "Tài xế STT",
+      "hint": "Trình điều khiển Wuji cho wuji text --audio (ví dụ: llama). Lưu tệp capability_drivers.text khi áp dụng."
+    },
+    "stt_model": {
+      "label": "Mô hình STT",
+      "hint": "ID mô hình được truyền vào trình điều khiển STT (trống = giá trị mặc định của trình điều khiển)."
+    },
+    "stt_language": {
+      "label": "Ngôn ngữ phiên âm",
+      "hint": "Ngôn ngữ gợi ý cho việc phiên âm; {auto_lang} sử dụng tính năng nhận diện tự động."
+    },
+    "stt_quality": {
+      "label": "Chất lượng bản chép lời",
+      "hint": "Cài đặt sẵn giữa tốc độ và độ chính xác cho việc phiên âm (tùy thuộc vào người lái)."
+    },
+    "stt_trim_silence": {
+      "label": "Cắt bỏ khoảng lặng",
+      "hint": "Loại bỏ khoảng im lặng ở đầu và cuối đoạn âm thanh đã ghi trước khi thực hiện nhận dạng văn bản từ giọng nói (STT)."
+    },
+    "stt_silence_level": {
+      "label": "Mức độ im lặng",
+      "hint": "Giá trị ngưỡng âm lượng để phát hiện im lặng khi tính năng cắt bớt đang được bật."
+    },
+    "stt_capture_device": {
+      "label": "Thiết bị thu hình",
+      "hint": "Tên hoặc đường dẫn của thiết bị đầu vào âm thanh (để trống = mặc định của hệ thống)."
+    },
+    "stt_sample_rate": {
+      "label": "Tần số lấy mẫu",
+      "hint": "Tần số lấy mẫu tính bằng Hz (8000–48000)."
+    },
+    "ui_theme": {
+      "label": "Chủ đề màu sắc",
+      "hint": "Nhập: chủ đề tìm kiếm mờ. <-/->: chuyển vòng. Chủ đề của người dùng: ~/.config/taiji/themes/"
+    },
+    "ui_corners": {
+      "label": "Kiểu góc",
+      "hint": "Khung vuông hoặc tròn, hoặc nền phẳng không có viền ngoài."
+    },
+    "ui_locale": {
+      "label": "Ngôn ngữ giao diện",
+      "hint": "Ngôn ngữ dùng cho các nhãn cài đặt và văn bản giao diện người dùng thông thường."
+    },
+    "tool_call_density": {
+      "label": "Mật độ gọi công cụ",
+      "hint": "Các dòng ghi lại lệnh gọi công cụ ngắn gọn hoặc chi tiết trong nhật ký hoạt động."
+    },
+    "turn_metrics_preset": {
+      "label": "Chỉ số chuyển đổi",
+      "hint": "Mức độ chi tiết của các chỉ số theo từng lượt trong nhật ký trò chuyện."
+    },
+    "turn_metrics_show_actions": {
+      "label": "Các hành động chuyển hướng",
+      "hint": "Hiển thị các nút điều khiển \"Làm lại\"/\"Sao chép\" bên dưới các lượt đã hoàn thành."
+    },
+    "presentation": {
+      "label": "Bài thuyết trình",
+      "hint": "Cách hiển thị các tin nhắn của trợ lý trong cuộc trò chuyện này."
+    },
+    "user_message_style": {
+      "label": "Kiểu tin nhắn",
+      "hint": "Chrome bong bóng cho vai trò này ({examples}, ...)."
+    },
+    "user_message_align": {
+      "label": "Sự phù hợp",
+      "hint": "Sắp xếp theo chiều ngang; {auto} nằm sau vai diễn (bạn: bên phải, trợ lý: bên trái)."
+    },
+    "user_message_max_width_pct": {
+      "label": "Chiều rộng tối đa",
+      "hint": "<-/-> hoặc nhấp vào thanh trượt để thiết lập độ rộng tối đa của bong bóng (40–100%)."
+    },
+    "user_message_fill_background": {
+      "label": "Tô nền",
+      "hint": "{on}: màu nền đồng nhất phía sau khung tin nhắn của bạn (bao gồm cả viền). {off}: chỉ hiển thị đường viền trên nền cửa sổ trò chuyện."
+    },
+    "assistant_message_style": {
+      "label": "Kiểu tin nhắn",
+      "hint": "Chrome bong bóng cho vai trò này ({examples}, ...)."
+    },
+    "assistant_message_align": {
+      "label": "Sự phù hợp",
+      "hint": "Sắp xếp theo chiều ngang; {auto} nằm sau vai diễn (bạn: bên phải, trợ lý: bên trái)."
+    },
+    "assistant_message_max_width_pct": {
+      "label": "Chiều rộng tối đa",
+      "hint": "<-/-> hoặc nhấp vào thanh trượt để thiết lập độ rộng tối đa của bong bóng (40–100%)."
+    },
+    "assistant_message_fill_background": {
+      "label": "Tô nền",
+      "hint": "{on}: màu nền đồng nhất phía sau khung tin nhắn của bạn (bao gồm cả viền). {off}: chỉ hiển thị đường viền trên nền cửa sổ trò chuyện."
+    },
+    "message_timestamps": {
+      "label": "Dấu thời gian",
+      "hint": "Hiển thị thời gian gửi trên các bong bóng tin nhắn của bạn."
+    },
+    "sticky_user_message": {
+      "label": "Lời nhắc cố định",
+      "hint": "Khi đọc các câu trả lời dài, hãy ghim phần đầu của lời nhắc mà bạn vừa cuộn đến."
+    },
+    "auto_compact_context_pct": {
+      "label": "Tự động nén",
+      "hint": "Khi nội dung chiếm % này của cửa sổ, hãy tự động tóm tắt các lượt nói trước đó."
+    },
+    "message_time_clock": {
+      "label": "Định dạng giờ",
+      "hint": "Định dạng 24 giờ hoặc 12 giờ kèm AM/PM."
+    },
+    "chat_width": {
+      "label": "Chiều rộng cửa sổ trò chuyện",
+      "hint": "Chiều rộng tối đa của cột trò chuyện (các ô đầu cuối)."
+    },
+    "code_block_wrap": {
+      "label": "Tự động xuống dòng",
+      "hint": "Đặt các dòng mã dài vào bên trong các khối mã được bao quanh."
+    },
+    "tool_labels_locale": {
+      "label": "Nhãn công cụ",
+      "hint": "Ngôn ngữ dùng cho các nhãn trạng thái công cụ trong giao diện người dùng."
+    },
+    "reduce_motion": {
+      "label": "Giảm chuyển động",
+      "hint": "Giảm thiểu chuyển động của giao diện (dành riêng cho các hiệu ứng động trong tương lai)."
+    },
+    "key_open_theme_picker": {
+      "label": "Phím tắt chọn chủ đề",
+      "hint": "Phím tắt toàn cầu để mở trình chọn chủ đề màu (ví dụ: Ctrl+T)."
+    },
+    "mcp_toggle": {
+      "label": "",
+      "hint": "Khoảng trắng: Kích hoạt máy chủ cho cuộc trò chuyện này. Phím Enter: Mở rộng hoặc thu gọn các công cụ."
+    },
+    "mcp_tool_toggle": {
+      "label": "",
+      "hint": "Khoảng trắng: cho phép hoặc chặn công cụ này trong cuộc trò chuyện."
+    },
+    "skill_toggle": {
+      "label": "",
+      "hint": "Hạn chế các kỹ năng theo danh sách cho phép, hoặc cho phép tất cả."
+    }
+  },
+  "options": {
+    "bool": {
+      "on": "Vào ngày",
+      "off": "Tắt"
+    },
+    "chain_of_thought": {
+      "off": "Tắt",
+      "prompt": "Yêu cầu",
+      "full": "Bản địa"
+    },
+    "turn_metrics_preset": {
+      "off": "Tắt",
+      "compact": "Nhỏ gọn",
+      "dev": "..."
+    },
+    "ui_corners": {
+      "square": "Hình vuông",
+      "rounded": "Tròn",
+      "flat": "Căn hộ"
+    },
+    "tool_call_density": {
+      "compact": "Nhỏ gọn",
+      "detailed": "Chi tiết"
+    },
+    "presentation": {
+      "markdown": "...",
+      "whatsapp": "Giao tiếp",
+      "story": "Câu chuyện",
+      "minimal": "Tối giản",
+      "bubbles": "Bong bóng",
+      "narrative": "Câu chuyện"
+    },
+    "message_style": {
+      "chat": "Trò chuyện",
+      "cornered": "Bị dồn vào đường cùng",
+      "block": "Khối",
+      "plain": "Thông thường",
+      "header": "Tiêu đề",
+      "terminal": "Trạm",
+      "log": "Nhật ký",
+      "card": "Thẻ",
+      "section": "Mục"
+    },
+    "message_align": {
+      "auto": "Tự động",
+      "left": "Bên trái",
+      "right": "Đúng",
+      "center": "Trung tâm"
+    },
+    "auto_compact": {
+      "off": "Tắt"
+    },
+    "chat_width": {
+      "auto": "Tự động",
+      "narrow": "Hẹp",
+      "medium": "Trung bình",
+      "wide": "Rộng"
+    },
+    "message_time_clock": {
+      "24h": "24 giờ",
+      "12h": "12 giờ (sáng/chiều)"
+    },
+    "stt_language": {
+      "auto": "Tự động phát hiện"
+    },
+    "stt_quality": {
+      "default": "(mặc định)",
+      "fast": "Nhanh",
+      "balanced": "Cân bằng",
+      "careful": "Cẩn thận"
+    },
+    "skill_state": {
+      "auto": "Mặc định",
+      "pinned": "Được ghim",
+      "off": "Bị chặn"
+    },
+    "mcp_tool_state": {
+      "allowed": "Được phép",
+      "blocked": "Bị chặn"
+    }
+  }
+}

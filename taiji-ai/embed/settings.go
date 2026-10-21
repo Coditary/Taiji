@@ -13,6 +13,12 @@ import (
 	"github.com/coditary/taiji/internal/session"
 )
 
+type mcpToolPayload struct {
+	Server      string `json:"server"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
 type settingsPayload struct {
 	Scope string `json:"scope"`
 
@@ -44,6 +50,7 @@ type settingsPayload struct {
 	ToolLabelsLocale  string `json:"tool_labels_locale"`
 
 	UITheme                 string `json:"ui_theme"`
+	UILocale                string `json:"ui_locale"`
 	UICorners               string `json:"ui_corners"`
 	ToolCallDensity         string `json:"tool_call_density"`
 	TurnMetricsShowActions  bool   `json:"turn_metrics_show_actions"`
@@ -65,8 +72,10 @@ type settingsPayload struct {
 	AutoCompactContextPct   int    `json:"auto_compact_context_pct"`
 	KeyOpenThemePicker      string `json:"key_open_theme_picker"`
 
-	MCPAvailable []string `json:"mcp_available"`
-	MCPEnabled   []string `json:"mcp_enabled"`
+	MCPAvailable []string         `json:"mcp_available"`
+	MCPEnabled   []string         `json:"mcp_enabled"`
+	MCPTools     []mcpToolPayload `json:"mcp_tools"`
+	MCPToolsDeny []string         `json:"mcp_tools_deny"`
 	SkillsAvail  []string `json:"skills_available"`
 	SkillsAllow  []string `json:"skills_allow"`
 	SkillsDeny   []string `json:"skills_deny"`
@@ -132,6 +141,15 @@ func buildSettingsPayload(h *runtimeHandle, scope string) settingsPayload {
 	if svc != nil && svc.MCP != nil {
 		out.MCPAvailable = svc.MCP.ConnectedServers()
 		sort.Strings(out.MCPAvailable)
+		if catalog, err := svc.MCP.ToolCatalog(context.Background()); err == nil {
+			for _, entry := range catalog {
+				out.MCPTools = append(out.MCPTools, mcpToolPayload{
+					Server:      entry.Server,
+					Name:        entry.Name,
+					Description: entry.Description,
+				})
+			}
+		}
 	}
 	if svc != nil && svc.Skills != nil {
 		if all, err := svc.Skills.LoadAll(); err == nil {
@@ -158,6 +176,7 @@ func buildSettingsPayload(h *runtimeHandle, scope string) settingsPayload {
 		out.SkillsAllow = append([]string(nil), st.SkillsAllow...)
 		out.SkillsDeny = append([]string(nil), st.SkillsDeny...)
 		out.MCPEnabled = append([]string(nil), st.MCPServers...)
+		out.MCPToolsDeny = append([]string(nil), st.MCPToolsDeny...)
 		if st.Temperature != nil {
 			out.Temperature = *st.Temperature
 			out.TemperatureSet = true
@@ -238,11 +257,9 @@ func buildSettingsPayload(h *runtimeHandle, scope string) settingsPayload {
 			out.TurnMetricsPreset = "dev"
 		}
 	}
+	out.ToolLabelsLocale = out.UILocale
 	if out.ToolLabelsLocale == "" {
-		out.ToolLabelsLocale = strings.TrimSpace(h.cfg.UI.ToolLabels.Locale)
-		if out.ToolLabelsLocale == "" {
-			out.ToolLabelsLocale = "en"
-		}
+		out.ToolLabelsLocale = "en"
 	}
 	if len(out.MCPEnabled) == 0 {
 		out.MCPEnabled = append([]string(nil), out.MCPAvailable...)
@@ -269,6 +286,7 @@ func fillAppearancePrefs(h *runtimeHandle, out *settingsPayload) {
 		theme = "dark"
 	}
 	out.UITheme = theme
+	out.UILocale = ui.LocaleOrDefault()
 	corners := strings.TrimSpace(ui.CornerStyle)
 	if corners == "" {
 		corners = "square"
@@ -328,6 +346,8 @@ func applyAppearancePrefs(cfg *taijicfg.Config, payload settingsPayload) {
 		theme = "dark"
 	}
 	cfg.UI.Theme = theme
+	cfg.UI.Locale = taijicfg.NormalizeUILocale(payload.UILocale)
+	cfg.UI.ToolLabels.Locale = taijicfg.NormalizeUILocale(payload.UILocale)
 	corners := strings.TrimSpace(payload.UICorners)
 	if corners == "" {
 		corners = "square"
@@ -478,7 +498,7 @@ func applySettingsPayload(h *runtimeHandle, payload settingsPayload) error {
 	st.Preset = strings.TrimSpace(payload.Preset)
 	st.Presentation = strings.TrimSpace(payload.Presentation)
 	st.TurnMetricsPreset = strings.TrimSpace(payload.TurnMetricsPreset)
-	st.ToolLabelsLocale = strings.TrimSpace(payload.ToolLabelsLocale)
+	st.ToolLabelsLocale = taijicfg.NormalizeUILocale(payload.UILocale)
 	st.SystemPromptExtra = payload.SystemPromptExtra
 
 	if id := strings.TrimSpace(payload.Provider); id != "" {
@@ -532,6 +552,7 @@ func applySettingsPayload(h *runtimeHandle, payload settingsPayload) error {
 	st.SkillsAllow = normalizeList(payload.SkillsAllow)
 	st.SkillsDeny = normalizeList(payload.SkillsDeny)
 	st.MCPServers = normalizeList(payload.MCPEnabled)
+	st.MCPToolsDeny = normalizeMCPToolsDeny(payload.MCPToolsDeny)
 
 	dec := payload.DecisionsEnabled
 	st.DecisionsEnabled = &dec
@@ -552,6 +573,26 @@ func applySettingsPayload(h *runtimeHandle, payload settingsPayload) error {
 
 	h.session.State.Settings = st
 	return h.session.Save()
+}
+
+func normalizeMCPToolsDeny(items []string) []string {
+	seen := map[string]struct{}{}
+	var out []string
+	for _, raw := range items {
+		server, tool, ok := session.ParseMCPToolRef(raw)
+		if !ok {
+			continue
+		}
+		ref := session.MCPToolRef(server, tool)
+		key := strings.ToLower(ref)
+		if _, dup := seen[key]; dup {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, ref)
+	}
+	sort.Strings(out)
+	return out
 }
 
 func normalizeList(items []string) []string {

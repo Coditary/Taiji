@@ -1,0 +1,94 @@
+{
+  "sidebar": {
+    "projects": "CÁC DỰ ÁN",
+    "projects_menu_hint": "Nhấp chuột phải: menu",
+    "new_session": "Phiên mới",
+    "agent_laya": "...",
+    "skills": "Kỹ năng",
+    "decisions": "Các quyết định",
+    "lsp": "...",
+    "connected": "Kết nối",
+    "empty_none": "không có",
+    "empty_inactive": "không hoạt động",
+    "mcp_title": "...",
+    "mcp_title_count": "...",
+    "mcp_not_connected": "chưa kết nối"
+  },
+  "context": {
+    "title": "BỐI CẢNH",
+    "skills": "Kỹ năng",
+    "system_prompt": "Thông báo của hệ thống",
+    "tools_mcp": "Định nghĩa công cụ & MCP",
+    "conversation": "Cuộc trò chuyện"
+  },
+  "empty": {
+    "hint_send": "Gửi tin nhắn để bắt đầu",
+    "quick_index_codebase": "Cơ sở mã Index",
+    "quick_generate_tests": "Tạo các bài kiểm thử",
+    "quick_analyze_git": "Phân tích git diff",
+    "uncommitted_one": "{count} thay đổi chưa được lưu",
+    "uncommitted_many": "{count} các thay đổi chưa được lưu"
+  },
+  "session_menu": {
+    "open": "Mở",
+    "delete": "Xóa"
+  },
+  "footer": {
+    "shortcuts_default": "Tab: chuyển tiêu điểm · Shift+Enter: xuống dòng · Enter: gửi · Esc: dừng"
+  },
+  "chat": {
+    "author_you": "Bạn",
+    "author_summary": "tóm tắt",
+    "thinking": "Suy nghĩ"
+  },
+  "composer_menu": {
+    "skills": "Kỹ năng",
+    "skills_hint": "Buộc phải sử dụng kỹ năng",
+    "mcp_servers": "Máy chủ MCP"
+  },
+  "question": {
+    "custom_placeholder": "Câu trả lời tùy chỉnh...",
+    "custom_label": "Câu trả lời tùy chỉnh",
+    "footer_apply": "Enter: áp dụng  ·  Esc: quay lại"
+  },
+  "activity": {
+    "mcp": "...",
+    "thinking": "Suy nghĩ",
+    "tool": "Công cụ",
+    "skill": "Kỹ năng",
+    "decision": "Quyết định",
+    "question": "Câu hỏi",
+    "generating_response": "Đang tạo phản hồi..."
+  },
+  "metrics": {
+    "tok_per_sec": "..."
+  },
+  "status": {
+    "starting": "Bắt đầu...",
+    "starting_agent": "Khởi động tác nhân...",
+    "agent_failed_prefix": "Lỗi khi thực thi tác vụ: ",
+    "init_failed_prefix": "Không khởi tạo được: ",
+    "answer_question": "Trả lời câu hỏi  ·  Esc: hủy",
+    "composer_submit": "[ Gửi ↵ ]  ·  Shift+Enter: xuống dòng  ·  Esc: dừng",
+    "could_not_send_answer": "Không thể gửi câu trả lời",
+    "agent_still_starting": "Trình khởi chạy vẫn đang khởi động...",
+    "voice_input_off": "Tính năng nhập liệu bằng giọng nói đã bị tắt (Cài đặt -> Âm thanh).",
+    "speech_input": "Nhập liệu bằng giọng nói...",
+    "wait_before_compact": "Hãy đợi phản hồi hiện tại trước khi nén.",
+    "compacting": "Tóm tắt cuộc trò chuyện...",
+    "generating_with_queue": "Đang tạo...  ·  {count} đã được đưa vào hàng đợi",
+    "generating_esc_stop": "Đang tạo...  ·  Nhấn phím Esc để dừng",
+    "enter_queues_message": "Thêm một tin nhắn vào hàng đợi",
+    "response_copied": "Đã sao chép phản hồi",
+    "failed_switch_session_prefix": "Không thể chuyển đổi phiên: ",
+    "failed_delete_session_prefix": "Không thể xóa phiên làm việc: ",
+    "failed_create_session_prefix": "Không thể tạo phiên: ",
+    "request_failed": "Yêu cầu không thành công",
+    "transcription_inserted": "Đã chèn bản ghi âm.",
+    "recording_hint": "Đang ghi âm... cập nhật văn bản trong khi bạn nói. Nhấn nút Dừng khi hoàn tất.",
+    "compacted_ok": "Cuộc trò chuyện được tóm tắt.",
+    "compaction_failed": "Quá trình nén không thành công.",
+    "could_not_load_skills": "Không thể tải các kỹ năng.",
+    "could_not_load_decisions": "Không thể tải các quyết định."
+  }
+}

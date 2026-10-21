@@ -3,6 +3,7 @@
 #include "taiji_block_logo.hpp"
 #include "ui_chat_column.hpp"
 #include "ui_layout.hpp"
+#include "ui_locale.hpp"
 #include "ui_theme.hpp"
 
 #include <tuinator/render/text.hpp>
@@ -14,7 +15,7 @@ namespace {
 
 struct QuickAction {
     const char* icon;
-    const char* label;
+    const char* label_key;
     const char* key_digit;
     char key_letter;
 };
@@ -24,9 +25,9 @@ constexpr int kQuickActionRowGap = 1;
 constexpr int kQuickActionPadX = 2;
 
 constexpr QuickAction kQuickActions[] = {
-    {kNfFile, "Index codebase", "1", 'c'},
-    {kNfTest, "Generate tests", "2", 't'},
-    {kNfGit, "Analyze git diff", "3", 'g'},
+    {kNfFile, "empty.quick_index_codebase", "1", 'c'},
+    {kNfTest, "empty.quick_generate_tests", "2", 't'},
+    {kNfGit, "empty.quick_analyze_git", "3", 'g'},
 };
 
 tuinator::Rgb quick_action_icon_color(std::size_t index) {
@@ -65,7 +66,8 @@ void paint_quick_action_pill(tuinator::PaintContext& ctx, const tuinator::Widget
     const int icon_w = tuinator::text_display_width(icon_text);
     ctx.canvas.draw_text({x, y}, icon_text, icon);
 
-    const std::string label_text = action.label;
+    const std::string localized = ui_shell(action.label_key);
+    const std::string label_text = localized.empty() ? action.label_key : localized;
     const std::string pad_right(kQuickActionPadX, ' ');
     const int key_w = tuinator::text_display_width(pad_right + action.key_digit);
     const int label_max = std::max(0, width - icon_w - key_w);
@@ -104,7 +106,11 @@ void paint_git_status(tuinator::PaintContext& ctx, const tuinator::Widget& widge
         ctx.canvas.draw_text({cursor, y}, mid, sep);
         cursor += tuinator::text_display_width(mid);
         char buf[48];
-        std::snprintf(buf, sizeof(buf), "%d uncommitted change%s", git.uncommitted, git.uncommitted == 1 ? "" : "s");
+        const std::string pattern =
+            git.uncommitted == 1 ? ui_shell("empty.uncommitted_one") : ui_shell("empty.uncommitted_many");
+        const std::string formatted =
+            ui_format(pattern.empty() ? "{count} uncommitted change(s)" : pattern, "count", std::to_string(git.uncommitted));
+        std::snprintf(buf, sizeof(buf), "%s", formatted.c_str());
         ctx.canvas.draw_text({cursor, y}, buf, changes);
     }
 }
@@ -240,10 +246,11 @@ void ChatEmptyState::paint(tuinator::PaintContext& ctx) const {
         const int git_w = [&]() {
             int w = tuinator::text_display_width(kNfGitBranch) + 1 + tuinator::text_display_width(git.branch);
             if (git.uncommitted > 0) {
-                char buf[48];
-                std::snprintf(buf, sizeof(buf), " • %d uncommitted change%s", git.uncommitted,
-                              git.uncommitted == 1 ? "" : "s");
-                w += tuinator::text_display_width(buf);
+                const std::string pattern =
+                    git.uncommitted == 1 ? ui_shell("empty.uncommitted_one") : ui_shell("empty.uncommitted_many");
+                const std::string changes = ui_format(pattern.empty() ? "{count} changes" : pattern, "count",
+                                                      std::to_string(git.uncommitted));
+                w += tuinator::text_display_width(" • " + changes);
             }
             return w;
         }();
@@ -251,7 +258,8 @@ void ChatEmptyState::paint(tuinator::PaintContext& ctx) const {
         paint_git_status(ctx, *this, git_x, git_y, git, theme_);
     }
 
-    const char* hint_line = "Send a message to start";
+    const std::string hint_line_text = ui_shell("empty.hint_send");
+    const std::string hint_line = hint_line_text.empty() ? "Send a message to start" : hint_line_text;
     const int hint_w = tuinator::text_display_width(hint_line);
     const int hint_x = stream_x + std::max(0, (stream_w - hint_w) / 2);
     const int hint_y = git_y + (git.valid ? 2 : 1);

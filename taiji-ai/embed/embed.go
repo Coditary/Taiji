@@ -820,8 +820,22 @@ func taiji_format_turn_metrics(handle C.uint64_t, out *C.taiji_turn_metrics_t, m
 		return C.CString("")
 	}
 	ui := effectiveUI(h)
-	lines := taijicfg.FormatTurnMetricsLines(turnMetricsValuesFromC(out), ui.TurnMetrics, int(maxWidth))
+	lines := taijicfg.FormatTurnMetricsLines(turnMetricsValuesFromC(out), ui.TurnMetrics, int(maxWidth), ui.LocaleOrDefault())
 	return C.CString(strings.Join(lines, "\n"))
+}
+
+//export taiji_ui_set_display_locales
+func taiji_ui_set_display_locales(handle C.uint64_t, uiLocale *C.char, toolLabelsLocale *C.char) C.int {
+	handlesMu.Lock()
+	h, ok := handles[uint64(handle)]
+	handlesMu.Unlock()
+	if !ok || h == nil || h.cfg == nil {
+		return 0
+	}
+	ui := taijicfg.NormalizeUILocale(C.GoString(uiLocale))
+	h.cfg.UI.Locale = ui
+	h.cfg.UI.ToolLabels.Locale = ui
+	return 1
 }
 
 //export taiji_tool_display_title

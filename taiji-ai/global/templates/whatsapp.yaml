@@ -1,6 +1,6 @@
 id: whatsapp
-name: WhatsApp Chat
-description: Short messenger-style replies, minimal formatting.
+name: Messenger chat
+description: Short conversational replies, minimal formatting.
 settings:
   preset: whatsapp
   presentation: whatsapp

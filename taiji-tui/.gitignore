@@ -1,3 +1,5 @@
 build/
+locales/.translate-cache.json
+scripts/__pycache__/
 highlight/target/
 fuzzy/target/

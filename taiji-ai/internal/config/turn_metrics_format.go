@@ -25,20 +25,21 @@ type TurnMetricsValues struct {
 }
 
 // FormatTurnMetrics builds a single-line status string (legacy helper).
-func FormatTurnMetrics(values TurnMetricsValues, cfg TurnMetricsUIConfig) string {
-	lines := FormatTurnMetricsLines(values, cfg, 0)
+func FormatTurnMetrics(values TurnMetricsValues, cfg TurnMetricsUIConfig, locale string) string {
+	lines := FormatTurnMetricsLines(values, cfg, 0, locale)
 	return strings.Join(lines, "\n")
 }
 
 // FormatTurnMetricsLines builds wrapped status lines under an assistant reply.
-func FormatTurnMetricsLines(values TurnMetricsValues, cfg TurnMetricsUIConfig, maxWidth int) []string {
+func FormatTurnMetricsLines(values TurnMetricsValues, cfg TurnMetricsUIConfig, maxWidth int, locale string) []string {
 	if !cfg.EnabledOrDefault() {
 		return nil
 	}
 
+	labels := TurnMetricsLabelsForLocale(locale)
 	var parts []string
 	for _, field := range cfg.ResolvedFields() {
-		if part := formatTurnMetricField(field, values, cfg.CompactOrDefault()); part != "" {
+		if part := formatTurnMetricField(field, values, cfg.CompactOrDefault(), labels); part != "" {
 			parts = append(parts, part)
 		}
 	}
@@ -110,7 +111,7 @@ func displayWidth(text string) int {
 	return len([]rune(text))
 }
 
-func formatTurnMetricField(field string, values TurnMetricsValues, compact bool) string {
+func formatTurnMetricField(field string, values TurnMetricsValues, compact bool, labels TurnMetricsLabels) string {
 	switch field {
 	case TurnMetricFieldTotal:
 		if values.TotalDurationMs <= 0 {
@@ -119,7 +120,7 @@ func formatTurnMetricField(field string, values TurnMetricsValues, compact bool)
 		if compact {
 			return formatDurationMs(values.TotalDurationMs)
 		}
-		return formatDurationMs(values.TotalDurationMs) + " total"
+		return formatDurationMs(values.TotalDurationMs) + " " + labels.Total
 	case TurnMetricFieldWait:
 		if values.WaitDurationMs <= 0 {
 			return ""
@@ -127,7 +128,7 @@ func formatTurnMetricField(field string, values TurnMetricsValues, compact bool)
 		if compact {
 			return formatDurationMs(values.WaitDurationMs)
 		}
-		return formatDurationMs(values.WaitDurationMs) + " loading"
+		return formatDurationMs(values.WaitDurationMs) + " " + labels.Wait
 	case TurnMetricFieldThought:
 		if !values.HadThinking || values.ThinkingDurationMs <= 0 {
 			return ""
@@ -135,7 +136,7 @@ func formatTurnMetricField(field string, values TurnMetricsValues, compact bool)
 		if compact {
 			return formatDurationMs(values.ThinkingDurationMs)
 		}
-		return formatDurationMs(values.ThinkingDurationMs) + " thought"
+		return formatDurationMs(values.ThinkingDurationMs) + " " + labels.Thought
 	case TurnMetricFieldGeneration:
 		if values.GenerationDurationMs <= 0 {
 			return ""
@@ -143,7 +144,7 @@ func formatTurnMetricField(field string, values TurnMetricsValues, compact bool)
 		if compact {
 			return formatDurationMs(values.GenerationDurationMs)
 		}
-		return formatDurationMs(values.GenerationDurationMs) + " generating"
+		return formatDurationMs(values.GenerationDurationMs) + " " + labels.Generation
 	case TurnMetricFieldOutputTokens:
 		if values.OutputTokens <= 0 {
 			return ""
@@ -151,7 +152,7 @@ func formatTurnMetricField(field string, values TurnMetricsValues, compact bool)
 		if compact {
 			return formatTokenCount(values.OutputTokens)
 		}
-		return formatTokenCount(values.OutputTokens) + " tok"
+		return formatTokenCount(values.OutputTokens) + " " + labels.Tok
 	case TurnMetricFieldInputTokens:
 		if values.InputTokens <= 0 {
 			return ""
@@ -159,15 +160,19 @@ func formatTurnMetricField(field string, values TurnMetricsValues, compact bool)
 		if compact {
 			return formatTokenCount(values.InputTokens)
 		}
-		return formatTokenCount(values.InputTokens) + " in"
+		return formatTokenCount(values.InputTokens) + " " + labels.TokIn
 	case TurnMetricFieldTokensPerSec:
 		if values.TokensPerSec <= 0 {
 			return ""
 		}
-		if values.TokensPerSec >= 100 {
-			return fmt.Sprintf("%.0f tok/s", values.TokensPerSec)
+		tokSuffix := strings.TrimSpace(strings.TrimPrefix(labels.TokPerSec, "%.1f"))
+		if tokSuffix == labels.TokPerSec {
+			tokSuffix = "tok/s"
 		}
-		return fmt.Sprintf("%.1f tok/s", values.TokensPerSec)
+		if values.TokensPerSec >= 100 {
+			return fmt.Sprintf("%.0f %s", values.TokensPerSec, tokSuffix)
+		}
+		return fmt.Sprintf(labels.TokPerSec, values.TokensPerSec)
 	case TurnMetricFieldCost:
 		if values.EstimatedCostUSD <= 0 {
 			return ""
@@ -178,9 +183,9 @@ func formatTurnMetricField(field string, values TurnMetricsValues, compact bool)
 			return ""
 		}
 		if values.ToolCalls == 1 {
-			return "1 tool"
+			return labels.ToolOne
 		}
-		return fmt.Sprintf("%d tools", values.ToolCalls)
+		return fmt.Sprintf(labels.ToolsMany, values.ToolCalls)
 	case TurnMetricFieldToolTime:
 		if values.ToolDurationMs <= 0 {
 			return ""
@@ -188,28 +193,28 @@ func formatTurnMetricField(field string, values TurnMetricsValues, compact bool)
 		if compact {
 			return formatDurationMs(values.ToolDurationMs)
 		}
-		return formatDurationMs(values.ToolDurationMs) + " tools"
+		return formatDurationMs(values.ToolDurationMs) + labels.ToolTime
 	case TurnMetricFieldSteps:
 		if values.Steps <= 0 {
 			return ""
 		}
 		if values.Steps == 1 {
-			return "1 step"
+			return labels.StepOne
 		}
-		return fmt.Sprintf("%d steps", values.Steps)
+		return fmt.Sprintf(labels.StepsMany, values.Steps)
 	case TurnMetricFieldContext:
 		if values.ContextTokens <= 0 {
 			return ""
 		}
 		if values.ContextWindow > 0 {
-			return fmt.Sprintf("%s / %s ctx", formatTokenCount(values.ContextTokens), formatTokenCount(values.ContextWindow))
+			return fmt.Sprintf(labels.CtxPair, formatTokenCount(values.ContextTokens), formatTokenCount(values.ContextWindow))
 		}
-		return formatTokenCount(values.ContextTokens) + " ctx"
+		return formatTokenCount(values.ContextTokens) + labels.Ctx
 	case TurnMetricFieldContextPct:
 		if values.ContextUsedPct <= 0 {
 			return ""
 		}
-		return fmt.Sprintf("%.0f%% ctx", values.ContextUsedPct)
+		return fmt.Sprintf(labels.CtxPct, values.ContextUsedPct)
 	default:
 		return ""
 	}

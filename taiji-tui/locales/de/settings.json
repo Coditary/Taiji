@@ -1,0 +1,341 @@
+{
+  "categories": {
+    "general": "Allgemein & Chat",
+    "general_short": "Allgemein",
+    "model": "Modell",
+    "agent": "Agent & Verhalten",
+    "agent_short": "Agenten",
+    "tools": "Werkzeuge & Fähigkeiten",
+    "tools_short": "Werkzeuge",
+    "audio": "Audio & Sprache",
+    "audio_short": "Ton",
+    "appearance": "Darstellung",
+    "appearance_short": "Optik",
+    "shortcuts": "Tastenkürzel",
+    "shortcuts_short": "Tasten"
+  },
+  "nav": {
+    "categories": "Kategorien"
+  },
+  "scope": {
+    "save_to": "Speichern in:",
+    "project": "Projekt",
+    "chat": "Gespräch"
+  },
+  "values": {
+    "empty": "(leer)",
+    "driver_default": "(Treiber-Standard)",
+    "default_paren": "(Standard)",
+    "unlimited": "0 (unbegrenzt)",
+    "silence_off": "0 (aus)",
+    "chars_suffix": "{count} Zeichen",
+    "capture_device_default": "Standard",
+    "enum_sep": "."
+  },
+  "sections": {
+    "execution": "Ausführung",
+    "thinking": "Denken",
+    "prompt": "Prompt-Vorlage",
+    "mcp_servers": "MCP-Server",
+    "skills": "Fertigkeiten",
+    "speech_to_text": "Sprache-zu-Text (Wuji)",
+    "theme": "Thema",
+    "agent_chat": "Agent & Gespräch",
+    "your_messages": "Deine Nachrichten",
+    "assistant_messages": "Assistent-Nachrichten",
+    "labels_motion": "Beschriftungen & Bewegung",
+    "global": "Allgemein",
+    "language": "Sprache"
+  },
+  "rows": {
+    "session_name": {
+      "label": "Chat-Name",
+      "hint": "Anzeigename für diese Chat-Sitzung."
+    },
+    "preset_combo": {
+      "label": "Preset & Vorlage",
+      "hint": "Presets, YAML-Vorlagen und Darstellungsstile durchschalten."
+    },
+    "provider": {
+      "label": "Anbieter",
+      "hint": "Enter: Fuzzy-Auswahl  <-/->: Anbieter wechseln."
+    },
+    "model": {
+      "label": "Modell",
+      "hint": "Enter/Leertaste: Modell wählen. (?) klicken: Wuji-Katalogdetails."
+    },
+    "temperature": {
+      "label": "Temperatur",
+      "hint": "Sampling-Temperatur; niedriger = deterministischer."
+    },
+    "max_tokens": {
+      "label": "Max. Tokens",
+      "hint": "Maximale Tokens pro Modellantwort."
+    },
+    "context_window": {
+      "label": "Kontextfenster",
+      "hint": "Enter: Token-Limit eingeben. <-/->: in Schritten anpassen."
+    },
+    "max_steps": {
+      "label": "Max. Schritte",
+      "hint": "Maximale autonome Tool-Aufruf-Schritte pro Anfrage."
+    },
+    "decisions_enabled": {
+      "label": "Entscheidungen",
+      "hint": "Erlaubt dem Agenten, Projektentscheidungen zu protokollieren."
+    },
+    "memory_enabled": {
+      "label": "Gedächtnis",
+      "hint": "Langzeitgedächtnis für diesen Chat aktivieren."
+    },
+    "chain_of_thought": {
+      "label": "Gedankenkette",
+      "hint": "Wie Denkprozesse sichtbar werden ({modes})."
+    },
+    "thought_max_chars": {
+      "label": "Max. Gedankenzeichen",
+      "hint": "Sichtbare Gedankenkette begrenzen (0 = unbegrenzt)."
+    },
+    "system_prompt_extra": {
+      "label": "Zusätzlicher System-Prompt",
+      "hint": "Zusätzliche Systemanweisungen für diesen Chat."
+    },
+    "stt_enabled": {
+      "label": "Spracheingabe aktiv",
+      "hint": "Mikrofon-Schaltfläche in der Chat-Eingabe (|O|)."
+    },
+    "stt_driver": {
+      "label": "STT-Treiber",
+      "hint": "Wuji-Treiber für wuji text --audio (z. B. llama). Speichert capability_drivers.text beim Übernehmen."
+    },
+    "stt_model": {
+      "label": "STT-Modell",
+      "hint": "Modell-ID für den STT-Treiber (leer = Treiber-Standard)."
+    },
+    "stt_language": {
+      "label": "Transkriptionssprache",
+      "hint": "Sprachhinweis für Transkription; {auto_lang} = automatische Erkennung."
+    },
+    "stt_quality": {
+      "label": "Transkriptionsqualität",
+      "hint": "Geschwindigkeit vs. Genauigkeit (treiberabhängig)."
+    },
+    "stt_trim_silence": {
+      "label": "Stille trimmen",
+      "hint": "Stille am Anfang/Ende der Aufnahme vor STT entfernen."
+    },
+    "stt_silence_level": {
+      "label": "Stille-Schwelle",
+      "hint": "Lautstärkeschwelle für Stille-Erkennung bei aktivem Trimmen."
+    },
+    "stt_capture_device": {
+      "label": "Aufnahmegerät",
+      "hint": "Audio-Eingabegerät (Name/Pfad; leer = Systemstandard)."
+    },
+    "stt_sample_rate": {
+      "label": "Abtastrate",
+      "hint": "Abtastrate in Hz (8000–48000)."
+    },
+    "ui_theme": {
+      "label": "Farbthema",
+      "hint": "Enter: Themes suchen. <-/->: wechseln. Eigene Themes: ~/.config/taiji/themes/"
+    },
+    "ui_corners": {
+      "label": "Eckenstil",
+      "hint": "Eckiger oder abgerundeter Rahmen, oder flach ohne Außenrahmen."
+    },
+    "ui_locale": {
+      "label": "Oberflächensprache",
+      "hint": "Sprache für Einstellungsbeschriftungen und gemeinsame UI-Texte."
+    },
+    "tool_call_density": {
+      "label": "Tool-Aufruf-Dichte",
+      "hint": "Kompakte oder detaillierte Tool-Zeilen im Aktivitätslog."
+    },
+    "turn_metrics_preset": {
+      "label": "Turn-Metriken",
+      "hint": "Ausführlichkeit der Turn-Metriken im Chat-Log."
+    },
+    "turn_metrics_show_actions": {
+      "label": "Turn-Aktionen",
+      "hint": "Wiederholen/Kopieren unter abgeschlossenen Turns anzeigen."
+    },
+    "presentation": {
+      "label": "Darstellung",
+      "hint": "Wie Assistentennachrichten in diesem Chat gerendert werden."
+    },
+    "user_message_style": {
+      "label": "Nachrichtenstil",
+      "hint": "Blasen-Stil für diese Rolle ({examples}, ...)."
+    },
+    "user_message_align": {
+      "label": "Ausrichtung",
+      "hint": "Horizontale Ausrichtung; {auto} folgt der Rolle (du: rechts, Assistent: links)."
+    },
+    "user_message_max_width_pct": {
+      "label": "Max. Breite",
+      "hint": "<-/-> oder Balken klicken: max. Blasenbreite (40–100 %)."
+    },
+    "user_message_fill_background": {
+      "label": "Hintergrund füllen",
+      "hint": "{on}: Volle Füllung inkl. Rahmen. {off}: nur Umriss auf Chat-Hintergrund."
+    },
+    "assistant_message_style": {
+      "label": "Nachrichtenstil",
+      "hint": "Blasen-Stil für diese Rolle ({examples}, ...)."
+    },
+    "assistant_message_align": {
+      "label": "Ausrichtung",
+      "hint": "Horizontale Ausrichtung; {auto} folgt der Rolle (du: rechts, Assistent: links)."
+    },
+    "assistant_message_max_width_pct": {
+      "label": "Max. Breite",
+      "hint": "<-/-> oder Balken klicken: max. Blasenbreite (40–100 %)."
+    },
+    "assistant_message_fill_background": {
+      "label": "Hintergrund füllen",
+      "hint": "{on}: Volle Füllung inkl. Rahmen. {off}: nur Umriss auf Chat-Hintergrund."
+    },
+    "message_timestamps": {
+      "label": "Zeitstempel",
+      "hint": "Sendezeit auf deinen Nachrichtenblasen anzeigen."
+    },
+    "sticky_user_message": {
+      "label": "Angeheftete Eingabe",
+      "hint": "Oberen Rand deiner letzten Eingabe beim Lesen langer Antworten fixieren."
+    },
+    "auto_compact_context_pct": {
+      "label": "Auto-Kompakt",
+      "hint": "Bei dieser % des Kontextfensters ältere Turns automatisch zusammenfassen."
+    },
+    "message_time_clock": {
+      "label": "Uhrformat",
+      "hint": "24-Stunden- oder 12-Stunden-Uhr (AM/PM)."
+    },
+    "chat_width": {
+      "label": "Chat-Breite",
+      "hint": "Maximale Breite der Chat-Spalte (Terminalzellen)."
+    },
+    "code_block_wrap": {
+      "label": "Code umbrechen",
+      "hint": "Lange Zeilen in Codeblöcken umbrechen."
+    },
+    "tool_labels_locale": {
+      "label": "Tool-Beschriftungen",
+      "hint": "Sprache für Tool-Statusbeschriftungen in der UI."
+    },
+    "reduce_motion": {
+      "label": "Bewegung reduzieren",
+      "hint": "Interface-Bewegung minimieren (für zukünftige Animationen)."
+    },
+    "key_open_theme_picker": {
+      "label": "Themen-Picker-Kürzel",
+      "hint": "Globales Kürzel für den Farbthemen-Picker (z. B. Strg+T)."
+    },
+    "project_provider": {
+      "label": "Standardanbieter",
+      "hint": "Enter: Fuzzy-Auswahl  <-/->: Anbieter wechseln."
+    },
+    "context_window_fixed": {
+      "label": "Kontextfenster",
+      "hint": "Kontextfenster ist im Modellkatalog fest vorgegeben."
+    },
+    "mcp_toggle": {
+      "label": "",
+      "hint": "Leertaste: Server für diesen Chat ein/aus. Enter: Tools auf-/zuklappen."
+    },
+    "mcp_tool_toggle": {
+      "label": "",
+      "hint": "Leertaste: Tool für den Chat erlauben oder blockieren."
+    },
+    "skill_toggle": {
+      "label": "",
+      "hint": "Skills auf Allowlist beschränken oder alle erlauben."
+    }
+  },
+  "options": {
+    "bool": {
+      "on": "Ein",
+      "off": "Aus"
+    },
+    "chain_of_thought": {
+      "off": "Aus",
+      "prompt": "Prompt-Vorlage",
+      "full": "Nativ"
+    },
+    "turn_metrics_preset": {
+      "off": "Aus",
+      "compact": "Kompakt",
+      "dev": "Entwickler"
+    },
+    "ui_corners": {
+      "square": "Eckig",
+      "rounded": "Abgerundet",
+      "flat": "Flach"
+    },
+    "tool_call_density": {
+      "compact": "Kompakt",
+      "detailed": "Detailliert"
+    },
+    "presentation": {
+      "markdown": "Markdown-Darstellung",
+      "whatsapp": "Kurzantworten",
+      "story": "Geschichte",
+      "minimal": "Schlicht",
+      "bubbles": "Sprechblasen",
+      "narrative": "Erzählung"
+    },
+    "message_style": {
+      "chat": "Messenger",
+      "cornered": "Eckrahmen",
+      "block": "Blockieren",
+      "plain": "Schlicht",
+      "header": "Kopfzeile",
+      "terminal": "Anschluss",
+      "log": "Protokoll",
+      "card": "Karte",
+      "section": "Abschnitt"
+    },
+    "message_align": {
+      "auto": "Automatisch",
+      "left": "Links",
+      "right": "Rechts",
+      "center": "Zentriert"
+    },
+    "auto_compact": {
+      "off": "Aus"
+    },
+    "chat_width": {
+      "auto": "Automatisch",
+      "narrow": "Schmal",
+      "medium": "Mittel",
+      "wide": "Breit"
+    },
+    "message_time_clock": {
+      "24h": "24-Stunden",
+      "12h": "12-Stunden (AM/PM)"
+    },
+    "stt_language": {
+      "auto": "Automatisch"
+    },
+    "stt_quality": {
+      "default": "(Standard)",
+      "fast": "Schnell",
+      "balanced": "Ausgewogen",
+      "careful": "Genau"
+    },
+    "skill_state": {
+      "auto": "Standard",
+      "pinned": "Angepinnt",
+      "off": "Blockiert"
+    },
+    "mcp_tool_state": {
+      "allowed": "Erlaubt",
+      "blocked": "Blockiert"
+    }
+  },
+  "empty": {
+    "mcp_none": "(nicht verbunden)",
+    "skills_none": "(nicht geladen)"
+  }
+}

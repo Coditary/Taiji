@@ -1,0 +1,94 @@
+{
+  "sidebar": {
+    "projects": "PROJELER",
+    "projects_menu_hint": "Sağ tıklama: menü",
+    "new_session": "Yeni Oturum",
+    "agent_laya": "...",
+    "skills": "Beceriler",
+    "decisions": "Kararlar",
+    "lsp": "...",
+    "connected": "Bağlı",
+    "empty_none": "yok",
+    "empty_inactive": "etkin değil",
+    "mcp_title": "...",
+    "mcp_title_count": "...",
+    "mcp_not_connected": "bağlı değil"
+  },
+  "context": {
+    "title": "BAĞLAM",
+    "skills": "Beceriler",
+    "system_prompt": "Sistem uyarısı",
+    "tools_mcp": "Araç tanımları ve MCP",
+    "conversation": "Sohbet"
+  },
+  "empty": {
+    "hint_send": "Başlamak için bir mesaj gönderin",
+    "quick_index_codebase": "Dizin kod tabanı",
+    "quick_generate_tests": "Testler oluştur",
+    "quick_analyze_git": "Git diff'i analiz et",
+    "uncommitted_one": "{count} kaydedilmemiş değişiklik",
+    "uncommitted_many": "{count} kaydedilmemiş değişiklikler"
+  },
+  "session_menu": {
+    "open": "Aç",
+    "delete": "Sil"
+  },
+  "footer": {
+    "shortcuts_default": "Sekme: odaklanma · Shift+Enter: satır sonu · Enter: gönder · Esc: durdur"
+  },
+  "chat": {
+    "author_you": "Sen",
+    "author_summary": "özet",
+    "thinking": "Düşünmek"
+  },
+  "composer_menu": {
+    "skills": "Beceriler",
+    "skills_hint": "Bir beceriyi zorla",
+    "mcp_servers": "MCP sunucuları"
+  },
+  "question": {
+    "custom_placeholder": "Özel cevap...",
+    "custom_label": "Özel cevap",
+    "footer_apply": "Giriş: uygula  ·  Esc: geri"
+  },
+  "activity": {
+    "mcp": "...",
+    "thinking": "Düşünmek",
+    "tool": "Araç",
+    "skill": "Beceri",
+    "decision": "Karar",
+    "question": "Soru",
+    "generating_response": "Yanıt oluşturuluyor..."
+  },
+  "metrics": {
+    "tok_per_sec": "..."
+  },
+  "status": {
+    "starting": "Başlıyoruz...",
+    "starting_agent": "Başlatma ajanı...",
+    "agent_failed_prefix": "İşlem başarısız oldu: ",
+    "init_failed_prefix": "Başlatma başarısız: ",
+    "answer_question": "Soruyu yanıtla  ·  Esc: iptal et",
+    "composer_submit": "[ Gönder ↵ ]  ·  Shift+Enter: satır sonu  ·  Esc: durdur",
+    "could_not_send_answer": "Yanıt gönderilemedi",
+    "agent_still_starting": "Ajan hâlâ başlatılıyor...",
+    "voice_input_off": "Sesli giriş kapalıdır (Ayarlar -> Ses).",
+    "speech_input": "Sesli giriş...",
+    "wait_before_compact": "Sıkıştırma işlemini gerçekleştirmeden önce mevcut yanıtın gelmesini bekleyin.",
+    "compacting": "Sohbeti özetlemek...",
+    "generating_with_queue": "Oluşturuluyor...  ·  {count} kuyruğa alındı",
+    "generating_esc_stop": "Oluşturuluyor...  ·  Durdurmak için Esc tuşuna basın",
+    "enter_queues_message": "Kuyruklara başka bir mesaj ekle",
+    "response_copied": "Yanıt kopyalandı",
+    "failed_switch_session_prefix": "Oturum değiştirme işlemi başarısız oldu: ",
+    "failed_delete_session_prefix": "Oturum silinemedi: ",
+    "failed_create_session_prefix": "Oturum oluşturulamadı: ",
+    "request_failed": "İstek başarısız oldu",
+    "transcription_inserted": "Transkripsiyon eklendi.",
+    "recording_hint": "Kayıt... Konuşurken metin güncellemeleri. İşiniz bittiğinde Dur düğmesine basın.",
+    "compacted_ok": "Konuşma özetlenmiştir.",
+    "compaction_failed": "Sıkıştırma işlemi başarısız oldu.",
+    "could_not_load_skills": "Beceriler yüklenemedi.",
+    "could_not_load_decisions": "Kararlar yüklenemedi."
+  }
+}

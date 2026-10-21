@@ -1,5 +1,6 @@
 #include "thinking_indicator.hpp"
 
+#include "ui_locale.hpp"
 #include "ui_theme.hpp"
 
 ThinkingIndicator::ThinkingIndicator(tuinator::Style throbber_style, tuinator::Style label_style)
@@ -7,7 +8,8 @@ ThinkingIndicator::ThinkingIndicator(tuinator::Style throbber_style, tuinator::S
     auto throbber = std::make_unique<tuinator::Throbber>("dots", throbber_style);
     throbber_ = throbber.get();
     add_child(std::move(throbber));
-    auto label = std::make_unique<tuinator::Label>("Thinking", label_style);
+    const std::string thinking = ui_shell("chat.thinking");
+    auto label = std::make_unique<tuinator::Label>(thinking.empty() ? "Thinking" : thinking, label_style);
     label_ = label.get();
     add_child(std::move(label));
 }

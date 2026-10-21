@@ -1,5 +1,7 @@
 #include "question_composer.hpp"
 
+#include "ui_locale.hpp"
+
 #include <tuinator/render/text.hpp>
 
 #include <algorithm>
@@ -465,7 +467,8 @@ void QuestionComposer::begin_custom_edit() {
     options.chrome = tuinator::TextInputChrome::Framed;
     options.max_content_lines = 1;
     options.prompt = "› ";
-    options.placeholder = "Custom answer…";
+    const std::string ph = ui_shell("question.custom_placeholder");
+    options.placeholder = ph.empty() ? "Custom answer…" : ph;
     custom_input_ = std::make_unique<tuinator::TextInput>(options, style_, focused_style_);
     custom_input_->set_on_submit([this](const std::string&) { finish_custom_edit(true); });
     editing_custom_ = true;
@@ -500,7 +503,8 @@ void QuestionComposer::finish_custom_edit(bool keep) {
 
 std::string QuestionComposer::footer_hint() const {
     if (editing_custom_) {
-        return "Enter: apply  ·  Esc: back";
+        const std::string hint = ui_shell("question.footer_apply");
+        return hint.empty() ? "Enter: apply  ·  Esc: back" : hint;
     }
     if (current_question().multiple) {
         std::string hint = "↑↓ select  ·  Space: toggle  ·  Enter: next";
@@ -592,7 +596,10 @@ void QuestionComposer::paint(tuinator::PaintContext& ctx) const {
 
         std::string label;
         if (visible.custom) {
-            label = "Custom answer";
+            {
+                const std::string custom = ui_shell("question.custom_label");
+                label = custom.empty() ? "Custom answer" : custom;
+            }
         } else {
             label = q.options.at(static_cast<std::size_t>(visible.option_index)).label;
         }

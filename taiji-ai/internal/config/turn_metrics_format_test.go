@@ -9,7 +9,7 @@ func TestFormatTurnMetricsDefaultFields(t *testing.T) {
 		GenerationDurationMs: 1100,
 		OutputTokens:         128,
 		TokensPerSec:         38.5,
-	}, DefaultUIConfig().TurnMetrics)
+	}, DefaultUIConfig().TurnMetrics, "en")
 	want := "18s total · 9.0s loading · 1.1s generating · 128 tok\n38.5 tok/s"
 	if text != want {
 		t.Fatalf("text = %q want %q", text, want)
@@ -23,7 +23,7 @@ func TestFormatTurnMetricsCustomFields(t *testing.T) {
 		TotalDurationMs: 900,
 		OutputTokens:    42,
 		TokensPerSec:    10,
-	}, cfg)
+	}, cfg, "en")
 	if text != "900ms total · 42 tok" {
 		t.Fatalf("text = %q", text)
 	}
@@ -32,7 +32,7 @@ func TestFormatTurnMetricsCustomFields(t *testing.T) {
 func TestFormatTurnMetricsDisabled(t *testing.T) {
 	enabled := false
 	cfg := TurnMetricsUIConfig{Enabled: &enabled, Fields: []string{"total"}}
-	text := FormatTurnMetrics(TurnMetricsValues{TotalDurationMs: 1000}, cfg)
+	text := FormatTurnMetrics(TurnMetricsValues{TotalDurationMs: 1000}, cfg, "en")
 	if text != "" {
 		t.Fatalf("text = %q", text)
 	}
@@ -72,7 +72,7 @@ func TestFormatTurnMetricsPresetDev(t *testing.T) {
 		EstimatedCostUSD:     0.0042,
 		Steps:                3,
 		HadThinking:          true,
-	}, cfg, 0)
+	}, cfg, 0, "en")
 	if len(lines) != 3 {
 		t.Fatalf("lines = %#v", lines)
 	}
@@ -87,7 +87,7 @@ func TestFormatTurnMetricsWrapByWidth(t *testing.T) {
 		TokensPerSec:     38.5,
 		ToolCalls:        2,
 		EstimatedCostUSD: 0.003,
-	}, cfg, 28)
+	}, cfg, 28, "en")
 	if len(lines) < 2 {
 		t.Fatalf("expected wrap, got %#v", lines)
 	}

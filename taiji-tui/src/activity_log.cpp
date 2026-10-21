@@ -2,6 +2,7 @@
 
 #include "ui_anim.hpp"
 #include "ui_chat_column.hpp"
+#include "ui_locale.hpp"
 #include "ui_theme.hpp"
 
 #include <libtaiji.h>
@@ -32,7 +33,8 @@ std::string question_header_from_args(const std::string& args) {
     if (!question.empty()) {
         return question.size() > 42 ? question.substr(0, 39) + "..." : question;
     }
-    return "Question";
+    const std::string fallback = ui_tr("tools", "scopes.question");
+    return fallback.empty() ? "Question" : fallback;
 }
 
 std::string decision_state_from_args(const std::string& args) {
@@ -632,13 +634,44 @@ void ActivityLog::set_generating_tail(bool show, std::string label) {
 }
 
 std::string ActivityLog::scope_label(Scope scope) {
+    const char* key = "scopes.tool";
     switch (scope) {
-    case Scope::Thinking: return "Thinking";
-    case Scope::Tool: return "Tool";
-    case Scope::MCP: return "MCP";
-    case Scope::Skill: return "Skill";
-    case Scope::Decision: return "Decision";
-    case Scope::Question: return "Question";
+    case Scope::Thinking:
+        key = "scopes.thinking";
+        break;
+    case Scope::Tool:
+        key = "scopes.tool";
+        break;
+    case Scope::MCP:
+        key = "scopes.mcp";
+        break;
+    case Scope::Skill:
+        key = "scopes.skill";
+        break;
+    case Scope::Decision:
+        key = "scopes.decision";
+        break;
+    case Scope::Question:
+        key = "scopes.question";
+        break;
+    }
+    const std::string translated = ui_tr("tools", key);
+    if (!translated.empty()) {
+        return translated;
+    }
+    switch (scope) {
+    case Scope::Thinking:
+        return "Thinking";
+    case Scope::Tool:
+        return "Tool";
+    case Scope::MCP:
+        return "MCP";
+    case Scope::Skill:
+        return "Skill";
+    case Scope::Decision:
+        return "Decision";
+    case Scope::Question:
+        return "Question";
     }
     return "Tool";
 }
@@ -1023,7 +1056,7 @@ int ActivityLog::body_wrap_cols() const {
 
 std::string ActivityLog::entry_title(const Entry& entry) const {
     if (entry.scope == Scope::MCP) {
-        std::string text = "MCP";
+        std::string text = scope_label(entry.scope);
         if (!entry.server.empty()) {
             text += " · " + entry.server;
         }
@@ -1037,7 +1070,7 @@ std::string ActivityLog::entry_title(const Entry& entry) const {
         return text;
     }
     if (entry.scope == Scope::Skill) {
-        std::string text = "Skill";
+        std::string text = scope_label(entry.scope);
         std::string skill = entry.skill_name;
         if (skill.empty()) {
             skill = skill_name_from_args(entry.args);
@@ -1048,7 +1081,7 @@ std::string ActivityLog::entry_title(const Entry& entry) const {
         return text;
     }
     if (entry.scope == Scope::Decision) {
-        std::string text = "Decision";
+        std::string text = scope_label(entry.scope);
         if (!entry.decision_driver.empty()) {
             text += " · " + entry.decision_driver;
         } else if (!entry.name.empty() && entry.name != "decide") {
@@ -1057,10 +1090,11 @@ std::string ActivityLog::entry_title(const Entry& entry) const {
         return text;
     }
     if (entry.scope == Scope::Question) {
+        const std::string q = scope_label(entry.scope);
         if (!entry.question_header.empty()) {
-            return "Question · " + entry.question_header;
+            return q + " · " + entry.question_header;
         }
-        return "Question";
+        return q;
     }
     if (entry.scope == Scope::Tool && !entry.name.empty()) {
         if (const std::string label = tool_display_title(entry.name); !label.empty()) {

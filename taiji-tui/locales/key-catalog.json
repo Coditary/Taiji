@@ -1,0 +1,2086 @@
+{
+  "default_locale": "en",
+  "modules": [
+    "common",
+    "settings",
+    "shell",
+    "tools"
+  ],
+  "locale_ids": [
+    "en",
+    "de",
+    "es",
+    "fr",
+    "it",
+    "pt",
+    "nl",
+    "pl",
+    "ru",
+    "ja",
+    "zh",
+    "hi",
+    "ar",
+    "id",
+    "vi",
+    "tr"
+  ],
+  "key_count": 341,
+  "keys_by_module": {
+    "common": [
+      "app.settings_apply_hint",
+      "app.settings_footer_apply",
+      "app.settings_footer_help",
+      "app.settings_title",
+      "app.sidebar_settings",
+      "composer.placeholder",
+      "locale_names.ar",
+      "locale_names.de",
+      "locale_names.en",
+      "locale_names.es",
+      "locale_names.fr",
+      "locale_names.hi",
+      "locale_names.id",
+      "locale_names.it",
+      "locale_names.ja",
+      "locale_names.nl",
+      "locale_names.pl",
+      "locale_names.pt",
+      "locale_names.ru",
+      "locale_names.tr",
+      "locale_names.vi",
+      "locale_names.zh",
+      "theme_picker.draft_saved",
+      "theme_picker.filter_placeholder",
+      "theme_picker.filter_placeholder_draft",
+      "theme_picker.no_matches",
+      "theme_picker.title"
+    ],
+    "settings": [
+      "categories.agent",
+      "categories.agent_short",
+      "categories.appearance",
+      "categories.appearance_short",
+      "categories.audio",
+      "categories.audio_short",
+      "categories.general",
+      "categories.general_short",
+      "categories.model",
+      "categories.shortcuts",
+      "categories.shortcuts_short",
+      "categories.tools",
+      "categories.tools_short",
+      "empty.mcp_none",
+      "empty.skills_none",
+      "nav.categories",
+      "options.auto_compact.off",
+      "options.bool.off",
+      "options.bool.on",
+      "options.chain_of_thought.full",
+      "options.chain_of_thought.off",
+      "options.chain_of_thought.prompt",
+      "options.chat_width.auto",
+      "options.chat_width.medium",
+      "options.chat_width.narrow",
+      "options.chat_width.wide",
+      "options.mcp_tool_state.allowed",
+      "options.mcp_tool_state.blocked",
+      "options.message_align.auto",
+      "options.message_align.center",
+      "options.message_align.left",
+      "options.message_align.right",
+      "options.message_style.block",
+      "options.message_style.card",
+      "options.message_style.chat",
+      "options.message_style.cornered",
+      "options.message_style.header",
+      "options.message_style.log",
+      "options.message_style.plain",
+      "options.message_style.section",
+      "options.message_style.terminal",
+      "options.message_time_clock.12h",
+      "options.message_time_clock.24h",
+      "options.presentation.bubbles",
+      "options.presentation.markdown",
+      "options.presentation.minimal",
+      "options.presentation.narrative",
+      "options.presentation.story",
+      "options.presentation.whatsapp",
+      "options.skill_state.auto",
+      "options.skill_state.off",
+      "options.skill_state.pinned",
+      "options.stt_language.auto",
+      "options.stt_quality.balanced",
+      "options.stt_quality.careful",
+      "options.stt_quality.default",
+      "options.stt_quality.fast",
+      "options.tool_call_density.compact",
+      "options.tool_call_density.detailed",
+      "options.turn_metrics_preset.compact",
+      "options.turn_metrics_preset.dev",
+      "options.turn_metrics_preset.off",
+      "options.ui_corners.flat",
+      "options.ui_corners.rounded",
+      "options.ui_corners.square",
+      "rows.assistant_message_align.hint",
+      "rows.assistant_message_align.label",
+      "rows.assistant_message_fill_background.hint",
+      "rows.assistant_message_fill_background.label",
+      "rows.assistant_message_max_width_pct.hint",
+      "rows.assistant_message_max_width_pct.label",
+      "rows.assistant_message_style.hint",
+      "rows.assistant_message_style.label",
+      "rows.auto_compact_context_pct.hint",
+      "rows.auto_compact_context_pct.label",
+      "rows.chain_of_thought.hint",
+      "rows.chain_of_thought.label",
+      "rows.chat_width.hint",
+      "rows.chat_width.label",
+      "rows.code_block_wrap.hint",
+      "rows.code_block_wrap.label",
+      "rows.context_window.hint",
+      "rows.context_window.label",
+      "rows.context_window_fixed.hint",
+      "rows.context_window_fixed.label",
+      "rows.decisions_enabled.hint",
+      "rows.decisions_enabled.label",
+      "rows.key_open_theme_picker.hint",
+      "rows.key_open_theme_picker.label",
+      "rows.max_steps.hint",
+      "rows.max_steps.label",
+      "rows.max_tokens.hint",
+      "rows.max_tokens.label",
+      "rows.mcp_toggle.hint",
+      "rows.mcp_toggle.label",
+      "rows.mcp_tool_toggle.hint",
+      "rows.mcp_tool_toggle.label",
+      "rows.memory_enabled.hint",
+      "rows.memory_enabled.label",
+      "rows.message_time_clock.hint",
+      "rows.message_time_clock.label",
+      "rows.message_timestamps.hint",
+      "rows.message_timestamps.label",
+      "rows.model.hint",
+      "rows.model.label",
+      "rows.presentation.hint",
+      "rows.presentation.label",
+      "rows.preset_combo.hint",
+      "rows.preset_combo.label",
+      "rows.project_provider.hint",
+      "rows.project_provider.label",
+      "rows.provider.hint",
+      "rows.provider.label",
+      "rows.reduce_motion.hint",
+      "rows.reduce_motion.label",
+      "rows.session_name.hint",
+      "rows.session_name.label",
+      "rows.skill_toggle.hint",
+      "rows.skill_toggle.label",
+      "rows.sticky_user_message.hint",
+      "rows.sticky_user_message.label",
+      "rows.stt_capture_device.hint",
+      "rows.stt_capture_device.label",
+      "rows.stt_driver.hint",
+      "rows.stt_driver.label",
+      "rows.stt_enabled.hint",
+      "rows.stt_enabled.label",
+      "rows.stt_language.hint",
+      "rows.stt_language.label",
+      "rows.stt_model.hint",
+      "rows.stt_model.label",
+      "rows.stt_quality.hint",
+      "rows.stt_quality.label",
+      "rows.stt_sample_rate.hint",
+      "rows.stt_sample_rate.label",
+      "rows.stt_silence_level.hint",
+      "rows.stt_silence_level.label",
+      "rows.stt_trim_silence.hint",
+      "rows.stt_trim_silence.label",
+      "rows.system_prompt_extra.hint",
+      "rows.system_prompt_extra.label",
+      "rows.temperature.hint",
+      "rows.temperature.label",
+      "rows.thought_max_chars.hint",
+      "rows.thought_max_chars.label",
+      "rows.tool_call_density.hint",
+      "rows.tool_call_density.label",
+      "rows.tool_labels_locale.hint",
+      "rows.tool_labels_locale.label",
+      "rows.turn_metrics_preset.hint",
+      "rows.turn_metrics_preset.label",
+      "rows.turn_metrics_show_actions.hint",
+      "rows.turn_metrics_show_actions.label",
+      "rows.ui_corners.hint",
+      "rows.ui_corners.label",
+      "rows.ui_locale.hint",
+      "rows.ui_locale.label",
+      "rows.ui_theme.hint",
+      "rows.ui_theme.label",
+      "rows.user_message_align.hint",
+      "rows.user_message_align.label",
+      "rows.user_message_fill_background.hint",
+      "rows.user_message_fill_background.label",
+      "rows.user_message_max_width_pct.hint",
+      "rows.user_message_max_width_pct.label",
+      "rows.user_message_style.hint",
+      "rows.user_message_style.label",
+      "scope.chat",
+      "scope.project",
+      "scope.save_to",
+      "sections.agent_chat",
+      "sections.assistant_messages",
+      "sections.execution",
+      "sections.global",
+      "sections.labels_motion",
+      "sections.language",
+      "sections.mcp_servers",
+      "sections.prompt",
+      "sections.skills",
+      "sections.speech_to_text",
+      "sections.theme",
+      "sections.thinking",
+      "sections.your_messages",
+      "values.capture_device_default",
+      "values.chars_suffix",
+      "values.default_paren",
+      "values.driver_default",
+      "values.empty",
+      "values.enum_sep",
+      "values.silence_off",
+      "values.unlimited"
+    ],
+    "shell": [
+      "activity.decision",
+      "activity.generating_response",
+      "activity.mcp",
+      "activity.question",
+      "activity.skill",
+      "activity.thinking",
+      "activity.tool",
+      "chat.author_summary",
+      "chat.author_you",
+      "chat.thinking",
+      "composer_menu.mcp_servers",
+      "composer_menu.skills",
+      "composer_menu.skills_hint",
+      "context.conversation",
+      "context.skills",
+      "context.system_prompt",
+      "context.title",
+      "context.tools_mcp",
+      "empty.hint_send",
+      "empty.quick_analyze_git",
+      "empty.quick_generate_tests",
+      "empty.quick_index_codebase",
+      "empty.uncommitted_many",
+      "empty.uncommitted_one",
+      "footer.shortcuts_default",
+      "metrics.tok_per_sec",
+      "question.custom_label",
+      "question.custom_placeholder",
+      "question.footer_apply",
+      "session_menu.delete",
+      "session_menu.open",
+      "sidebar.agent_laya",
+      "sidebar.connected",
+      "sidebar.decisions",
+      "sidebar.empty_inactive",
+      "sidebar.empty_none",
+      "sidebar.lsp",
+      "sidebar.mcp_not_connected",
+      "sidebar.mcp_title",
+      "sidebar.mcp_title_count",
+      "sidebar.new_session",
+      "sidebar.projects",
+      "sidebar.projects_menu_hint",
+      "sidebar.skills",
+      "status.agent_failed_prefix",
+      "status.agent_still_starting",
+      "status.answer_question",
+      "status.compacted_ok",
+      "status.compacting",
+      "status.compaction_failed",
+      "status.composer_submit",
+      "status.could_not_load_decisions",
+      "status.could_not_load_skills",
+      "status.could_not_send_answer",
+      "status.enter_queues_message",
+      "status.failed_create_session_prefix",
+      "status.failed_delete_session_prefix",
+      "status.failed_switch_session_prefix",
+      "status.generating_esc_stop",
+      "status.generating_with_queue",
+      "status.init_failed_prefix",
+      "status.recording_hint",
+      "status.request_failed",
+      "status.response_copied",
+      "status.speech_input",
+      "status.starting",
+      "status.starting_agent",
+      "status.transcription_inserted",
+      "status.voice_input_off",
+      "status.wait_before_compact"
+    ],
+    "tools": [
+      "metrics.ctx",
+      "metrics.ctx_pair",
+      "metrics.ctx_pct",
+      "metrics.generation",
+      "metrics.step_one",
+      "metrics.steps_many",
+      "metrics.thought",
+      "metrics.tok",
+      "metrics.tok_in",
+      "metrics.tok_per_sec",
+      "metrics.tool_one",
+      "metrics.tool_time",
+      "metrics.tools_many",
+      "metrics.total",
+      "metrics.wait",
+      "names.ask_user",
+      "names.batch_edit",
+      "names.bg_process",
+      "names.decide",
+      "names.decision_remember",
+      "names.delegate_task",
+      "names.edit_file",
+      "names.file_outline",
+      "names.generate_image",
+      "names.git_inspect",
+      "names.glob_search",
+      "names.go_symbol_intel",
+      "names.grep",
+      "names.invoke_skill",
+      "names.list_dir",
+      "names.list_mcp_resources",
+      "names.manage_file",
+      "names.memory_recall",
+      "names.memory_remember",
+      "names.memory_revise",
+      "names.rag_index",
+      "names.rag_search",
+      "names.read_file",
+      "names.read_mcp_resource",
+      "names.run_tests",
+      "names.shell",
+      "names.skill_search",
+      "names.todo_plan",
+      "names.turn_route",
+      "names.web_fetch",
+      "names.workspace_checkpoint",
+      "names.write_file",
+      "scopes.decision",
+      "scopes.mcp",
+      "scopes.question",
+      "scopes.skill",
+      "scopes.thinking",
+      "scopes.tool"
+    ]
+  },
+  "keys": [
+    {
+      "module": "common",
+      "key": "app.settings_apply_hint",
+      "en": "Ctrl+S apply  ·  Esc close"
+    },
+    {
+      "module": "common",
+      "key": "app.settings_footer_apply",
+      "en": " Ctrl+S: apply "
+    },
+    {
+      "module": "common",
+      "key": "app.settings_footer_help",
+      "en": " Esc: close   Tab: pane   Space/Enter: change   <-/->: cycle"
+    },
+    {
+      "module": "common",
+      "key": "app.settings_title",
+      "en": "Settings"
+    },
+    {
+      "module": "common",
+      "key": "app.sidebar_settings",
+      "en": "Settings"
+    },
+    {
+      "module": "common",
+      "key": "composer.placeholder",
+      "en": "Write a message..."
+    },
+    {
+      "module": "common",
+      "key": "locale_names.ar",
+      "en": "العربية"
+    },
+    {
+      "module": "common",
+      "key": "locale_names.de",
+      "en": "Deutsch"
+    },
+    {
+      "module": "common",
+      "key": "locale_names.en",
+      "en": "English"
+    },
+    {
+      "module": "common",
+      "key": "locale_names.es",
+      "en": "Español"
+    },
+    {
+      "module": "common",
+      "key": "locale_names.fr",
+      "en": "Français"
+    },
+    {
+      "module": "common",
+      "key": "locale_names.hi",
+      "en": "हिन्दी"
+    },
+    {
+      "module": "common",
+      "key": "locale_names.id",
+      "en": "Bahasa Indonesia"
+    },
+    {
+      "module": "common",
+      "key": "locale_names.it",
+      "en": "Italiano"
+    },
+    {
+      "module": "common",
+      "key": "locale_names.ja",
+      "en": "日本語"
+    },
+    {
+      "module": "common",
+      "key": "locale_names.nl",
+      "en": "Nederlands"
+    },
+    {
+      "module": "common",
+      "key": "locale_names.pl",
+      "en": "Polski"
+    },
+    {
+      "module": "common",
+      "key": "locale_names.pt",
+      "en": "Português"
+    },
+    {
+      "module": "common",
+      "key": "locale_names.ru",
+      "en": "Русский"
+    },
+    {
+      "module": "common",
+      "key": "locale_names.tr",
+      "en": "Türkçe"
+    },
+    {
+      "module": "common",
+      "key": "locale_names.vi",
+      "en": "Tiếng Việt"
+    },
+    {
+      "module": "common",
+      "key": "locale_names.zh",
+      "en": "简体中文"
+    },
+    {
+      "module": "common",
+      "key": "theme_picker.draft_saved",
+      "en": "Draft saved — Esc restores your message"
+    },
+    {
+      "module": "common",
+      "key": "theme_picker.filter_placeholder",
+      "en": "Filter color themes..."
+    },
+    {
+      "module": "common",
+      "key": "theme_picker.filter_placeholder_draft",
+      "en": "Filter themes — Esc restores your message"
+    },
+    {
+      "module": "common",
+      "key": "theme_picker.no_matches",
+      "en": "(no matches)"
+    },
+    {
+      "module": "common",
+      "key": "theme_picker.title",
+      "en": "Color themes"
+    },
+    {
+      "module": "settings",
+      "key": "categories.agent",
+      "en": "Agent & Behaviour"
+    },
+    {
+      "module": "settings",
+      "key": "categories.agent_short",
+      "en": "Agent"
+    },
+    {
+      "module": "settings",
+      "key": "categories.appearance",
+      "en": "Appearance"
+    },
+    {
+      "module": "settings",
+      "key": "categories.appearance_short",
+      "en": "Look"
+    },
+    {
+      "module": "settings",
+      "key": "categories.audio",
+      "en": "Audio & Speech"
+    },
+    {
+      "module": "settings",
+      "key": "categories.audio_short",
+      "en": "Audio"
+    },
+    {
+      "module": "settings",
+      "key": "categories.general",
+      "en": "General & Chat"
+    },
+    {
+      "module": "settings",
+      "key": "categories.general_short",
+      "en": "General"
+    },
+    {
+      "module": "settings",
+      "key": "categories.model",
+      "en": "Model"
+    },
+    {
+      "module": "settings",
+      "key": "categories.shortcuts",
+      "en": "Keyboard Shortcuts"
+    },
+    {
+      "module": "settings",
+      "key": "categories.shortcuts_short",
+      "en": "Keys"
+    },
+    {
+      "module": "settings",
+      "key": "categories.tools",
+      "en": "Tools & Skills"
+    },
+    {
+      "module": "settings",
+      "key": "categories.tools_short",
+      "en": "Tools"
+    },
+    {
+      "module": "settings",
+      "key": "empty.mcp_none",
+      "en": "(none connected)"
+    },
+    {
+      "module": "settings",
+      "key": "empty.skills_none",
+      "en": "(none loaded)"
+    },
+    {
+      "module": "settings",
+      "key": "nav.categories",
+      "en": "Categories"
+    },
+    {
+      "module": "settings",
+      "key": "options.auto_compact.off",
+      "en": "Off"
+    },
+    {
+      "module": "settings",
+      "key": "options.bool.off",
+      "en": "Off"
+    },
+    {
+      "module": "settings",
+      "key": "options.bool.on",
+      "en": "On"
+    },
+    {
+      "module": "settings",
+      "key": "options.chain_of_thought.full",
+      "en": "Native"
+    },
+    {
+      "module": "settings",
+      "key": "options.chain_of_thought.off",
+      "en": "Off"
+    },
+    {
+      "module": "settings",
+      "key": "options.chain_of_thought.prompt",
+      "en": "Prompt"
+    },
+    {
+      "module": "settings",
+      "key": "options.chat_width.auto",
+      "en": "Auto"
+    },
+    {
+      "module": "settings",
+      "key": "options.chat_width.medium",
+      "en": "Medium"
+    },
+    {
+      "module": "settings",
+      "key": "options.chat_width.narrow",
+      "en": "Narrow"
+    },
+    {
+      "module": "settings",
+      "key": "options.chat_width.wide",
+      "en": "Wide"
+    },
+    {
+      "module": "settings",
+      "key": "options.mcp_tool_state.allowed",
+      "en": "Allowed"
+    },
+    {
+      "module": "settings",
+      "key": "options.mcp_tool_state.blocked",
+      "en": "Blocked"
+    },
+    {
+      "module": "settings",
+      "key": "options.message_align.auto",
+      "en": "Auto"
+    },
+    {
+      "module": "settings",
+      "key": "options.message_align.center",
+      "en": "Center"
+    },
+    {
+      "module": "settings",
+      "key": "options.message_align.left",
+      "en": "Left"
+    },
+    {
+      "module": "settings",
+      "key": "options.message_align.right",
+      "en": "Right"
+    },
+    {
+      "module": "settings",
+      "key": "options.message_style.block",
+      "en": "Block"
+    },
+    {
+      "module": "settings",
+      "key": "options.message_style.card",
+      "en": "Card"
+    },
+    {
+      "module": "settings",
+      "key": "options.message_style.chat",
+      "en": "Chat"
+    },
+    {
+      "module": "settings",
+      "key": "options.message_style.cornered",
+      "en": "Cornered"
+    },
+    {
+      "module": "settings",
+      "key": "options.message_style.header",
+      "en": "Header"
+    },
+    {
+      "module": "settings",
+      "key": "options.message_style.log",
+      "en": "Log"
+    },
+    {
+      "module": "settings",
+      "key": "options.message_style.plain",
+      "en": "Plain"
+    },
+    {
+      "module": "settings",
+      "key": "options.message_style.section",
+      "en": "Section"
+    },
+    {
+      "module": "settings",
+      "key": "options.message_style.terminal",
+      "en": "Terminal"
+    },
+    {
+      "module": "settings",
+      "key": "options.message_time_clock.12h",
+      "en": "12-hour (AM/PM)"
+    },
+    {
+      "module": "settings",
+      "key": "options.message_time_clock.24h",
+      "en": "24-hour"
+    },
+    {
+      "module": "settings",
+      "key": "options.presentation.bubbles",
+      "en": "Bubbles"
+    },
+    {
+      "module": "settings",
+      "key": "options.presentation.markdown",
+      "en": "Markdown"
+    },
+    {
+      "module": "settings",
+      "key": "options.presentation.minimal",
+      "en": "Minimal"
+    },
+    {
+      "module": "settings",
+      "key": "options.presentation.narrative",
+      "en": "Narrative"
+    },
+    {
+      "module": "settings",
+      "key": "options.presentation.story",
+      "en": "Story"
+    },
+    {
+      "module": "settings",
+      "key": "options.presentation.whatsapp",
+      "en": "Conversational"
+    },
+    {
+      "module": "settings",
+      "key": "options.skill_state.auto",
+      "en": "Default"
+    },
+    {
+      "module": "settings",
+      "key": "options.skill_state.off",
+      "en": "Blocked"
+    },
+    {
+      "module": "settings",
+      "key": "options.skill_state.pinned",
+      "en": "Pinned"
+    },
+    {
+      "module": "settings",
+      "key": "options.stt_language.auto",
+      "en": "Auto-detect"
+    },
+    {
+      "module": "settings",
+      "key": "options.stt_quality.balanced",
+      "en": "Balanced"
+    },
+    {
+      "module": "settings",
+      "key": "options.stt_quality.careful",
+      "en": "Careful"
+    },
+    {
+      "module": "settings",
+      "key": "options.stt_quality.default",
+      "en": "(default)"
+    },
+    {
+      "module": "settings",
+      "key": "options.stt_quality.fast",
+      "en": "Fast"
+    },
+    {
+      "module": "settings",
+      "key": "options.tool_call_density.compact",
+      "en": "Compact"
+    },
+    {
+      "module": "settings",
+      "key": "options.tool_call_density.detailed",
+      "en": "Detailed"
+    },
+    {
+      "module": "settings",
+      "key": "options.turn_metrics_preset.compact",
+      "en": "Compact"
+    },
+    {
+      "module": "settings",
+      "key": "options.turn_metrics_preset.dev",
+      "en": "Dev"
+    },
+    {
+      "module": "settings",
+      "key": "options.turn_metrics_preset.off",
+      "en": "Off"
+    },
+    {
+      "module": "settings",
+      "key": "options.ui_corners.flat",
+      "en": "Flat"
+    },
+    {
+      "module": "settings",
+      "key": "options.ui_corners.rounded",
+      "en": "Rounded"
+    },
+    {
+      "module": "settings",
+      "key": "options.ui_corners.square",
+      "en": "Square"
+    },
+    {
+      "module": "settings",
+      "key": "rows.assistant_message_align.hint",
+      "en": "Horizontal placement; {auto} follows the role (you: right, assistant: left)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.assistant_message_align.label",
+      "en": "Alignment"
+    },
+    {
+      "module": "settings",
+      "key": "rows.assistant_message_fill_background.hint",
+      "en": "{on}: solid fill behind your message frame (border included). {off}: outline only on the chat background."
+    },
+    {
+      "module": "settings",
+      "key": "rows.assistant_message_fill_background.label",
+      "en": "Fill background"
+    },
+    {
+      "module": "settings",
+      "key": "rows.assistant_message_max_width_pct.hint",
+      "en": "<-/-> or click the bar to set max bubble width (40–100%)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.assistant_message_max_width_pct.label",
+      "en": "Max width"
+    },
+    {
+      "module": "settings",
+      "key": "rows.assistant_message_style.hint",
+      "en": "Bubble chrome for this role ({examples}, ...)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.assistant_message_style.label",
+      "en": "Message style"
+    },
+    {
+      "module": "settings",
+      "key": "rows.auto_compact_context_pct.hint",
+      "en": "When context fills this % of the window, summarize older turns automatically."
+    },
+    {
+      "module": "settings",
+      "key": "rows.auto_compact_context_pct.label",
+      "en": "Auto-compact"
+    },
+    {
+      "module": "settings",
+      "key": "rows.chain_of_thought.hint",
+      "en": "How reasoning is exposed ({modes})."
+    },
+    {
+      "module": "settings",
+      "key": "rows.chain_of_thought.label",
+      "en": "Chain of thought"
+    },
+    {
+      "module": "settings",
+      "key": "rows.chat_width.hint",
+      "en": "Maximum width of the chat column (terminal cells)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.chat_width.label",
+      "en": "Chat width"
+    },
+    {
+      "module": "settings",
+      "key": "rows.code_block_wrap.hint",
+      "en": "Wrap long lines inside fenced code blocks."
+    },
+    {
+      "module": "settings",
+      "key": "rows.code_block_wrap.label",
+      "en": "Code wrap"
+    },
+    {
+      "module": "settings",
+      "key": "rows.context_window.hint",
+      "en": "Enter: type token limit. <-/->: adjust in steps."
+    },
+    {
+      "module": "settings",
+      "key": "rows.context_window.label",
+      "en": "Context window"
+    },
+    {
+      "module": "settings",
+      "key": "rows.context_window_fixed.hint",
+      "en": "Context window is fixed by the model catalog."
+    },
+    {
+      "module": "settings",
+      "key": "rows.context_window_fixed.label",
+      "en": "Context window"
+    },
+    {
+      "module": "settings",
+      "key": "rows.decisions_enabled.hint",
+      "en": "Allow the agent to record project decisions."
+    },
+    {
+      "module": "settings",
+      "key": "rows.decisions_enabled.label",
+      "en": "Decisions"
+    },
+    {
+      "module": "settings",
+      "key": "rows.key_open_theme_picker.hint",
+      "en": "Global shortcut to open the color theme picker (e.g. Ctrl+T)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.key_open_theme_picker.label",
+      "en": "Theme picker shortcut"
+    },
+    {
+      "module": "settings",
+      "key": "rows.max_steps.hint",
+      "en": "Maximum autonomous tool-call steps per request."
+    },
+    {
+      "module": "settings",
+      "key": "rows.max_steps.label",
+      "en": "Max steps"
+    },
+    {
+      "module": "settings",
+      "key": "rows.max_tokens.hint",
+      "en": "Maximum tokens per model response."
+    },
+    {
+      "module": "settings",
+      "key": "rows.max_tokens.label",
+      "en": "Max tokens"
+    },
+    {
+      "module": "settings",
+      "key": "rows.mcp_toggle.hint",
+      "en": "Space: enable server for this chat. Enter: expand or collapse tools."
+    },
+    {
+      "module": "settings",
+      "key": "rows.mcp_toggle.label",
+      "en": ""
+    },
+    {
+      "module": "settings",
+      "key": "rows.mcp_tool_toggle.hint",
+      "en": "Space: allow or block this tool for the chat."
+    },
+    {
+      "module": "settings",
+      "key": "rows.mcp_tool_toggle.label",
+      "en": ""
+    },
+    {
+      "module": "settings",
+      "key": "rows.memory_enabled.hint",
+      "en": "Enable long-term memory for this chat."
+    },
+    {
+      "module": "settings",
+      "key": "rows.memory_enabled.label",
+      "en": "Memory"
+    },
+    {
+      "module": "settings",
+      "key": "rows.message_time_clock.hint",
+      "en": "24-hour clock or 12-hour with AM/PM."
+    },
+    {
+      "module": "settings",
+      "key": "rows.message_time_clock.label",
+      "en": "Clock format"
+    },
+    {
+      "module": "settings",
+      "key": "rows.message_timestamps.hint",
+      "en": "Show send time on your message bubbles."
+    },
+    {
+      "module": "settings",
+      "key": "rows.message_timestamps.label",
+      "en": "Timestamps"
+    },
+    {
+      "module": "settings",
+      "key": "rows.model.hint",
+      "en": "Enter/Space: pick model. Click (?): Wuji catalog details."
+    },
+    {
+      "module": "settings",
+      "key": "rows.model.label",
+      "en": "Model"
+    },
+    {
+      "module": "settings",
+      "key": "rows.presentation.hint",
+      "en": "How assistant messages are rendered in this chat."
+    },
+    {
+      "module": "settings",
+      "key": "rows.presentation.label",
+      "en": "Presentation"
+    },
+    {
+      "module": "settings",
+      "key": "rows.preset_combo.hint",
+      "en": "Cycle presets, YAML templates, and presentation styles."
+    },
+    {
+      "module": "settings",
+      "key": "rows.preset_combo.label",
+      "en": "Preset & template"
+    },
+    {
+      "module": "settings",
+      "key": "rows.project_provider.hint",
+      "en": "Enter: fuzzy picker  <-/->: cycle provider."
+    },
+    {
+      "module": "settings",
+      "key": "rows.project_provider.label",
+      "en": "Default provider"
+    },
+    {
+      "module": "settings",
+      "key": "rows.provider.hint",
+      "en": "Enter: fuzzy picker  <-/->: cycle provider."
+    },
+    {
+      "module": "settings",
+      "key": "rows.provider.label",
+      "en": "Provider"
+    },
+    {
+      "module": "settings",
+      "key": "rows.reduce_motion.hint",
+      "en": "Minimize interface motion (reserved for future animations)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.reduce_motion.label",
+      "en": "Reduce motion"
+    },
+    {
+      "module": "settings",
+      "key": "rows.session_name.hint",
+      "en": "Display name for this chat session."
+    },
+    {
+      "module": "settings",
+      "key": "rows.session_name.label",
+      "en": "Chat name"
+    },
+    {
+      "module": "settings",
+      "key": "rows.skill_toggle.hint",
+      "en": "Restrict skills to an allowlist, or allow all."
+    },
+    {
+      "module": "settings",
+      "key": "rows.skill_toggle.label",
+      "en": ""
+    },
+    {
+      "module": "settings",
+      "key": "rows.sticky_user_message.hint",
+      "en": "Pin the top of your last scrolled prompt while reading long replies."
+    },
+    {
+      "module": "settings",
+      "key": "rows.sticky_user_message.label",
+      "en": "Sticky prompt"
+    },
+    {
+      "module": "settings",
+      "key": "rows.stt_capture_device.hint",
+      "en": "Audio input device name or path (empty = system default)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.stt_capture_device.label",
+      "en": "Capture device"
+    },
+    {
+      "module": "settings",
+      "key": "rows.stt_driver.hint",
+      "en": "Wuji driver for wuji text --audio (e.g. llama). Saves capability_drivers.text on apply."
+    },
+    {
+      "module": "settings",
+      "key": "rows.stt_driver.label",
+      "en": "STT driver"
+    },
+    {
+      "module": "settings",
+      "key": "rows.stt_enabled.hint",
+      "en": "Microphone button in the chat input (|O|)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.stt_enabled.label",
+      "en": "Voice input enabled"
+    },
+    {
+      "module": "settings",
+      "key": "rows.stt_language.hint",
+      "en": "Hint language for transcription; {auto_lang} uses automatic detection."
+    },
+    {
+      "module": "settings",
+      "key": "rows.stt_language.label",
+      "en": "Transcription language"
+    },
+    {
+      "module": "settings",
+      "key": "rows.stt_model.hint",
+      "en": "Model id passed to the STT driver (empty = driver default)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.stt_model.label",
+      "en": "STT model"
+    },
+    {
+      "module": "settings",
+      "key": "rows.stt_quality.hint",
+      "en": "Speed vs accuracy preset for transcription (driver-dependent)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.stt_quality.label",
+      "en": "Transcription quality"
+    },
+    {
+      "module": "settings",
+      "key": "rows.stt_sample_rate.hint",
+      "en": "Capture sample rate in Hz (8000–48000)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.stt_sample_rate.label",
+      "en": "Sample rate"
+    },
+    {
+      "module": "settings",
+      "key": "rows.stt_silence_level.hint",
+      "en": "Volume threshold for silence detection when trim is on."
+    },
+    {
+      "module": "settings",
+      "key": "rows.stt_silence_level.label",
+      "en": "Silence level"
+    },
+    {
+      "module": "settings",
+      "key": "rows.stt_trim_silence.hint",
+      "en": "Drop leading/trailing silence from recorded audio before STT."
+    },
+    {
+      "module": "settings",
+      "key": "rows.stt_trim_silence.label",
+      "en": "Trim silence"
+    },
+    {
+      "module": "settings",
+      "key": "rows.system_prompt_extra.hint",
+      "en": "Extra system instructions appended for this chat."
+    },
+    {
+      "module": "settings",
+      "key": "rows.system_prompt_extra.label",
+      "en": "System prompt extra"
+    },
+    {
+      "module": "settings",
+      "key": "rows.temperature.hint",
+      "en": "Sampling temperature; lower is more deterministic."
+    },
+    {
+      "module": "settings",
+      "key": "rows.temperature.label",
+      "en": "Temperature"
+    },
+    {
+      "module": "settings",
+      "key": "rows.thought_max_chars.hint",
+      "en": "Cap visible chain-of-thought length (0 = unlimited)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.thought_max_chars.label",
+      "en": "Thought max chars"
+    },
+    {
+      "module": "settings",
+      "key": "rows.tool_call_density.hint",
+      "en": "Compact or detailed tool-call lines in the activity log."
+    },
+    {
+      "module": "settings",
+      "key": "rows.tool_call_density.label",
+      "en": "Tool call density"
+    },
+    {
+      "module": "settings",
+      "key": "rows.tool_labels_locale.hint",
+      "en": "Language for tool status labels in the UI."
+    },
+    {
+      "module": "settings",
+      "key": "rows.tool_labels_locale.label",
+      "en": "Tool labels"
+    },
+    {
+      "module": "settings",
+      "key": "rows.turn_metrics_preset.hint",
+      "en": "Verbosity of per-turn metrics in the chat log."
+    },
+    {
+      "module": "settings",
+      "key": "rows.turn_metrics_preset.label",
+      "en": "Turn metrics"
+    },
+    {
+      "module": "settings",
+      "key": "rows.turn_metrics_show_actions.hint",
+      "en": "Show redo/copy controls under finished turns."
+    },
+    {
+      "module": "settings",
+      "key": "rows.turn_metrics_show_actions.label",
+      "en": "Turn actions"
+    },
+    {
+      "module": "settings",
+      "key": "rows.ui_corners.hint",
+      "en": "Square or rounded frame, or flat fill without an outer border."
+    },
+    {
+      "module": "settings",
+      "key": "rows.ui_corners.label",
+      "en": "Corner style"
+    },
+    {
+      "module": "settings",
+      "key": "rows.ui_locale.hint",
+      "en": "Language for settings labels and common UI text."
+    },
+    {
+      "module": "settings",
+      "key": "rows.ui_locale.label",
+      "en": "Interface language"
+    },
+    {
+      "module": "settings",
+      "key": "rows.ui_theme.hint",
+      "en": "Enter: fuzzy search themes. <-/->: cycle. User themes: ~/.config/taiji/themes/"
+    },
+    {
+      "module": "settings",
+      "key": "rows.ui_theme.label",
+      "en": "Color theme"
+    },
+    {
+      "module": "settings",
+      "key": "rows.user_message_align.hint",
+      "en": "Horizontal placement; {auto} follows the role (you: right, assistant: left)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.user_message_align.label",
+      "en": "Alignment"
+    },
+    {
+      "module": "settings",
+      "key": "rows.user_message_fill_background.hint",
+      "en": "{on}: solid fill behind your message frame (border included). {off}: outline only on the chat background."
+    },
+    {
+      "module": "settings",
+      "key": "rows.user_message_fill_background.label",
+      "en": "Fill background"
+    },
+    {
+      "module": "settings",
+      "key": "rows.user_message_max_width_pct.hint",
+      "en": "<-/-> or click the bar to set max bubble width (40–100%)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.user_message_max_width_pct.label",
+      "en": "Max width"
+    },
+    {
+      "module": "settings",
+      "key": "rows.user_message_style.hint",
+      "en": "Bubble chrome for this role ({examples}, ...)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.user_message_style.label",
+      "en": "Message style"
+    },
+    {
+      "module": "settings",
+      "key": "scope.chat",
+      "en": "Chat"
+    },
+    {
+      "module": "settings",
+      "key": "scope.project",
+      "en": "Project"
+    },
+    {
+      "module": "settings",
+      "key": "scope.save_to",
+      "en": "Save to:"
+    },
+    {
+      "module": "settings",
+      "key": "sections.agent_chat",
+      "en": "Agent & Chat"
+    },
+    {
+      "module": "settings",
+      "key": "sections.assistant_messages",
+      "en": "Assistant messages"
+    },
+    {
+      "module": "settings",
+      "key": "sections.execution",
+      "en": "Execution"
+    },
+    {
+      "module": "settings",
+      "key": "sections.global",
+      "en": "Global"
+    },
+    {
+      "module": "settings",
+      "key": "sections.labels_motion",
+      "en": "Labels & Motion"
+    },
+    {
+      "module": "settings",
+      "key": "sections.language",
+      "en": "Language"
+    },
+    {
+      "module": "settings",
+      "key": "sections.mcp_servers",
+      "en": "MCP Servers"
+    },
+    {
+      "module": "settings",
+      "key": "sections.prompt",
+      "en": "Prompt"
+    },
+    {
+      "module": "settings",
+      "key": "sections.skills",
+      "en": "Skills"
+    },
+    {
+      "module": "settings",
+      "key": "sections.speech_to_text",
+      "en": "Speech-to-text (Wuji)"
+    },
+    {
+      "module": "settings",
+      "key": "sections.theme",
+      "en": "Theme"
+    },
+    {
+      "module": "settings",
+      "key": "sections.thinking",
+      "en": "Thinking"
+    },
+    {
+      "module": "settings",
+      "key": "sections.your_messages",
+      "en": "Your messages"
+    },
+    {
+      "module": "settings",
+      "key": "values.capture_device_default",
+      "en": "default"
+    },
+    {
+      "module": "settings",
+      "key": "values.chars_suffix",
+      "en": "{count} chars"
+    },
+    {
+      "module": "settings",
+      "key": "values.default_paren",
+      "en": "(default)"
+    },
+    {
+      "module": "settings",
+      "key": "values.driver_default",
+      "en": "(driver default)"
+    },
+    {
+      "module": "settings",
+      "key": "values.empty",
+      "en": "(empty)"
+    },
+    {
+      "module": "settings",
+      "key": "values.enum_sep",
+      "en": ", "
+    },
+    {
+      "module": "settings",
+      "key": "values.silence_off",
+      "en": "0 (off)"
+    },
+    {
+      "module": "settings",
+      "key": "values.unlimited",
+      "en": "0 (unlimited)"
+    },
+    {
+      "module": "shell",
+      "key": "activity.decision",
+      "en": "Decision"
+    },
+    {
+      "module": "shell",
+      "key": "activity.generating_response",
+      "en": "Generating response..."
+    },
+    {
+      "module": "shell",
+      "key": "activity.mcp",
+      "en": "MCP"
+    },
+    {
+      "module": "shell",
+      "key": "activity.question",
+      "en": "Question"
+    },
+    {
+      "module": "shell",
+      "key": "activity.skill",
+      "en": "Skill"
+    },
+    {
+      "module": "shell",
+      "key": "activity.thinking",
+      "en": "Thinking"
+    },
+    {
+      "module": "shell",
+      "key": "activity.tool",
+      "en": "Tool"
+    },
+    {
+      "module": "shell",
+      "key": "chat.author_summary",
+      "en": "summary"
+    },
+    {
+      "module": "shell",
+      "key": "chat.author_you",
+      "en": "You"
+    },
+    {
+      "module": "shell",
+      "key": "chat.thinking",
+      "en": "Thinking"
+    },
+    {
+      "module": "shell",
+      "key": "composer_menu.mcp_servers",
+      "en": "MCP servers"
+    },
+    {
+      "module": "shell",
+      "key": "composer_menu.skills",
+      "en": "Skills"
+    },
+    {
+      "module": "shell",
+      "key": "composer_menu.skills_hint",
+      "en": "Force a skill"
+    },
+    {
+      "module": "shell",
+      "key": "context.conversation",
+      "en": "Conversation"
+    },
+    {
+      "module": "shell",
+      "key": "context.skills",
+      "en": "Skills"
+    },
+    {
+      "module": "shell",
+      "key": "context.system_prompt",
+      "en": "System prompt"
+    },
+    {
+      "module": "shell",
+      "key": "context.title",
+      "en": "CONTEXT"
+    },
+    {
+      "module": "shell",
+      "key": "context.tools_mcp",
+      "en": "Tool definitions & MCP"
+    },
+    {
+      "module": "shell",
+      "key": "empty.hint_send",
+      "en": "Send a message to start"
+    },
+    {
+      "module": "shell",
+      "key": "empty.quick_analyze_git",
+      "en": "Analyze git diff"
+    },
+    {
+      "module": "shell",
+      "key": "empty.quick_generate_tests",
+      "en": "Generate tests"
+    },
+    {
+      "module": "shell",
+      "key": "empty.quick_index_codebase",
+      "en": "Index codebase"
+    },
+    {
+      "module": "shell",
+      "key": "empty.uncommitted_many",
+      "en": "{count} uncommitted changes"
+    },
+    {
+      "module": "shell",
+      "key": "empty.uncommitted_one",
+      "en": "{count} uncommitted change"
+    },
+    {
+      "module": "shell",
+      "key": "footer.shortcuts_default",
+      "en": "Tab: focus · Shift+Enter: newline · Enter: send · Esc: stop"
+    },
+    {
+      "module": "shell",
+      "key": "metrics.tok_per_sec",
+      "en": "{value} tok/s"
+    },
+    {
+      "module": "shell",
+      "key": "question.custom_label",
+      "en": "Custom answer"
+    },
+    {
+      "module": "shell",
+      "key": "question.custom_placeholder",
+      "en": "Custom answer..."
+    },
+    {
+      "module": "shell",
+      "key": "question.footer_apply",
+      "en": "Enter: apply  ·  Esc: back"
+    },
+    {
+      "module": "shell",
+      "key": "session_menu.delete",
+      "en": "Delete"
+    },
+    {
+      "module": "shell",
+      "key": "session_menu.open",
+      "en": "Open"
+    },
+    {
+      "module": "shell",
+      "key": "sidebar.agent_laya",
+      "en": "AGENT & LAYA"
+    },
+    {
+      "module": "shell",
+      "key": "sidebar.connected",
+      "en": "Connected"
+    },
+    {
+      "module": "shell",
+      "key": "sidebar.decisions",
+      "en": "Decisions"
+    },
+    {
+      "module": "shell",
+      "key": "sidebar.empty_inactive",
+      "en": "inactive"
+    },
+    {
+      "module": "shell",
+      "key": "sidebar.empty_none",
+      "en": "none"
+    },
+    {
+      "module": "shell",
+      "key": "sidebar.lsp",
+      "en": "LSP"
+    },
+    {
+      "module": "shell",
+      "key": "sidebar.mcp_not_connected",
+      "en": "not connected"
+    },
+    {
+      "module": "shell",
+      "key": "sidebar.mcp_title",
+      "en": "MCP"
+    },
+    {
+      "module": "shell",
+      "key": "sidebar.mcp_title_count",
+      "en": "MCP ({count})"
+    },
+    {
+      "module": "shell",
+      "key": "sidebar.new_session",
+      "en": "New Session"
+    },
+    {
+      "module": "shell",
+      "key": "sidebar.projects",
+      "en": "PROJECTS"
+    },
+    {
+      "module": "shell",
+      "key": "sidebar.projects_menu_hint",
+      "en": "R-Click: menu"
+    },
+    {
+      "module": "shell",
+      "key": "sidebar.skills",
+      "en": "Skills"
+    },
+    {
+      "module": "shell",
+      "key": "status.agent_failed_prefix",
+      "en": "Agent failed: "
+    },
+    {
+      "module": "shell",
+      "key": "status.agent_still_starting",
+      "en": "Agent is still starting..."
+    },
+    {
+      "module": "shell",
+      "key": "status.answer_question",
+      "en": "Answer the question  ·  Esc: cancel"
+    },
+    {
+      "module": "shell",
+      "key": "status.compacted_ok",
+      "en": "Conversation compacted."
+    },
+    {
+      "module": "shell",
+      "key": "status.compacting",
+      "en": "Compacting conversation..."
+    },
+    {
+      "module": "shell",
+      "key": "status.compaction_failed",
+      "en": "Compaction failed."
+    },
+    {
+      "module": "shell",
+      "key": "status.composer_submit",
+      "en": "[ Send ↵ ]  ·  Shift+Enter: newline  ·  Esc: stop"
+    },
+    {
+      "module": "shell",
+      "key": "status.could_not_load_decisions",
+      "en": "Could not load decisions."
+    },
+    {
+      "module": "shell",
+      "key": "status.could_not_load_skills",
+      "en": "Could not load skills."
+    },
+    {
+      "module": "shell",
+      "key": "status.could_not_send_answer",
+      "en": "Could not send answer"
+    },
+    {
+      "module": "shell",
+      "key": "status.enter_queues_message",
+      "en": "Enter queues another message"
+    },
+    {
+      "module": "shell",
+      "key": "status.failed_create_session_prefix",
+      "en": "Failed to create session: "
+    },
+    {
+      "module": "shell",
+      "key": "status.failed_delete_session_prefix",
+      "en": "Failed to delete session: "
+    },
+    {
+      "module": "shell",
+      "key": "status.failed_switch_session_prefix",
+      "en": "Failed to switch session: "
+    },
+    {
+      "module": "shell",
+      "key": "status.generating_esc_stop",
+      "en": "Generating...  ·  Esc to stop"
+    },
+    {
+      "module": "shell",
+      "key": "status.generating_with_queue",
+      "en": "Generating...  ·  {count} queued"
+    },
+    {
+      "module": "shell",
+      "key": "status.init_failed_prefix",
+      "en": "Init failed: "
+    },
+    {
+      "module": "shell",
+      "key": "status.recording_hint",
+      "en": "Recording... text updates while you speak. Press Stop when done."
+    },
+    {
+      "module": "shell",
+      "key": "status.request_failed",
+      "en": "Request failed"
+    },
+    {
+      "module": "shell",
+      "key": "status.response_copied",
+      "en": "Response copied"
+    },
+    {
+      "module": "shell",
+      "key": "status.speech_input",
+      "en": "Speech input..."
+    },
+    {
+      "module": "shell",
+      "key": "status.starting",
+      "en": "Starting..."
+    },
+    {
+      "module": "shell",
+      "key": "status.starting_agent",
+      "en": "Starting agent..."
+    },
+    {
+      "module": "shell",
+      "key": "status.transcription_inserted",
+      "en": "Transcription inserted."
+    },
+    {
+      "module": "shell",
+      "key": "status.voice_input_off",
+      "en": "Voice input is off (Settings -> Audio)."
+    },
+    {
+      "module": "shell",
+      "key": "status.wait_before_compact",
+      "en": "Wait for the current reply before compacting."
+    },
+    {
+      "module": "tools",
+      "key": "metrics.ctx",
+      "en": " ctx"
+    },
+    {
+      "module": "tools",
+      "key": "metrics.ctx_pair",
+      "en": "%s / %s ctx"
+    },
+    {
+      "module": "tools",
+      "key": "metrics.ctx_pct",
+      "en": "%.0f%% ctx"
+    },
+    {
+      "module": "tools",
+      "key": "metrics.generation",
+      "en": "generating"
+    },
+    {
+      "module": "tools",
+      "key": "metrics.step_one",
+      "en": "1 step"
+    },
+    {
+      "module": "tools",
+      "key": "metrics.steps_many",
+      "en": "%d steps"
+    },
+    {
+      "module": "tools",
+      "key": "metrics.thought",
+      "en": "thought"
+    },
+    {
+      "module": "tools",
+      "key": "metrics.tok",
+      "en": "tok"
+    },
+    {
+      "module": "tools",
+      "key": "metrics.tok_in",
+      "en": "in"
+    },
+    {
+      "module": "tools",
+      "key": "metrics.tok_per_sec",
+      "en": "%.1f tok/s"
+    },
+    {
+      "module": "tools",
+      "key": "metrics.tool_one",
+      "en": "1 tool"
+    },
+    {
+      "module": "tools",
+      "key": "metrics.tool_time",
+      "en": " tools"
+    },
+    {
+      "module": "tools",
+      "key": "metrics.tools_many",
+      "en": "%d tools"
+    },
+    {
+      "module": "tools",
+      "key": "metrics.total",
+      "en": "total"
+    },
+    {
+      "module": "tools",
+      "key": "metrics.wait",
+      "en": "loading"
+    },
+    {
+      "module": "tools",
+      "key": "names.ask_user",
+      "en": "Ask"
+    },
+    {
+      "module": "tools",
+      "key": "names.batch_edit",
+      "en": "Batch edit"
+    },
+    {
+      "module": "tools",
+      "key": "names.bg_process",
+      "en": "Background"
+    },
+    {
+      "module": "tools",
+      "key": "names.decide",
+      "en": "Decide"
+    },
+    {
+      "module": "tools",
+      "key": "names.decision_remember",
+      "en": "Save decision"
+    },
+    {
+      "module": "tools",
+      "key": "names.delegate_task",
+      "en": "Delegate"
+    },
+    {
+      "module": "tools",
+      "key": "names.edit_file",
+      "en": "Edit"
+    },
+    {
+      "module": "tools",
+      "key": "names.file_outline",
+      "en": "Outline"
+    },
+    {
+      "module": "tools",
+      "key": "names.generate_image",
+      "en": "Generate image"
+    },
+    {
+      "module": "tools",
+      "key": "names.git_inspect",
+      "en": "Git Inspect"
+    },
+    {
+      "module": "tools",
+      "key": "names.glob_search",
+      "en": "Find files"
+    },
+    {
+      "module": "tools",
+      "key": "names.go_symbol_intel",
+      "en": "Symbol Intel"
+    },
+    {
+      "module": "tools",
+      "key": "names.grep",
+      "en": "Search"
+    },
+    {
+      "module": "tools",
+      "key": "names.invoke_skill",
+      "en": "Skill"
+    },
+    {
+      "module": "tools",
+      "key": "names.list_dir",
+      "en": "List"
+    },
+    {
+      "module": "tools",
+      "key": "names.list_mcp_resources",
+      "en": "List MCP resources"
+    },
+    {
+      "module": "tools",
+      "key": "names.manage_file",
+      "en": "Manage file"
+    },
+    {
+      "module": "tools",
+      "key": "names.memory_recall",
+      "en": "Recall"
+    },
+    {
+      "module": "tools",
+      "key": "names.memory_remember",
+      "en": "Remember"
+    },
+    {
+      "module": "tools",
+      "key": "names.memory_revise",
+      "en": "Revise memory"
+    },
+    {
+      "module": "tools",
+      "key": "names.rag_index",
+      "en": "Index docs"
+    },
+    {
+      "module": "tools",
+      "key": "names.rag_search",
+      "en": "Search docs"
+    },
+    {
+      "module": "tools",
+      "key": "names.read_file",
+      "en": "Read"
+    },
+    {
+      "module": "tools",
+      "key": "names.read_mcp_resource",
+      "en": "Read MCP resource"
+    },
+    {
+      "module": "tools",
+      "key": "names.run_tests",
+      "en": "Test"
+    },
+    {
+      "module": "tools",
+      "key": "names.shell",
+      "en": "Run"
+    },
+    {
+      "module": "tools",
+      "key": "names.skill_search",
+      "en": "Find skill"
+    },
+    {
+      "module": "tools",
+      "key": "names.todo_plan",
+      "en": "Plan"
+    },
+    {
+      "module": "tools",
+      "key": "names.turn_route",
+      "en": "Route"
+    },
+    {
+      "module": "tools",
+      "key": "names.web_fetch",
+      "en": "Fetch URL"
+    },
+    {
+      "module": "tools",
+      "key": "names.workspace_checkpoint",
+      "en": "Checkpoint"
+    },
+    {
+      "module": "tools",
+      "key": "names.write_file",
+      "en": "Write"
+    },
+    {
+      "module": "tools",
+      "key": "scopes.decision",
+      "en": "Decision"
+    },
+    {
+      "module": "tools",
+      "key": "scopes.mcp",
+      "en": "MCP"
+    },
+    {
+      "module": "tools",
+      "key": "scopes.question",
+      "en": "Question"
+    },
+    {
+      "module": "tools",
+      "key": "scopes.skill",
+      "en": "Skill"
+    },
+    {
+      "module": "tools",
+      "key": "scopes.thinking",
+      "en": "Thinking"
+    },
+    {
+      "module": "tools",
+      "key": "scopes.tool",
+      "en": "Tool"
+    }
+  ]
+}

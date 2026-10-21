@@ -1,0 +1,341 @@
+{
+  "categories": {
+    "general": "Algemeen & Chat",
+    "general_short": "Algemeen",
+    "model": "...",
+    "agent": "Agent & Gedrag",
+    "agent_short": "...",
+    "tools": "Hulpmiddelen en vaardigheden",
+    "tools_short": "Hulpmiddelen",
+    "audio": "Audio en spraak",
+    "audio_short": "...",
+    "appearance": "Weergave",
+    "shortcuts": "Sneltoetsen",
+    "shortcuts_short": "Toetsen",
+    "appearance_short": "Kijk eens"
+  },
+  "rows": {
+    "ui_locale": {
+      "label": "Taal van de gebruikersinterface",
+      "hint": "Taal voor labels van instellingen en algemene UI-tekst."
+    },
+    "session_name": {
+      "label": "Chatnaam",
+      "hint": "Weergavenaam voor deze chatsessie."
+    },
+    "preset_combo": {
+      "label": "Voorinstellingen en sjablonen",
+      "hint": "Fietsvoorinstellingen, YAML-sjablonen en presentatiestijlen."
+    },
+    "provider": {
+      "label": "Aanbieder",
+      "hint": "Druk op: fuzzy picker  <-/->: door de provider bladeren."
+    },
+    "project_provider": {
+      "label": "Standaardaanbieder",
+      "hint": "Druk op: fuzzy picker  <-/->: door de provider bladeren."
+    },
+    "model": {
+      "label": "...",
+      "hint": "Enter/Spatiebalk: model selecteren. Klik op (?): details uit de Wuji-catalogus."
+    },
+    "temperature": {
+      "label": "Temperatuur",
+      "hint": "Bemonsteringstemperatuur; hoe lager, hoe deterministischer."
+    },
+    "max_tokens": {
+      "label": "Max. aantal tokens",
+      "hint": "Maximaal aantal tokens per modelantwoord."
+    },
+    "context_window": {
+      "label": "Contextvenster",
+      "hint": "Voer in: limiet voor het aantal tekens. <-/->: in stappen aanpassen."
+    },
+    "context_window_fixed": {
+      "label": "Contextvenster",
+      "hint": "Het contextvenster wordt bepaald door de modelcatalogus."
+    },
+    "max_steps": {
+      "label": "Max. aantal stappen",
+      "hint": "Maximaal aantal autonome stappen voor het opvragen van gereedschap per verzoek."
+    },
+    "decisions_enabled": {
+      "label": "Besluiten",
+      "hint": "Geef de medewerker toestemming om beslissingen over het project vast te leggen."
+    },
+    "memory_enabled": {
+      "label": "Geheugen",
+      "hint": "Schakel het langetermijngeheugen voor deze chat in."
+    },
+    "chain_of_thought": {
+      "label": "Gedachtegang",
+      "hint": "Hoe redeneringen aan het licht komen ({modes})."
+    },
+    "thought_max_chars": {
+      "label": "Aantal tekens overschreden",
+      "hint": "Beperk de zichtbare lengte van de gedachtenketen (0 = onbeperkt)."
+    },
+    "system_prompt_extra": {
+      "label": "Extra systeemmelding",
+      "hint": "Voor dit chatgesprek zijn extra systeeminstructies toegevoegd."
+    },
+    "stt_enabled": {
+      "label": "Spraakinvoer ingeschakeld",
+      "hint": "Microfoonknop in het chatvenster (|O|)."
+    },
+    "stt_driver": {
+      "label": "STT-bestuurder",
+      "hint": "Wuji-driver voor wuji-tekst --audio (bijv. llama). Slaat capability_drivers.text op bij het toepassen."
+    },
+    "stt_model": {
+      "label": "STT-model",
+      "hint": "Model-ID doorgegeven aan de STT-driver (leeg = standaardinstelling van de driver)."
+    },
+    "stt_language": {
+      "label": "Transcriptietaal",
+      "hint": "Aanwijzing voor de taal van de transcriptie; {auto_lang} maakt gebruik van automatische herkenning."
+    },
+    "stt_quality": {
+      "label": "Kwaliteit van de transcriptie",
+      "hint": "Voorinstelling voor snelheid versus nauwkeurigheid bij transcriptie (afhankelijk van de bestuurder)."
+    },
+    "stt_trim_silence": {
+      "label": "Stilte onderbreken",
+      "hint": "Verwijder de stilte aan het begin en einde van de opgenomen audio vóór de STT."
+    },
+    "stt_silence_level": {
+      "label": "Stilteniveau",
+      "hint": "Volumedrempel voor stilteherkenning wanneer de trimfunctie is ingeschakeld."
+    },
+    "stt_capture_device": {
+      "label": "Opnameapparaat",
+      "hint": "Naam of pad van het audio-invoerapparaat (leeg = systeemstandaard)."
+    },
+    "stt_sample_rate": {
+      "label": "Bemonsteringsfrequentie",
+      "hint": "Opnamefrequentie in Hz (8000–48000)."
+    },
+    "ui_theme": {
+      "label": "Kleurthema",
+      "hint": "Voer in: thema’s voor fuzzy-zoekopdrachten. <-/->: doorlopen. Gebruikersthema’s: ~/.config/taiji/themes/"
+    },
+    "ui_corners": {
+      "label": "Hoekmodel",
+      "hint": "Een vierkant of afgerond kader, of een vlakke vulling zonder buitenrand."
+    },
+    "tool_call_density": {
+      "label": "Dichtheid van gereedschapsaanroepen",
+      "hint": "Beknopte of gedetailleerde gereedschapsvermeldingen in het activiteitenlogboek."
+    },
+    "turn_metrics_preset": {
+      "label": "Statistieken weergeven",
+      "hint": "De gedetailleerdheid van de statistieken per beurt in het chatlog."
+    },
+    "turn_metrics_show_actions": {
+      "label": "Acties uitvoeren",
+      "hint": "Toon de knoppen voor ‘Opnieuw uitvoeren’ en ‘Kopiëren’ onder voltooide beurten."
+    },
+    "presentation": {
+      "label": "Presentatie",
+      "hint": "Hoe berichten van assistenten in deze chat worden weergegeven."
+    },
+    "user_message_style": {
+      "label": "Stijl van het bericht",
+      "hint": "Bubble Chrome voor deze rol ({examples}, ...)."
+    },
+    "user_message_align": {
+      "label": "Uitlijning",
+      "hint": "Horizontale plaatsing; {auto} volgt de rol (jij: rechts, assistent: links)."
+    },
+    "user_message_max_width_pct": {
+      "label": "Maximale breedte",
+      "hint": "<-/-> of klik op de balk om de maximale breedte van de bubbel in te stellen (40–100%)."
+    },
+    "user_message_fill_background": {
+      "label": "Achtergrond vullen",
+      "hint": "{on}: effen achtergrond achter je berichtkader (inclusief rand). {off}: alleen een omtrek op de achtergrond van de chat."
+    },
+    "assistant_message_style": {
+      "label": "Stijl van het bericht",
+      "hint": "Bubble Chrome voor deze rol ({examples}, ...)."
+    },
+    "assistant_message_align": {
+      "label": "Uitlijning",
+      "hint": "Horizontale plaatsing; {auto} volgt de rol (jij: rechts, assistent: links)."
+    },
+    "assistant_message_max_width_pct": {
+      "label": "Maximale breedte",
+      "hint": "<-/-> of klik op de balk om de maximale breedte van de bubbel in te stellen (40–100%)."
+    },
+    "assistant_message_fill_background": {
+      "label": "Achtergrond vullen",
+      "hint": "{on}: effen achtergrond achter je berichtkader (inclusief rand). {off}: alleen een omtrek op de achtergrond van de chat."
+    },
+    "message_timestamps": {
+      "label": "Tijdstempels",
+      "hint": "Geef het verzendtijdstip weer in je tekstballonnen."
+    },
+    "sticky_user_message": {
+      "label": "Vaste prompt",
+      "hint": "Zet de bovenkant van je laatst gescrollde prompt vast terwijl je lange reacties leest."
+    },
+    "auto_compact_context_pct": {
+      "label": "...",
+      "hint": "Wanneer de context dit percentage van het venster vult, worden oudere beurtdelen automatisch samengevat."
+    },
+    "message_time_clock": {
+      "label": "Kloknotatie",
+      "hint": "24-uursklok of 12-uursklok met AM/PM."
+    },
+    "chat_width": {
+      "label": "Breedte van de chat",
+      "hint": "Maximale breedte van de chatkolom (terminalcellen)."
+    },
+    "code_block_wrap": {
+      "label": "Regelafbreking",
+      "hint": "Zet lange regels tussen afgebakende codeblokken."
+    },
+    "tool_labels_locale": {
+      "label": "Gereedschapsetiketten",
+      "hint": "Taal voor statuslabels van tools in de gebruikersinterface."
+    },
+    "reduce_motion": {
+      "label": "Beweging beperken",
+      "hint": "Beperk de bewegingen van de interface tot een minimum (gereserveerd voor toekomstige animaties)."
+    },
+    "key_open_theme_picker": {
+      "label": "Snelkoppeling voor themakeuze",
+      "hint": "Algemene sneltoets om de kleurenthema-kiezer te openen (bijv. Ctrl+T)."
+    },
+    "mcp_toggle": {
+      "label": "",
+      "hint": "Ruimte: schakel de server voor deze chat in. Enter: de hulpmiddelen uitvouwen of samenvouwen."
+    },
+    "mcp_tool_toggle": {
+      "label": "",
+      "hint": "Spatie: deze tool toestaan of blokkeren voor de chat."
+    },
+    "skill_toggle": {
+      "label": "",
+      "hint": "Beperk vaardigheden tot een lijst met toegestane vaardigheden, of sta alles toe."
+    }
+  },
+  "nav": {
+    "categories": "Categorieën"
+  },
+  "scope": {
+    "save_to": "Opslaan in:",
+    "project": "...",
+    "chat": "..."
+  },
+  "values": {
+    "empty": "(leeg)",
+    "driver_default": "(standaardinstelling voor de bestuurder)",
+    "default_paren": "(standaard)",
+    "unlimited": "0 (onbeperkt)",
+    "silence_off": "0 (uit)",
+    "chars_suffix": "{count} tekens",
+    "capture_device_default": "standaard",
+    "enum_sep": ","
+  },
+  "sections": {
+    "execution": "Uitvoering",
+    "thinking": "Nadenken",
+    "prompt": "Opdracht",
+    "mcp_servers": "MCP-servers",
+    "skills": "Vaardigheden",
+    "speech_to_text": "Spraak-naar-tekst (Wuji)",
+    "theme": "Thema",
+    "agent_chat": "...",
+    "your_messages": "Je berichten",
+    "assistant_messages": "Berichten van de assistent",
+    "labels_motion": "Etiketten & Beweging",
+    "global": "Wereldwijd",
+    "language": "Taal"
+  },
+  "empty": {
+    "mcp_none": "(geen verbinding)",
+    "skills_none": "(geen geladen)"
+  },
+  "options": {
+    "bool": {
+      "on": "Op",
+      "off": "Uit"
+    },
+    "chain_of_thought": {
+      "off": "Uit",
+      "prompt": "Opdracht",
+      "full": "Inheems"
+    },
+    "turn_metrics_preset": {
+      "off": "Uit",
+      "compact": "...",
+      "dev": "..."
+    },
+    "ui_corners": {
+      "square": "Vierkant",
+      "rounded": "Afgerond",
+      "flat": "Appartement"
+    },
+    "tool_call_density": {
+      "compact": "...",
+      "detailed": "Gedetailleerd"
+    },
+    "presentation": {
+      "markdown": "...",
+      "whatsapp": "Gespreksgericht",
+      "story": "Verhaal",
+      "minimal": "Minimaal",
+      "bubbles": "Bubbels",
+      "narrative": "Verhaal"
+    },
+    "message_style": {
+      "chat": "...",
+      "cornered": "In het nauw gedreven",
+      "block": "Blok",
+      "plain": "Gewoon",
+      "header": "Koptekst",
+      "terminal": "...",
+      "log": "Logboek",
+      "card": "Kaart",
+      "section": "Paragraaf"
+    },
+    "message_align": {
+      "auto": "...",
+      "left": "Links",
+      "right": "Juist",
+      "center": "Midden"
+    },
+    "auto_compact": {
+      "off": "Uit"
+    },
+    "chat_width": {
+      "auto": "...",
+      "narrow": "Smal",
+      "medium": "...",
+      "wide": "Breed"
+    },
+    "message_time_clock": {
+      "24h": "24 uur per dag",
+      "12h": "12 uur (ochtend/middag)"
+    },
+    "stt_language": {
+      "auto": "Automatisch detecteren"
+    },
+    "stt_quality": {
+      "default": "(standaard)",
+      "fast": "Snel",
+      "balanced": "Evenwichtig",
+      "careful": "Voorzichtig"
+    },
+    "skill_state": {
+      "auto": "Standaard",
+      "pinned": "Vastgezet",
+      "off": "Geblokkeerd"
+    },
+    "mcp_tool_state": {
+      "allowed": "Toegestaan",
+      "blocked": "Geblokkeerd"
+    }
+  }
+}

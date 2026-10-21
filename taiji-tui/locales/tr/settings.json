@@ -1,0 +1,341 @@
+{
+  "categories": {
+    "general": "Genel ve Sohbet",
+    "general_short": "Genel",
+    "model": "...",
+    "agent": "Ajan ve Davranış",
+    "agent_short": "Ajan",
+    "tools": "Araçlar ve Beceriler",
+    "tools_short": "Araçlar",
+    "audio": "Ses ve Konuşma",
+    "audio_short": "Ses",
+    "appearance": "Görünüm",
+    "appearance_short": "Görünüm",
+    "shortcuts": "Klavye Kısayolları",
+    "shortcuts_short": "Tuşlar"
+  },
+  "nav": {
+    "categories": "Kategoriler"
+  },
+  "scope": {
+    "save_to": "Kaydet:",
+    "project": "Proje",
+    "chat": "Sohbet"
+  },
+  "values": {
+    "empty": "(boş)",
+    "driver_default": "(sürücü varsayılanı)",
+    "default_paren": "(varsayılan)",
+    "unlimited": "0 (sınırsız)",
+    "silence_off": "0 (kapalı)",
+    "chars_suffix": "{count} karakter",
+    "capture_device_default": "varsayılan",
+    "enum_sep": ","
+  },
+  "sections": {
+    "execution": "Yürütme",
+    "thinking": "Düşünme",
+    "prompt": "İstem",
+    "mcp_servers": "MCP Sunucuları",
+    "skills": "Beceriler",
+    "speech_to_text": "Konuşmadan metne (Wuji)",
+    "theme": "Tema",
+    "agent_chat": "Ajan ve Sohbet",
+    "your_messages": "Mesajlarınız",
+    "assistant_messages": "Asistan mesajları",
+    "labels_motion": "Etiketler ve Hareket",
+    "global": "Genel",
+    "language": "Dil"
+  },
+  "empty": {
+    "mcp_none": "(bağlı değil)",
+    "skills_none": "(yüklenmedi)"
+  },
+  "rows": {
+    "session_name": {
+      "label": "Sohbet adı",
+      "hint": "Bu sohbet oturumunun görünen adı."
+    },
+    "preset_combo": {
+      "label": "Ön ayar ve şablon",
+      "hint": "Ön ayarlar, YAML şablonları ve sunum stilleri arasında geçiş."
+    },
+    "provider": {
+      "label": "Sağlayıcı",
+      "hint": "Enter: arama seçici  <-/->: sağlayıcı değiştir."
+    },
+    "model": {
+      "label": "...",
+      "hint": "Enter/Boşluk: model seç. (?) tıkla: Wuji katalog ayrıntıları."
+    },
+    "temperature": {
+      "label": "Sıcaklık",
+      "hint": "Örnekleme sıcaklığı; düşük = daha deterministik."
+    },
+    "max_tokens": {
+      "label": "Maks. token",
+      "hint": "Model yanıtı için maksimum token."
+    },
+    "context_window": {
+      "label": "Bağlam penceresi",
+      "hint": "Enter: token limiti yaz. <-/->: adımlarla ayarla."
+    },
+    "max_steps": {
+      "label": "Maks. adım",
+      "hint": "İstek başına maksimum otonom araç çağrısı adımı."
+    },
+    "decisions_enabled": {
+      "label": "Kararlar",
+      "hint": "Ajanın proje kararlarını kaydetmesine izin ver."
+    },
+    "memory_enabled": {
+      "label": "Bellek",
+      "hint": "Bu sohbet için uzun süreli belleği etkinleştir."
+    },
+    "chain_of_thought": {
+      "label": "Düşünce zinciri",
+      "hint": "Akıl yürütmenin gösterimi ({modes})."
+    },
+    "thought_max_chars": {
+      "label": "Maks. düşünce karakteri",
+      "hint": "Görünen düşünce zinciri üst sınırı (0 = sınırsız)."
+    },
+    "system_prompt_extra": {
+      "label": "Ek sistem istemi",
+      "hint": "Bu sohbete eklenen ek sistem talimatları."
+    },
+    "stt_enabled": {
+      "label": "Ses girişi etkin",
+      "hint": "Sohbet girişindeki mikrofon düğmesi (|O|)."
+    },
+    "stt_driver": {
+      "label": "STT sürücüsü",
+      "hint": "wuji text --audio için Wuji sürücüsü (ör. llama). Uygularken capability_drivers.text kaydedilir."
+    },
+    "stt_model": {
+      "label": "STT modeli",
+      "hint": "STT sürücüsüne verilen model kimliği (boş = sürücü varsayılanı)."
+    },
+    "stt_language": {
+      "label": "Transkripsiyon dili",
+      "hint": "Transkripsiyon için dil ipucu; {auto_lang} otomatik algılama."
+    },
+    "stt_quality": {
+      "label": "Transkripsiyon kalitesi",
+      "hint": "Hız ve doğruluk ön ayarı (sürücüye bağlı)."
+    },
+    "stt_trim_silence": {
+      "label": "Sessizliği kırp",
+      "hint": "STT öncesi kaydın baş/son sessizliğini kaldır."
+    },
+    "stt_silence_level": {
+      "label": "Sessizlik eşiği",
+      "hint": "Kırpma açıkken sessizlik algılama ses eşiği."
+    },
+    "stt_capture_device": {
+      "label": "Kayıt aygıtı",
+      "hint": "Ses giriş aygıtı adı veya yolu (boş = sistem varsayılanı)."
+    },
+    "stt_sample_rate": {
+      "label": "Örnekleme hızı",
+      "hint": "Kayıt örnekleme hızı Hz (8000–48000)."
+    },
+    "ui_theme": {
+      "label": "Renk teması",
+      "hint": "Enter: tema ara. <-/->: geçiş. Kullanıcı temaları: ~/.config/taiji/themes/"
+    },
+    "ui_corners": {
+      "label": "Köşe stili",
+      "hint": "Kare veya yuvarlak çerçeve ya da dış çerçevesiz düz dolgu."
+    },
+    "ui_locale": {
+      "label": "Arayüz dili",
+      "hint": "Ayar etiketleri ve ortak arayüz metinleri için dil."
+    },
+    "tool_call_density": {
+      "label": "Araç çağrısı yoğunluğu",
+      "hint": "Etkinlik günlüğünde araç satırları özet veya ayrıntılı."
+    },
+    "turn_metrics_preset": {
+      "label": "Tur metrikleri",
+      "hint": "Sohbet günlüğünde tur metriklerinin ayrıntı düzeyi."
+    },
+    "turn_metrics_show_actions": {
+      "label": "Tur işlemleri",
+      "hint": "Tamamlanan turların altında yeniden dene/kopyala göster."
+    },
+    "presentation": {
+      "label": "Sunum",
+      "hint": "Bu sohbette asistan mesajlarının nasıl çizileceği."
+    },
+    "user_message_style": {
+      "label": "Mesaj stili",
+      "hint": "Bu rol için balon stili ({examples}, ...)."
+    },
+    "user_message_align": {
+      "label": "Hizalama",
+      "hint": "Yatay konum; {auto} role göre (sen: sağ, asistan: sol)."
+    },
+    "user_message_max_width_pct": {
+      "label": "Maks. genişlik",
+      "hint": "<-/-> veya çubuğa tıkla: maks. balon genişliği (%40–100)."
+    },
+    "user_message_fill_background": {
+      "label": "Arka planı doldur",
+      "hint": "{on}: çerçeve dahil dolgu. {off}: sohbet arka planında yalnızca çizgi."
+    },
+    "assistant_message_style": {
+      "label": "Mesaj stili",
+      "hint": "Bu rol için balon stili ({examples}, ...)."
+    },
+    "assistant_message_align": {
+      "label": "Hizalama",
+      "hint": "Yatay konum; {auto} role göre (sen: sağ, asistan: sol)."
+    },
+    "assistant_message_max_width_pct": {
+      "label": "Maks. genişlik",
+      "hint": "<-/-> veya çubuğa tıkla: maks. balon genişliği (%40–100)."
+    },
+    "assistant_message_fill_background": {
+      "label": "Arka planı doldur",
+      "hint": "{on}: çerçeve dahil dolgu. {off}: sohbet arka planında yalnızca çizgi."
+    },
+    "message_timestamps": {
+      "label": "Zaman damgaları",
+      "hint": "Mesaj balonlarında gönderim zamanını göster."
+    },
+    "sticky_user_message": {
+      "label": "Sabit istem",
+      "hint": "Uzun yanıtları okurken son kaydırılan istemin üstünü sabitle."
+    },
+    "auto_compact_context_pct": {
+      "label": "Otomatik sıkıştır",
+      "hint": "Bağlam bu pencere % dolunca eski turları otomatik özetle."
+    },
+    "message_time_clock": {
+      "label": "Saat biçimi",
+      "hint": "24 saat veya 12 saat (AM/PM)."
+    },
+    "chat_width": {
+      "label": "Sohbet genişliği",
+      "hint": "Sohbet sütununun maksimum genişliği (terminal hücresi)."
+    },
+    "code_block_wrap": {
+      "label": "Kod kaydırma",
+      "hint": "Kod bloklarında uzun satırları kaydır."
+    },
+    "tool_labels_locale": {
+      "label": "Araç etiketleri",
+      "hint": "Arayüzde araç durum etiketleri için dil."
+    },
+    "reduce_motion": {
+      "label": "Hareketi azalt",
+      "hint": "Arayüz hareketini en aza indir (gelecek animasyonlar için)."
+    },
+    "key_open_theme_picker": {
+      "label": "Tema seçici kısayolu",
+      "hint": "Renk teması seçiciyi açan genel kısayol (ör. Ctrl+T)."
+    },
+    "project_provider": {
+      "label": "Varsayılan sağlayıcı",
+      "hint": "Enter: arama seçici  <-/->: sağlayıcı değiştir."
+    },
+    "context_window_fixed": {
+      "label": "Bağlam penceresi",
+      "hint": "Bağlam penceresi model kataloğunda sabittir."
+    },
+    "mcp_toggle": {
+      "label": "",
+      "hint": "Boşluk: bu sohbet için sunucuyu aç/kapat. Enter: araç listesini aç/kapat."
+    },
+    "mcp_tool_toggle": {
+      "label": "",
+      "hint": "Boşluk: bu aracı sohbet için izin ver veya engelle."
+    },
+    "skill_toggle": {
+      "label": "",
+      "hint": "Becerileri izin listesine kısıtla veya tümüne izin ver."
+    }
+  },
+  "options": {
+    "bool": {
+      "on": "Açık",
+      "off": "Kapalı"
+    },
+    "chain_of_thought": {
+      "off": "Kapalı",
+      "prompt": "İstem",
+      "full": "Yerel"
+    },
+    "turn_metrics_preset": {
+      "off": "Kapalı",
+      "compact": "Özet",
+      "dev": "Geliştirici"
+    },
+    "ui_corners": {
+      "square": "Kare",
+      "rounded": "Yuvarlak",
+      "flat": "Düz"
+    },
+    "tool_call_density": {
+      "compact": "Özet",
+      "detailed": "Ayrıntılı"
+    },
+    "presentation": {
+      "markdown": "...",
+      "whatsapp": "Sohbet (kısa)",
+      "story": "Hikâye",
+      "minimal": "...",
+      "bubbles": "Balonlar",
+      "narrative": "Anlatı"
+    },
+    "message_style": {
+      "chat": "Sohbet",
+      "cornered": "Köşeli",
+      "block": "Blok",
+      "plain": "Sade",
+      "header": "Başlık",
+      "terminal": "...",
+      "log": "Günlük",
+      "card": "Kart",
+      "section": "Bölüm"
+    },
+    "message_align": {
+      "auto": "Otomatik",
+      "left": "Sol",
+      "right": "Sağ",
+      "center": "Orta"
+    },
+    "auto_compact": {
+      "off": "Kapalı"
+    },
+    "chat_width": {
+      "auto": "Otomatik",
+      "narrow": "Dar",
+      "medium": "Orta",
+      "wide": "Geniş"
+    },
+    "message_time_clock": {
+      "24h": "24 saat",
+      "12h": "12 saat (AM/PM)"
+    },
+    "stt_language": {
+      "auto": "Otomatik algıla"
+    },
+    "stt_quality": {
+      "default": "(varsayılan)",
+      "fast": "Hızlı",
+      "balanced": "Dengeli",
+      "careful": "Dikkatli"
+    },
+    "skill_state": {
+      "auto": "Varsayılan",
+      "pinned": "Sabitlendi",
+      "off": "Engelli"
+    },
+    "mcp_tool_state": {
+      "allowed": "İzinli",
+      "blocked": "Engelli"
+    }
+  }
+}

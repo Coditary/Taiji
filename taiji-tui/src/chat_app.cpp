@@ -15,6 +15,7 @@
 #include "ui_panel_box.hpp"
 #include "ui_theme.hpp"
 #include "ui_keybindings.hpp"
+#include "ui_locale.hpp"
 
 #include <tuinator/widgets/menu/menu_bar.hpp>
 
@@ -33,6 +34,14 @@
 #include <vector>
 
 namespace {
+
+void sync_go_display_locales(uint64_t handle, const std::string& ui_locale, const std::string& tool_labels) {
+    if (handle == 0 || ui_locale.empty()) {
+        return;
+    }
+    const std::string tl = tool_labels.empty() ? ui_locale : tool_labels;
+    taiji_ui_set_display_locales(handle, const_cast<char*>(ui_locale.c_str()), const_cast<char*>(tl.c_str()));
+}
 
 class AppShell : public tuinator::Widget {
   public:
@@ -732,7 +741,7 @@ ChatApp::ChatApp(tuinator::Application& app)
     input_style_ = ui_composer_input_style();
     input_focused_style_ = input_style_;
 
-    footer_text_ = "Starting…";
+    footer_text_ = ui_shell("status.starting").empty() ? "Starting…" : ui_shell("status.starting");
 }
 
 ChatApp::~ChatApp() {
@@ -774,6 +783,18 @@ void ChatApp::set_root() {
                                     draft.assistant_message_style, draft.assistant_message_align,
                                     draft.assistant_message_max_width_pct);
         ui_apply_message_fill_background(draft.user_message_fill_background, draft.assistant_message_fill_background);
+        ui_set_locale(draft.ui_locale);
+        sync_go_display_locales(taiji_handle_, draft.ui_locale, draft.tool_labels_locale);
+        refresh_shell_strings();
+        if (message_composer_ != nullptr) {
+            message_composer_->refresh_locale_strings();
+        }
+        if (settings_modal_ != nullptr && settings_modal_->is_open()) {
+            settings_modal_->refresh_translated_content();
+        }
+        if (sidebar_footer_ != nullptr) {
+            sidebar_footer_->mark_dirty();
+        }
         if (input_ != nullptr) {
             input_->sync_frame_border_style();
         }
@@ -848,7 +869,10 @@ void ChatApp::set_root() {
     input_options.framed_border_style = ui_frame_border_style();
     input_options.max_content_lines = 5;
     input_options.prompt = "› ";
-    input_options.placeholder = "Write a message…";
+    {
+        const std::string ph = ui_tr("common", "composer.placeholder");
+        input_options.placeholder = ph.empty() ? "Write a message…" : ph;
+    }
     auto message_composer =
         std::make_unique<MessageComposer>(input_options, input_style_, input_focused_style_, theme_);
     message_composer_ = message_composer.get();
@@ -966,6 +990,11 @@ void ChatApp::set_root() {
             return false;
         }
         if (message_composer_ != nullptr && message_composer_->is_theme_picker_open()) {
+            if (message_composer_->route_theme_picker_key(*key)) {
+                message_composer_->mark_dirty();
+                app_.repaint_all();
+                return true;
+            }
             return false;
         }
         if (ui_keybinding_matches(key_open_theme_picker_, *key)) {
@@ -986,23 +1015,29 @@ void ChatApp::set_root() {
     refresh_context_sidebar();
 
     sidebar_body->add_child(std::make_unique<SidebarDivider>(theme_));
-    sidebar_body->add_child(make_sidebar_heading("AGENT & LAYA", theme_));
+    {
+        const std::string agent_title = ui_shell("sidebar.agent_laya");
+        auto agent_heading =
+            make_sidebar_heading(agent_title.empty() ? "AGENT & LAYA" : agent_title, theme_);
+        sidebar_agent_heading_ = agent_heading.get();
+        sidebar_body->add_child(std::move(agent_heading));
+    }
 
-    auto skills_row = std::make_unique<SidebarKvRow>(theme_, "Skills");
+    auto skills_row = std::make_unique<SidebarKvRow>(theme_, ui_shell("sidebar.skills").empty() ? "Skills" : ui_shell("sidebar.skills"));
     skills_row_ = skills_row.get();
-    skills_row_->set_empty_value("none");
+    skills_row_->set_empty_value(ui_shell("sidebar.empty_none").empty() ? "none" : ui_shell("sidebar.empty_none"));
     sidebar_body->add_child(std::move(skills_row));
     refresh_skills_sidebar();
 
-    auto decisions_row = std::make_unique<SidebarKvRow>(theme_, "Decisions");
+    auto decisions_row = std::make_unique<SidebarKvRow>(theme_, ui_shell("sidebar.decisions").empty() ? "Decisions" : ui_shell("sidebar.decisions"));
     decisions_row_ = decisions_row.get();
-    decisions_row_->set_empty_value("none");
+    decisions_row_->set_empty_value(ui_shell("sidebar.empty_none").empty() ? "none" : ui_shell("sidebar.empty_none"));
     sidebar_body->add_child(std::move(decisions_row));
     refresh_decisions_sidebar();
 
-    auto lsp_row = std::make_unique<SidebarKvRow>(theme_, "LSP");
+    auto lsp_row = std::make_unique<SidebarKvRow>(theme_, ui_shell("sidebar.lsp").empty() ? "LSP" : ui_shell("sidebar.lsp"));
     lsp_row_ = lsp_row.get();
-    lsp_row_->set_empty_value("inactive");
+    lsp_row_->set_empty_value(ui_shell("sidebar.empty_inactive").empty() ? "inactive" : ui_shell("sidebar.empty_inactive"));
     sidebar_body->add_child(std::move(lsp_row));
 
     sidebar_body->add_child(std::make_unique<SidebarDivider>(theme_));
@@ -1015,7 +1050,7 @@ void ChatApp::set_root() {
 
     sidebar->add_child(std::move(sidebar_body));
 
-    auto sidebar_footer = std::make_unique<SidebarFooter>(theme_, [this]() { open_settings_modal(); });
+    auto sidebar_footer = std::make_unique<SidebarFooter>(theme_);
     sidebar_footer_ = sidebar_footer.get();
     sidebar->add_child(std::move(sidebar_footer));
 
@@ -1034,7 +1069,8 @@ void ChatApp::set_root() {
         [this](const std::string& project_root) { create_new_session(project_root); },
         [this](const std::string& project_root, const std::string& session_id, tuinator::Point position) {
             show_session_context_menu(position, project_root, session_id);
-        });
+        },
+        [this]() { open_settings_modal(); });
     session_nav_ = session_nav.get();
     session_nav->refresh(taiji_handle_);
 
@@ -1076,7 +1112,7 @@ void ChatApp::start_background_init() {
 void ChatApp::apply_bootstrap_handle(uint64_t handle, const std::string& error) {
     if (handle == 0) {
         const char* msg = !error.empty() ? error.c_str() : taiji_init_error();
-        session_label_ = std::string("Init failed: ") + (msg != nullptr ? msg : "unknown");
+        session_label_ = ui_shell("status.init_failed_prefix") + (msg != nullptr ? msg : "unknown");
         footer_text_ = session_label_;
         refresh_status_footer();
         refresh_chat_header();
@@ -1090,7 +1126,7 @@ void ChatApp::apply_bootstrap_handle(uint64_t handle, const std::string& error) 
     if (settings_modal_ != nullptr) {
         settings_modal_->set_handle(taiji_handle_);
     }
-    footer_text_ = "Starting agent…";
+    footer_text_ = ui_shell("status.starting_agent").empty() ? "Starting agent…" : ui_shell("status.starting_agent");
     refresh_appearance_prefs();
     refresh_input_model_info();
     refresh_context_sidebar();
@@ -1113,7 +1149,7 @@ void ChatApp::apply_runtime_ready() {
     }
     char* rt_err = taiji_runtime_error(taiji_handle_);
     if (rt_err != nullptr && rt_err[0] != '\0') {
-        footer_text_ = std::string("Agent failed: ") + rt_err;
+        footer_text_ = ui_shell("status.agent_failed_prefix") + rt_err;
         std::free(rt_err);
         refresh_status_footer();
         app_.repaint_all();
@@ -1126,7 +1162,7 @@ void ChatApp::apply_runtime_ready() {
 
     runtime_ready_applied_ = true;
     runtime_ready_at_ = std::chrono::steady_clock::now();
-    footer_text_ = kDefaultFooterShortcuts;
+    footer_text_ = ui_default_footer_shortcuts();
     refresh_context_sidebar();
     refresh_mcp_sidebar();
     refresh_skills_sidebar();
@@ -1278,14 +1314,17 @@ void ChatApp::poll_updates() {
 }
 
 void ChatApp::focus_input() {
-    app_.refresh_focus();
     if (question_prompt_active_ && question_composer_ != nullptr) {
+        app_.refresh_focus();
         question_composer_->mark_dirty();
         return;
     }
     if (input_ != nullptr) {
+        app_.focus_widget(input_);
         input_->mark_dirty();
+        return;
     }
+    app_.refresh_focus();
 }
 
 void ChatApp::show_question_prompt(const QuestionPromptUpdate& prompt) {
@@ -1300,7 +1339,7 @@ void ChatApp::show_question_prompt(const QuestionPromptUpdate& prompt) {
     composer_switch_->show_question();
     question_composer_->begin(prompt.request_id, prompt.questions);
     question_prompt_active_ = true;
-    set_footer_status("Answer the question  ·  Esc: cancel");
+    set_footer_status(ui_shell("status.answer_question"));
     request_chat_layout_refresh();
     focus_input();
     app_.repaint_all();
@@ -1314,7 +1353,7 @@ void ChatApp::hide_question_prompt() {
         composer_switch_->show_input();
     }
     question_prompt_active_ = false;
-    set_footer_status("[ Send ↵ ]  ·  Shift+Enter: newline  ·  Esc: stop");
+    set_footer_status(ui_shell("status.composer_submit"));
     request_chat_layout_refresh();
     focus_input();
     app_.repaint_all();
@@ -1330,7 +1369,7 @@ void ChatApp::submit_question_answers(const std::string& request_id,
     char* request_id_buf = const_cast<char*>(request_id.c_str());
     char* answers_buf = const_cast<char*>(payload.c_str());
     if (taiji_question_reply(taiji_handle_, request_id_buf, answers_buf) == 0) {
-        set_footer_status("Could not send answer");
+        set_footer_status(ui_shell("status.could_not_send_answer"));
     }
     hide_question_prompt();
 }
@@ -1501,6 +1540,55 @@ void ChatApp::refresh_user_time_labels_on_screen() {
     }
 }
 
+void ChatApp::refresh_shell_strings() {
+    const auto tr = [](const char* key, const char* fallback) {
+        const std::string text = ui_shell(key);
+        return text.empty() ? std::string(fallback) : text;
+    };
+    if (sidebar_agent_heading_ != nullptr) {
+        sidebar_agent_heading_->set_text(tr("sidebar.agent_laya", "AGENT & LAYA"));
+    }
+    if (skills_row_ != nullptr) {
+        skills_row_->set_title(tr("sidebar.skills", "Skills"));
+        skills_row_->set_empty_value(tr("sidebar.empty_none", "none"));
+        skills_row_->mark_dirty();
+    }
+    if (decisions_row_ != nullptr) {
+        decisions_row_->set_title(tr("sidebar.decisions", "Decisions"));
+        decisions_row_->set_empty_value(tr("sidebar.empty_none", "none"));
+        decisions_row_->mark_dirty();
+    }
+    if (lsp_row_ != nullptr) {
+        lsp_row_->set_title(tr("sidebar.lsp", "LSP"));
+        lsp_row_->set_empty_value(tr("sidebar.empty_inactive", "inactive"));
+        lsp_row_->mark_dirty();
+    }
+    if (session_nav_ != nullptr) {
+        session_nav_->mark_dirty();
+    }
+    if (context_panel_ != nullptr) {
+        context_panel_->mark_dirty();
+    }
+    if (mcp_list_ != nullptr) {
+        mcp_list_->mark_dirty();
+    }
+    if (empty_state_ != nullptr) {
+        empty_state_->mark_dirty();
+    }
+    const std::string thinking = tr("chat.thinking", "Thinking");
+    for (TurnView& view : turn_views_) {
+        if (view.thinking != nullptr) {
+            view.thinking->set_label(thinking);
+        }
+    }
+    for (std::size_t i = 0; i < turn_views_.size(); ++i) {
+        if (turn_views_[i].activity != nullptr) {
+            turn_views_[i].activity->mark_dirty();
+        }
+        refresh_turn_view(i);
+    }
+}
+
 void ChatApp::refresh_appearance_prefs() {
     if (taiji_handle_ == 0) {
         return;
@@ -1512,6 +1600,20 @@ void ChatApp::refresh_appearance_prefs() {
     }
     const std::string json = raw;
     std::free(raw);
+    std::string ui_locale = ui_normalize_locale_id(json_extract_string(json, "ui_locale"));
+    ui_set_locale(ui_locale);
+    std::string tool_labels = json_extract_string(json, "tool_labels_locale");
+    if (tool_labels.empty()) {
+        tool_labels = ui_locale;
+    }
+    sync_go_display_locales(taiji_handle_, ui_locale, tool_labels);
+    refresh_shell_strings();
+    if (message_composer_ != nullptr) {
+        message_composer_->refresh_locale_strings();
+    }
+    if (sidebar_footer_ != nullptr) {
+        sidebar_footer_->mark_dirty();
+    }
     const std::string theme = json_extract_string(json, "ui_theme");
     if (!theme.empty()) {
         apply_ui_theme(theme);
@@ -1607,15 +1709,15 @@ void ChatApp::refresh_speech_input_prefs() {
 
 void ChatApp::toggle_speech_input() {
     if (taiji_handle_ == 0) {
-        set_footer_status("Agent is still starting…");
+        set_footer_status(ui_shell("status.agent_still_starting"));
         return;
     }
     if (!runtime_ready_applied_ || taiji_runtime_ready(taiji_handle_) == 0) {
-        set_footer_status("Agent is still starting…");
+        set_footer_status(ui_shell("status.agent_still_starting"));
         return;
     }
     if (!stt_enabled_) {
-        set_footer_status("Voice input is off (Settings → Audio).");
+        set_footer_status(ui_shell("status.voice_input_off"));
         return;
     }
     if (stt_busy_) {
@@ -1631,7 +1733,7 @@ void ChatApp::toggle_speech_input() {
     if (speech_mic_ != nullptr) {
         speech_mic_->set_enabled(false);
     }
-    set_footer_status("Speech input…");
+    set_footer_status(ui_shell("status.speech_input"));
     const uint64_t handle = taiji_handle_;
     stt_thread_ = std::thread([this, handle]() {
         char* raw = taiji_stt_toggle(handle);
@@ -1719,7 +1821,7 @@ void ChatApp::submit_message(const std::string& text) {
         return;
     }
     if (!runtime_ready_applied_ || taiji_runtime_ready(taiji_handle_) == 0) {
-        set_footer_status("Agent is still starting…");
+        set_footer_status(ui_shell("status.agent_still_starting"));
         return;
     }
 
@@ -1750,7 +1852,7 @@ void ChatApp::submit_message(const std::string& text) {
 
 void ChatApp::handle_skills_command() {
     char* raw = taiji_skills_list(taiji_handle_);
-    std::string reply = raw != nullptr ? std::string(raw) : "Could not load skills.";
+    std::string reply = raw != nullptr ? std::string(raw) : ui_shell("status.could_not_load_skills").empty() ? "Could not load skills." : ui_shell("status.could_not_load_skills");
     if (raw != nullptr) {
         std::free(raw);
     }
@@ -1759,7 +1861,7 @@ void ChatApp::handle_skills_command() {
 
 void ChatApp::handle_decisions_command() {
     char* raw = taiji_decisions_list(taiji_handle_);
-    std::string reply = raw != nullptr ? std::string(raw) : "Could not load decisions.";
+    std::string reply = raw != nullptr ? std::string(raw) : ui_shell("status.could_not_load_decisions").empty() ? "Could not load decisions." : ui_shell("status.could_not_load_decisions");
     if (raw != nullptr) {
         std::free(raw);
     }
@@ -1771,14 +1873,14 @@ void ChatApp::handle_compact_command() {
         return;
     }
     if (worker_busy_) {
-        set_footer_status("Wait for the current reply before compacting.");
+        set_footer_status(ui_shell("status.wait_before_compact"));
         return;
     }
     if (compact_busy_) {
         return;
     }
     compact_busy_ = true;
-    set_footer_status("Compacting conversation…");
+    set_footer_status(ui_shell("status.compacting"));
     if (compact_thread_.joinable()) {
         compact_thread_.join();
     }
@@ -2108,15 +2210,14 @@ void ChatApp::refresh_queue_ui(bool force) {
     if (worker_busy) {
         if (waiting > 0) {
             std::ostringstream out;
-            out << "Generating…  ·  " << waiting << " queued";
-            set_footer_status(out.str());
+            set_footer_status(ui_format(ui_shell("status.generating_with_queue"), "count", std::to_string(waiting)));
         } else {
-            set_footer_status("Generating…  ·  Esc to stop");
+            set_footer_status(ui_shell("status.generating_esc_stop"));
         }
     } else if (waiting > 0) {
-        set_footer_status("Enter queues another message");
+        set_footer_status(ui_shell("status.enter_queues_message"));
     } else {
-        set_footer_status(kDefaultFooterShortcuts);
+        set_footer_status(ui_default_footer_shortcuts());
     }
 }
 
@@ -2169,7 +2270,7 @@ void ChatApp::copy_turn_response(std::size_t turn_index) {
         return;
     }
     tuinator::clipboard::set(text);
-    set_footer_status("Response copied");
+    set_footer_status(ui_shell("status.response_copied"));
 }
 
 void ChatApp::step_turn_version(std::size_t turn_index, int delta) {
@@ -2421,7 +2522,7 @@ void ChatApp::sync_turn_view(std::size_t index, const ChatTurn& turn, bool worke
     } else {
         const bool compact = turn.user_kind == "compact";
         view.user->set_compact_summary(compact);
-        view.user->set_author_label(compact ? "summary" : "");
+        view.user->set_author_label(compact ? (ui_shell("chat.author_summary").empty() ? "summary" : ui_shell("chat.author_summary")) : "");
         view.user->set_text(turn.user);
         tuinator::Style user_style;
         user_style.foreground_rgb = ui_user_bubble();
@@ -2468,7 +2569,9 @@ void ChatApp::sync_turn_view(std::size_t index, const ChatTurn& turn, bool worke
         } else {
             view.activity->set_pipeline_title("");
         }
-        view.activity->set_generating_tail(use_activity_tail);
+        const std::string generating_label = ui_shell("activity.generating_response");
+        view.activity->set_generating_tail(use_activity_tail,
+                                           generating_label.empty() ? "Generating response…" : generating_label);
     }
 
     if (turn.status == TurnStatus::Queued) {
@@ -2998,7 +3101,7 @@ void ChatApp::switch_to_session(const std::string& project_root, const std::stri
     if (taiji_session_switch(taiji_handle_, const_cast<char*>(project_root.c_str()),
                              const_cast<char*>(session_id.c_str()), &error) == 0) {
         if (error != nullptr) {
-            set_footer_status(std::string("Failed to switch session: ") + error);
+            set_footer_status(ui_shell("status.failed_switch_session_prefix") + error);
             std::free(error);
         }
         return;
@@ -3028,8 +3131,8 @@ void ChatApp::show_session_context_menu(const tuinator::Point& position, const s
     const std::string project = project_root;
     const std::string id = session_id;
     menu->set_items({
-        SessionContextMenu::Item{"Open", [this, project, id]() { switch_to_session(project, id); }},
-        SessionContextMenu::Item{"Delete", [this, project, id]() { delete_session(project, id); }},
+        SessionContextMenu::Item{ui_shell("session_menu.open").empty() ? "Open" : ui_shell("session_menu.open"), [this, project, id]() { switch_to_session(project, id); }},
+        SessionContextMenu::Item{ui_shell("session_menu.delete").empty() ? "Delete" : ui_shell("session_menu.delete"), [this, project, id]() { delete_session(project, id); }},
     });
     menu->show(position);
     app_.repaint_all();
@@ -3058,7 +3161,7 @@ void ChatApp::delete_session(const std::string& project_root, const std::string&
     if (taiji_session_delete(taiji_handle_, const_cast<char*>(project_root.c_str()),
                              const_cast<char*>(session_id.c_str()), &error) == 0) {
         if (error != nullptr) {
-            set_footer_status(std::string("Failed to delete session: ") + error);
+            set_footer_status(ui_shell("status.failed_delete_session_prefix") + error);
             std::free(error);
         }
         return;
@@ -3104,7 +3207,7 @@ void ChatApp::create_new_session(const std::string& project_root) {
     const char* root_arg = project_root.empty() ? nullptr : project_root.c_str();
     if (taiji_session_new(taiji_handle_, const_cast<char*>(root_arg), &error) == 0) {
         if (error != nullptr) {
-            set_footer_status(std::string("Failed to create session: ") + error);
+            set_footer_status(ui_shell("status.failed_create_session_prefix") + error);
             std::free(error);
         }
         return;
@@ -3230,7 +3333,7 @@ void ChatApp::on_job_finished(std::size_t turn_index, bool ok, const std::string
     focus_input();
 
     if (!ok && !is_cancellation_error(error)) {
-        set_footer_status(error.empty() ? "Request failed" : error);
+        set_footer_status(error.empty() ? ui_shell("status.request_failed") : error);
     }
 
     if (pending_regenerate_turn_.has_value()) {
@@ -3393,13 +3496,13 @@ bool ChatApp::apply_pending_updates() {
             input_->set_value(merged);
             stt_input_base_.clear();
             focus_input();
-            set_footer_status("Transcription inserted.");
+            set_footer_status(ui_shell("status.transcription_inserted"));
         } else if (stt_update.recording) {
             if (speech_mic_ != nullptr) {
                 speech_mic_->set_recording(true);
                 speech_mic_->set_enabled(stt_enabled_);
             }
-            set_footer_status("Recording… text updates while you speak. Press Stop when done.");
+            set_footer_status(ui_shell("status.recording_hint"));
         } else {
             refresh_status_footer();
         }
@@ -3426,9 +3529,9 @@ bool ChatApp::apply_pending_updates() {
         if (compact_update.ok) {
             reload_turns_from_backend();
             refresh_context_sidebar();
-            set_footer_status("Conversation compacted.");
+            set_footer_status(ui_shell("status.compacted_ok"));
         } else {
-            set_footer_status(compact_update.error.empty() ? "Compaction failed." : compact_update.error);
+            set_footer_status(compact_update.error.empty() ? ui_shell("status.compaction_failed") : compact_update.error);
         }
     }
 

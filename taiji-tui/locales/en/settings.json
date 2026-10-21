@@ -1,0 +1,341 @@
+{
+  "categories": {
+    "general": "General & Chat",
+    "general_short": "General",
+    "model": "Model",
+    "agent": "Agent & Behaviour",
+    "agent_short": "Agent",
+    "tools": "Tools & Skills",
+    "tools_short": "Tools",
+    "audio": "Audio & Speech",
+    "audio_short": "Audio",
+    "appearance": "Appearance",
+    "appearance_short": "Look",
+    "shortcuts": "Keyboard Shortcuts",
+    "shortcuts_short": "Keys"
+  },
+  "nav": {
+    "categories": "Categories"
+  },
+  "scope": {
+    "save_to": "Save to:",
+    "project": "Project",
+    "chat": "Chat"
+  },
+  "values": {
+    "empty": "(empty)",
+    "driver_default": "(driver default)",
+    "default_paren": "(default)",
+    "unlimited": "0 (unlimited)",
+    "silence_off": "0 (off)",
+    "chars_suffix": "{count} chars",
+    "capture_device_default": "default",
+    "enum_sep": ", "
+  },
+  "sections": {
+    "execution": "Execution",
+    "thinking": "Thinking",
+    "prompt": "Prompt",
+    "mcp_servers": "MCP Servers",
+    "skills": "Skills",
+    "speech_to_text": "Speech-to-text (Wuji)",
+    "theme": "Theme",
+    "agent_chat": "Agent & Chat",
+    "your_messages": "Your messages",
+    "assistant_messages": "Assistant messages",
+    "labels_motion": "Labels & Motion",
+    "global": "Global",
+    "language": "Language"
+  },
+  "empty": {
+    "mcp_none": "(none connected)",
+    "skills_none": "(none loaded)"
+  },
+  "rows": {
+    "session_name": {
+      "label": "Chat name",
+      "hint": "Display name for this chat session."
+    },
+    "preset_combo": {
+      "label": "Preset & template",
+      "hint": "Cycle presets, YAML templates, and presentation styles."
+    },
+    "provider": {
+      "label": "Provider",
+      "hint": "Enter: fuzzy picker  <-/->: cycle provider."
+    },
+    "project_provider": {
+      "label": "Default provider",
+      "hint": "Enter: fuzzy picker  <-/->: cycle provider."
+    },
+    "model": {
+      "label": "Model",
+      "hint": "Enter/Space: pick model. Click (?): Wuji catalog details."
+    },
+    "temperature": {
+      "label": "Temperature",
+      "hint": "Sampling temperature; lower is more deterministic."
+    },
+    "max_tokens": {
+      "label": "Max tokens",
+      "hint": "Maximum tokens per model response."
+    },
+    "context_window": {
+      "label": "Context window",
+      "hint": "Enter: type token limit. <-/->: adjust in steps."
+    },
+    "context_window_fixed": {
+      "label": "Context window",
+      "hint": "Context window is fixed by the model catalog."
+    },
+    "max_steps": {
+      "label": "Max steps",
+      "hint": "Maximum autonomous tool-call steps per request."
+    },
+    "decisions_enabled": {
+      "label": "Decisions",
+      "hint": "Allow the agent to record project decisions."
+    },
+    "memory_enabled": {
+      "label": "Memory",
+      "hint": "Enable long-term memory for this chat."
+    },
+    "chain_of_thought": {
+      "label": "Chain of thought",
+      "hint": "How reasoning is exposed ({modes})."
+    },
+    "thought_max_chars": {
+      "label": "Thought max chars",
+      "hint": "Cap visible chain-of-thought length (0 = unlimited)."
+    },
+    "system_prompt_extra": {
+      "label": "System prompt extra",
+      "hint": "Extra system instructions appended for this chat."
+    },
+    "stt_enabled": {
+      "label": "Voice input enabled",
+      "hint": "Microphone button in the chat input (|O|)."
+    },
+    "stt_driver": {
+      "label": "STT driver",
+      "hint": "Wuji driver for wuji text --audio (e.g. llama). Saves capability_drivers.text on apply."
+    },
+    "stt_model": {
+      "label": "STT model",
+      "hint": "Model id passed to the STT driver (empty = driver default)."
+    },
+    "stt_language": {
+      "label": "Transcription language",
+      "hint": "Hint language for transcription; {auto_lang} uses automatic detection."
+    },
+    "stt_quality": {
+      "label": "Transcription quality",
+      "hint": "Speed vs accuracy preset for transcription (driver-dependent)."
+    },
+    "stt_trim_silence": {
+      "label": "Trim silence",
+      "hint": "Drop leading/trailing silence from recorded audio before STT."
+    },
+    "stt_silence_level": {
+      "label": "Silence level",
+      "hint": "Volume threshold for silence detection when trim is on."
+    },
+    "stt_capture_device": {
+      "label": "Capture device",
+      "hint": "Audio input device name or path (empty = system default)."
+    },
+    "stt_sample_rate": {
+      "label": "Sample rate",
+      "hint": "Capture sample rate in Hz (8000–48000)."
+    },
+    "ui_theme": {
+      "label": "Color theme",
+      "hint": "Enter: fuzzy search themes. <-/->: cycle. User themes: ~/.config/taiji/themes/"
+    },
+    "ui_corners": {
+      "label": "Corner style",
+      "hint": "Square or rounded frame, or flat fill without an outer border."
+    },
+    "ui_locale": {
+      "label": "Interface language",
+      "hint": "Language for settings labels and common UI text."
+    },
+    "tool_call_density": {
+      "label": "Tool call density",
+      "hint": "Compact or detailed tool-call lines in the activity log."
+    },
+    "turn_metrics_preset": {
+      "label": "Turn metrics",
+      "hint": "Verbosity of per-turn metrics in the chat log."
+    },
+    "turn_metrics_show_actions": {
+      "label": "Turn actions",
+      "hint": "Show redo/copy controls under finished turns."
+    },
+    "presentation": {
+      "label": "Presentation",
+      "hint": "How assistant messages are rendered in this chat."
+    },
+    "user_message_style": {
+      "label": "Message style",
+      "hint": "Bubble chrome for this role ({examples}, ...)."
+    },
+    "user_message_align": {
+      "label": "Alignment",
+      "hint": "Horizontal placement; {auto} follows the role (you: right, assistant: left)."
+    },
+    "user_message_max_width_pct": {
+      "label": "Max width",
+      "hint": "<-/-> or click the bar to set max bubble width (40–100%)."
+    },
+    "user_message_fill_background": {
+      "label": "Fill background",
+      "hint": "{on}: solid fill behind your message frame (border included). {off}: outline only on the chat background."
+    },
+    "assistant_message_style": {
+      "label": "Message style",
+      "hint": "Bubble chrome for this role ({examples}, ...)."
+    },
+    "assistant_message_align": {
+      "label": "Alignment",
+      "hint": "Horizontal placement; {auto} follows the role (you: right, assistant: left)."
+    },
+    "assistant_message_max_width_pct": {
+      "label": "Max width",
+      "hint": "<-/-> or click the bar to set max bubble width (40–100%)."
+    },
+    "assistant_message_fill_background": {
+      "label": "Fill background",
+      "hint": "{on}: solid fill behind your message frame (border included). {off}: outline only on the chat background."
+    },
+    "message_timestamps": {
+      "label": "Timestamps",
+      "hint": "Show send time on your message bubbles."
+    },
+    "sticky_user_message": {
+      "label": "Sticky prompt",
+      "hint": "Pin the top of your last scrolled prompt while reading long replies."
+    },
+    "auto_compact_context_pct": {
+      "label": "Auto-compact",
+      "hint": "When context fills this % of the window, summarize older turns automatically."
+    },
+    "message_time_clock": {
+      "label": "Clock format",
+      "hint": "24-hour clock or 12-hour with AM/PM."
+    },
+    "chat_width": {
+      "label": "Chat width",
+      "hint": "Maximum width of the chat column (terminal cells)."
+    },
+    "code_block_wrap": {
+      "label": "Code wrap",
+      "hint": "Wrap long lines inside fenced code blocks."
+    },
+    "tool_labels_locale": {
+      "label": "Tool labels",
+      "hint": "Language for tool status labels in the UI."
+    },
+    "reduce_motion": {
+      "label": "Reduce motion",
+      "hint": "Minimize interface motion (reserved for future animations)."
+    },
+    "key_open_theme_picker": {
+      "label": "Theme picker shortcut",
+      "hint": "Global shortcut to open the color theme picker (e.g. Ctrl+T)."
+    },
+    "mcp_toggle": {
+      "label": "",
+      "hint": "Space: enable server for this chat. Enter: expand or collapse tools."
+    },
+    "mcp_tool_toggle": {
+      "label": "",
+      "hint": "Space: allow or block this tool for the chat."
+    },
+    "skill_toggle": {
+      "label": "",
+      "hint": "Restrict skills to an allowlist, or allow all."
+    }
+  },
+  "options": {
+    "bool": {
+      "on": "On",
+      "off": "Off"
+    },
+    "chain_of_thought": {
+      "off": "Off",
+      "prompt": "Prompt",
+      "full": "Native"
+    },
+    "turn_metrics_preset": {
+      "off": "Off",
+      "compact": "Compact",
+      "dev": "Dev"
+    },
+    "ui_corners": {
+      "square": "Square",
+      "rounded": "Rounded",
+      "flat": "Flat"
+    },
+    "tool_call_density": {
+      "compact": "Compact",
+      "detailed": "Detailed"
+    },
+    "presentation": {
+      "markdown": "Markdown",
+      "whatsapp": "Conversational",
+      "story": "Story",
+      "minimal": "Minimal",
+      "bubbles": "Bubbles",
+      "narrative": "Narrative"
+    },
+    "message_style": {
+      "chat": "Chat",
+      "cornered": "Cornered",
+      "block": "Block",
+      "plain": "Plain",
+      "header": "Header",
+      "terminal": "Terminal",
+      "log": "Log",
+      "card": "Card",
+      "section": "Section"
+    },
+    "message_align": {
+      "auto": "Auto",
+      "left": "Left",
+      "right": "Right",
+      "center": "Center"
+    },
+    "auto_compact": {
+      "off": "Off"
+    },
+    "chat_width": {
+      "auto": "Auto",
+      "narrow": "Narrow",
+      "medium": "Medium",
+      "wide": "Wide"
+    },
+    "message_time_clock": {
+      "24h": "24-hour",
+      "12h": "12-hour (AM/PM)"
+    },
+    "stt_language": {
+      "auto": "Auto-detect"
+    },
+    "stt_quality": {
+      "default": "(default)",
+      "fast": "Fast",
+      "balanced": "Balanced",
+      "careful": "Careful"
+    },
+    "skill_state": {
+      "auto": "Default",
+      "pinned": "Pinned",
+      "off": "Blocked"
+    },
+    "mcp_tool_state": {
+      "allowed": "Allowed",
+      "blocked": "Blocked"
+    }
+  }
+}

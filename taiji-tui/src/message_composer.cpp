@@ -2,6 +2,7 @@
 
 #include "skim_fuzzy.hpp"
 #include "ui_chat_column.hpp"
+#include "ui_locale.hpp"
 #include "ui_theme.hpp"
 
 #include <tuinator/render/text.hpp>
@@ -30,8 +31,7 @@ MessageComposer::MessageComposer(tuinator::TextInputOptions input_options, tuina
     input_ = std::make_unique<ChatTextInput>(input_options, style, focused_style);
     input_->set_on_submit([this](const std::string& value) {
         if (theme_picker_.is_open()) {
-            theme_picker_.commit_selection();
-            close_theme_picker(true);
+            confirm_theme_picker_selection();
             return;
         }
         if (palette_.is_open()) {
@@ -108,6 +108,14 @@ void MessageComposer::notify_input_changed(const std::string& value) {
         }
     }
     mark_dirty();
+}
+
+void MessageComposer::refresh_locale_strings() {
+    if (input_ == nullptr || theme_picker_.is_open()) {
+        return;
+    }
+    const std::string ph = ui_tr("common", "composer.placeholder");
+    input_->set_placeholder(ph.empty() ? "Write a message…" : ph);
 }
 
 void MessageComposer::clear_after_send() {
@@ -284,8 +292,82 @@ void MessageComposer::paint(tuinator::PaintContext& ctx) const {
     }
 }
 
+bool MessageComposer::theme_picker_navigation_key(const tuinator::KeyPress& key) {
+    switch (key.key) {
+    case tuinator::Key::Up:
+    case tuinator::Key::Down:
+    case tuinator::Key::PageUp:
+    case tuinator::Key::PageDown:
+    case tuinator::Key::Home:
+    case tuinator::Key::End:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool MessageComposer::has_focused_descendant() const {
+    if (input_ != nullptr && (input_->is_focused() || input_->has_focused_descendant())) {
+        return true;
+    }
+    return tuinator::Widget::has_focused_descendant();
+}
+
+bool MessageComposer::route_theme_picker_key(const tuinator::KeyPress& key) {
+    if (!theme_picker_.is_open()) {
+        return false;
+    }
+    if (key.key == tuinator::Key::Escape) {
+        close_theme_picker(false);
+        return true;
+    }
+    if (key.key == tuinator::Key::Up) {
+        theme_picker_.move_selection(-1);
+        return true;
+    }
+    if (key.key == tuinator::Key::Down) {
+        theme_picker_.move_selection(1);
+        return true;
+    }
+    if (key.key == tuinator::Key::PageUp) {
+        theme_picker_.move_page(-5);
+        return true;
+    }
+    if (key.key == tuinator::Key::PageDown) {
+        theme_picker_.move_page(5);
+        return true;
+    }
+    if (key.key == tuinator::Key::Home) {
+        theme_picker_.jump_selection(false);
+        return true;
+    }
+    if (key.key == tuinator::Key::End) {
+        theme_picker_.jump_selection(true);
+        return true;
+    }
+    if (key.key == tuinator::Key::Enter) {
+        confirm_theme_picker_selection();
+        return true;
+    }
+    return false;
+}
+
+void MessageComposer::confirm_theme_picker_selection() {
+    if (!theme_picker_.is_open()) {
+        return;
+    }
+    theme_picker_.commit_selection();
+    close_theme_picker(true);
+}
+
 bool MessageComposer::handle_event(const tuinator::Event& event) {
     if (theme_picker_.is_open()) {
+        if (const auto* key = std::get_if<tuinator::KeyPress>(&event)) {
+            if (route_theme_picker_key(*key)) {
+                mark_dirty();
+                return true;
+            }
+        }
         if (const auto* mouse = std::get_if<tuinator::MouseEvent>(&event)) {
             const tuinator::Point local{mouse->position.x - bounds_.x, mouse->position.y - bounds_.y};
             if (mouse->button == tuinator::MouseButton::Left && mouse->action == tuinator::MouseAction::Release) {
@@ -294,8 +376,7 @@ bool MessageComposer::handle_event(const tuinator::Event& event) {
                                                    mouse->position.y - theme_picker_bounds_.y};
                 if (theme_picker_.hit_test_row(picker_local, visible_row)) {
                     theme_picker_.select_visible_row(visible_row);
-                    theme_picker_.commit_selection();
-                    close_theme_picker(true);
+                    confirm_theme_picker_selection();
                     return true;
                 }
             }
@@ -366,8 +447,11 @@ tuinator::Widget* MessageComposer::hit_test(tuinator::Point point) {
 }
 
 tuinator::Widget* MessageComposer::hit_test_focusable(tuinator::Point point) {
-    if (palette_.is_open() || theme_picker_.is_open()) {
+    if (palette_.is_open()) {
         return this;
+    }
+    if (theme_picker_.is_open() && input_ != nullptr) {
+        return input_->hit_test_focusable(point);
     }
     if (input_ != nullptr) {
         return input_->hit_test_focusable(point);
@@ -440,7 +524,12 @@ void MessageComposer::rebuild_palette_rows(const std::string& filter) {
     rows.push_back({"mode.plan", "agent", "⚡", "Plan", "Architecture-first, no edits", "", false, false});
     rows.push_back({"mode.debug", "agent", "🐞", "Debug", "Trace errors and root cause", "", false, false});
     rows.push_back({"mode.ask", "agent", "💬", "Ask", "Read-only answers", "", false, false});
-    rows.push_back({"menu.skills", "agent", "⚡", "Skills", "Force a skill", "", true, false});
+    {
+        const std::string skills = ui_shell("composer_menu.skills");
+        const std::string hint = ui_shell("composer_menu.skills_hint");
+        rows.push_back({"menu.skills", "agent", "⚡", skills.empty() ? "Skills" : skills,
+                        hint.empty() ? "Force a skill" : hint, "", true, false});
+    }
 
     for (const std::string& skill : ctx_cache_.skills) {
         rows.push_back({"skill." + skill, "menu.skills", "▪", skill, "", "", false, false});
@@ -487,7 +576,11 @@ void MessageComposer::rebuild_palette_rows(const std::string& filter) {
     const int mcp_active = static_cast<int>(ctx_cache_.mcp_enabled.size());
     char mcp_sub[32];
     std::snprintf(mcp_sub, sizeof(mcp_sub), "%d active", mcp_active);
-    rows.push_back({"menu.mcp", "runtime", "🔌", "MCP servers", mcp_sub, "", true, false});
+    {
+        const std::string mcp_label = ui_shell("composer_menu.mcp_servers");
+        rows.push_back({"menu.mcp", "runtime", "🔌", mcp_label.empty() ? "MCP servers" : mcp_label, mcp_sub, "", true,
+                        false});
+    }
     for (const std::string& server : ctx_cache_.mcp_servers) {
         const bool enabled =
             std::find(ctx_cache_.mcp_enabled.begin(), ctx_cache_.mcp_enabled.end(), server) !=
@@ -599,11 +692,13 @@ void MessageComposer::open_theme_picker(const std::string& active_theme_id) {
     stashed_input_ = input_->value();
     input_->set_value("");
     if (stashed_input_.empty()) {
-        input_->set_placeholder("Search color themes…");
+        const std::string ph = ui_tr("common", "theme_picker.filter_placeholder");
+        input_->set_placeholder(ph.empty() ? "Filter color themes…" : ph);
     } else {
-        input_->set_placeholder("Search themes… (draft saved)");
+        const std::string ph = ui_tr("common", "theme_picker.filter_placeholder_draft");
+        input_->set_placeholder(ph.empty() ? "Filter themes — Esc restores your message" : ph);
     }
-    input_->set_composer_intercept_key([this](const tuinator::KeyPress& key) { return handle_theme_picker_key(key); });
+    input_->set_composer_intercept_key([this](const tuinator::KeyPress& key) { return route_theme_picker_key(key); });
     theme_picker_.open(active_theme_id, !stashed_input_.empty());
     if (on_palette_open_changed_) {
         on_palette_open_changed_(true);
@@ -637,37 +732,6 @@ void MessageComposer::restore_stashed_input() {
     input_->set_placeholder(default_input_placeholder_);
     input_->set_value(stashed_input_);
     stashed_input_.clear();
-}
-
-bool MessageComposer::handle_theme_picker_key(const tuinator::KeyPress& key) {
-    if (!theme_picker_.is_open()) {
-        return false;
-    }
-    if (key.key == tuinator::Key::Escape) {
-        close_theme_picker(false);
-        return true;
-    }
-    if (key.key == tuinator::Key::Up) {
-        theme_picker_.move_selection(-1);
-        mark_dirty();
-        return true;
-    }
-    if (key.key == tuinator::Key::Down) {
-        theme_picker_.move_selection(1);
-        mark_dirty();
-        return true;
-    }
-    if (key.key == tuinator::Key::PageUp) {
-        theme_picker_.move_page(-5);
-        mark_dirty();
-        return true;
-    }
-    if (key.key == tuinator::Key::PageDown) {
-        theme_picker_.move_page(5);
-        mark_dirty();
-        return true;
-    }
-    return false;
 }
 
 std::string MessageComposer::read_file_snippet(const std::string& rel_path) const {

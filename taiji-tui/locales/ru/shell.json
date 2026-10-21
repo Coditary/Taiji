@@ -1,0 +1,94 @@
+{
+  "sidebar": {
+    "projects": "ПРОЕКТЫ",
+    "projects_menu_hint": "Щелчок правой кнопкой мыши: меню",
+    "new_session": "Новая сессия",
+    "agent_laya": "АГЕНТ И ЛАЯ",
+    "skills": "Навыки",
+    "decisions": "Решения",
+    "lsp": "...",
+    "connected": "Подключено",
+    "empty_none": "нет",
+    "empty_inactive": "неактивный",
+    "mcp_title": "...",
+    "mcp_title_count": "...",
+    "mcp_not_connected": "не подключено"
+  },
+  "context": {
+    "title": "КОНТЕКСТ",
+    "skills": "Навыки",
+    "system_prompt": "Системная подсказка",
+    "tools_mcp": "Определения инструментов и MCP",
+    "conversation": "Разговор"
+  },
+  "empty": {
+    "hint_send": "Отправьте сообщение, чтобы начать",
+    "quick_index_codebase": "Код исходного кода Index",
+    "quick_generate_tests": "Создать тесты",
+    "quick_analyze_git": "Анализ git diff",
+    "uncommitted_one": "{count} нефиксированные изменения",
+    "uncommitted_many": "{count} несохраненные изменения"
+  },
+  "session_menu": {
+    "open": "Открыть",
+    "delete": "Удалить"
+  },
+  "footer": {
+    "shortcuts_default": "Вкладка: фокус · Shift+Enter: новая строка · Enter: отправить · Esc: остановить"
+  },
+  "chat": {
+    "author_you": "Вы",
+    "author_summary": "резюме",
+    "thinking": "Размышления"
+  },
+  "composer_menu": {
+    "skills": "Навыки",
+    "skills_hint": "Принудительно применить навык",
+    "mcp_servers": "Серверы MCP"
+  },
+  "question": {
+    "custom_placeholder": "Индивидуальный ответ...",
+    "custom_label": "Индивидуальный ответ",
+    "footer_apply": "Ввод: применить  ·  Esc: назад"
+  },
+  "activity": {
+    "mcp": "...",
+    "thinking": "Размышления",
+    "tool": "Инструмент",
+    "skill": "Навык",
+    "decision": "Решение",
+    "question": "Вопрос",
+    "generating_response": "Обрабатывается запрос..."
+  },
+  "metrics": {
+    "tok_per_sec": "{value} тк/с"
+  },
+  "status": {
+    "starting": "Начинаем...",
+    "starting_agent": "Запуск агента...",
+    "agent_failed_prefix": "Ошибка агента: ",
+    "init_failed_prefix": "Ошибка инициализации: ",
+    "answer_question": "Ответить на вопрос  ·  Esc: отменить",
+    "composer_submit": "[ Отправить ↵ ]  ·  Shift+Enter: переход на новую строку  ·  Esc: остановить",
+    "could_not_send_answer": "Не удалось отправить ответ",
+    "agent_still_starting": "Агент всё ещё запускается...",
+    "voice_input_off": "Голосовой ввод отключен (Настройки -> Аудио).",
+    "speech_input": "Голосовой ввод...",
+    "wait_before_compact": "Перед сжатием дождитесь текущего ответа.",
+    "compacting": "Краткое изложение разговора...",
+    "generating_with_queue": "Обработка...  ·  {count} в очереди",
+    "generating_esc_stop": "Ожидание...  ·  Нажмите Esc, чтобы остановить",
+    "enter_queues_message": "Добавить в очередь ещё одно сообщение",
+    "response_copied": "Ответ скопирован",
+    "failed_switch_session_prefix": "Не удалось переключиться на другую сессию: ",
+    "failed_delete_session_prefix": "Не удалось удалить сессию: ",
+    "failed_create_session_prefix": "Не удалось создать сессию: ",
+    "request_failed": "Ошибка при обработке запроса",
+    "transcription_inserted": "Транскрипция добавлена.",
+    "recording_hint": "Запись... обновления текста во время речи. По завершении нажмите \"Стоп\".",
+    "compacted_ok": "Разговор сокращен.",
+    "compaction_failed": "Уплотнение не удалось.",
+    "could_not_load_skills": "Не удалось загрузить навыки.",
+    "could_not_load_decisions": "Не удалось загрузить решения."
+  }
+}

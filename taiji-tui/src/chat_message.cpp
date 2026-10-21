@@ -2,6 +2,7 @@
 
 #include "chat_message_chrome.hpp"
 #include "ui_chat_column.hpp"
+#include "ui_locale.hpp"
 #include "ui_theme.hpp"
 
 #include <tuinator/render/glyphs.hpp>
@@ -236,7 +237,11 @@ void ChatMessage::set_compact_summary(bool compact) {
 }
 
 std::string ChatMessage::speaker_name() const {
-    return author_label_.empty() ? "You" : author_label_;
+    if (author_label_.empty()) {
+        const std::string you = ui_shell("chat.author_you");
+        return you.empty() ? "You" : you;
+    }
+    return author_label_;
 }
 
 std::string ChatMessage::log_speaker_name() const {

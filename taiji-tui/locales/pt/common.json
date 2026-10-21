@@ -1,0 +1,37 @@
+{
+  "app": {
+    "settings_title": "Configurações",
+    "sidebar_settings": "Definições",
+    "settings_apply_hint": "Ctrl+S para guardar  ·  Esc para fechar",
+    "settings_footer_help": " Esc: fechar   Tab: painel   Espaço/Enter: alterar   <-/->: percorrer",
+    "settings_footer_apply": " Ctrl+S: aplicar "
+  },
+  "locale_names": {
+    "en": "Inglês",
+    "de": "Deutsch",
+    "es": "Español",
+    "fr": "Français",
+    "it": "Italiano",
+    "pt": "Português",
+    "nl": "Nederlands",
+    "pl": "Polski",
+    "ru": "russo",
+    "ja": "japonês",
+    "zh": "chinês",
+    "tr": "Türkçe",
+    "hi": "hindi",
+    "ar": "árabe",
+    "id": "indonésio",
+    "vi": "vietnamita"
+  },
+  "composer": {
+    "placeholder": "Escreve uma mensagem..."
+  },
+  "theme_picker": {
+    "title": "Temas de cores",
+    "filter_placeholder": "Filtrar temas de cores...",
+    "filter_placeholder_draft": "Filtrar temas — A tecla Esc restaura a sua mensagem",
+    "no_matches": "(sem resultados)",
+    "draft_saved": "Rascunho guardado — A tecla Esc restaura a sua mensagem"
+  }
+}

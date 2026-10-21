@@ -1,0 +1,94 @@
+{
+  "sidebar": {
+    "projects": "PROJETS",
+    "projects_menu_hint": "Clic droit : menu",
+    "new_session": "Nouvelle session",
+    "agent_laya": "...",
+    "skills": "Compétences",
+    "decisions": "Décisions",
+    "lsp": "...",
+    "connected": "Connecté",
+    "empty_none": "aucun",
+    "empty_inactive": "inactif",
+    "mcp_title": "...",
+    "mcp_title_count": "...",
+    "mcp_not_connected": "non connecté"
+  },
+  "context": {
+    "title": "CONTEXTE",
+    "skills": "Compétences",
+    "system_prompt": "Invite du système",
+    "tools_mcp": "Définitions des outils et MCP",
+    "conversation": "..."
+  },
+  "empty": {
+    "hint_send": "Envoyez un message pour commencer",
+    "quick_index_codebase": "Code source de l'index",
+    "quick_generate_tests": "Générer des tests",
+    "quick_analyze_git": "Analyser git diff",
+    "uncommitted_one": "{count} modification non validée",
+    "uncommitted_many": "{count} modifications non validées"
+  },
+  "session_menu": {
+    "open": "Ouvrir",
+    "delete": "Supprimer"
+  },
+  "footer": {
+    "shortcuts_default": "Tab : sélectionner · Maj+Entrée : nouvelle ligne · Entrée : envoyer · Échap : arrêter"
+  },
+  "chat": {
+    "author_you": "Toi",
+    "author_summary": "résumé",
+    "thinking": "Réflexion"
+  },
+  "composer_menu": {
+    "skills": "Compétences",
+    "skills_hint": "Forcer une compétence",
+    "mcp_servers": "Serveurs MCP"
+  },
+  "question": {
+    "custom_placeholder": "Réponse personnalisée...",
+    "custom_label": "Réponse personnalisée",
+    "footer_apply": "Entrée : valider  ·  Échap : retour"
+  },
+  "activity": {
+    "mcp": "...",
+    "thinking": "Réflexion",
+    "tool": "Outil",
+    "skill": "Compétence",
+    "decision": "Décision",
+    "question": "...",
+    "generating_response": "Génération de la réponse..."
+  },
+  "metrics": {
+    "tok_per_sec": "..."
+  },
+  "status": {
+    "starting": "C'est parti...",
+    "starting_agent": "Agent de démarrage...",
+    "agent_failed_prefix": "Échec de l'agent : ",
+    "init_failed_prefix": "Échec de l'initialisation : ",
+    "answer_question": "Répondre à la question  ·  Échap : annuler",
+    "composer_submit": "[ Envoyer ↵ ]  ·  Maj+Entrée : saut de ligne  ·  Échap : arrêter",
+    "could_not_send_answer": "Impossible d'envoyer la réponse",
+    "agent_still_starting": "L'agent est toujours en cours de démarrage...",
+    "voice_input_off": "La saisie vocale est désactivée (Paramètres -> Audio).",
+    "speech_input": "Saisie vocale...",
+    "wait_before_compact": "Attendez la réponse en cours avant de procéder à la compression.",
+    "compacting": "Conversation condensée...",
+    "generating_with_queue": "Génération en cours...  ·  {count} en file d'attente",
+    "generating_esc_stop": "Génération en cours...  ·  Appuyez sur Échap pour arrêter",
+    "enter_queues_message": "Ajouter un autre message à la file d'attente",
+    "response_copied": "Réponse copiée",
+    "failed_switch_session_prefix": "Échec du changement de session : ",
+    "failed_delete_session_prefix": "Échec de la suppression de la session : ",
+    "failed_create_session_prefix": "Échec de la création de la session : ",
+    "request_failed": "Échec de la requête",
+    "transcription_inserted": "Transcription insérée.",
+    "recording_hint": "Enregistrement... mise à jour du texte au fur et à mesure que vous parlez. Appuyez sur \" Arrêt \" lorsque vous avez terminé.",
+    "compacted_ok": "Conversation condensée.",
+    "compaction_failed": "Le compactage a échoué.",
+    "could_not_load_skills": "Impossible de charger les compétences.",
+    "could_not_load_decisions": "Impossible de charger les décisions."
+  }
+}

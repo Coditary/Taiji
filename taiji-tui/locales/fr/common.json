@@ -1,0 +1,37 @@
+{
+  "app": {
+    "settings_title": "Paramètres",
+    "sidebar_settings": "Paramètres",
+    "settings_apply_hint": "Ctrl+S appliquer  ·  Échap fermer",
+    "settings_footer_help": "Echap : fermeture   Onglet : volet   Espace/Entrée : changement<-/->: cycle",
+    "settings_footer_apply": "Ctrl+S : appliquer"
+  },
+  "locale_names": {
+    "en": "Anglais",
+    "de": "Deutsch",
+    "es": "Español",
+    "fr": "Français",
+    "it": "Italiano",
+    "pt": "Português",
+    "nl": "Nederlands",
+    "pl": "Polski",
+    "ru": "russe",
+    "ja": "japonais",
+    "zh": "chinois",
+    "tr": "Türkçe",
+    "hi": "hindi",
+    "ar": "arabe",
+    "id": "indonésien",
+    "vi": "vietnamien"
+  },
+  "composer": {
+    "placeholder": "Écrire"
+  },
+  "theme_picker": {
+    "title": "Thèmes couleurs",
+    "filter_placeholder": "Filtrer les thèmes de couleurs...",
+    "filter_placeholder_draft": "Filtrer les thèmes — Esc restaure votre message",
+    "no_matches": "(aucun résultat)",
+    "draft_saved": "Brouillon enregistré — Appuyez sur Échap pour rétablir votre message"
+  }
+}

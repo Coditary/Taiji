@@ -2,6 +2,7 @@
 
 #include "ui_anim.hpp"
 #include "ui_layout.hpp"
+#include "ui_locale.hpp"
 #include "ui_theme.hpp"
 
 #include <tuinator/render/text.hpp>
@@ -109,18 +110,22 @@ void McpServerList::paint(tuinator::PaintContext& ctx) const {
     tuinator::Style muted = ui_resolve_sidebar_text(ctx, *this, ui_secondary_style(theme_));
     tuinator::Style label = ui_resolve_sidebar_text(ctx, *this, theme_.label);
 
-    char title_buf[32];
-    if (servers_.empty()) {
-        std::snprintf(title_buf, sizeof(title_buf), "MCP");
-    } else {
-        std::snprintf(title_buf, sizeof(title_buf), "MCP (%zu)", servers_.size());
+    std::string title = ui_shell("sidebar.mcp_title");
+    if (title.empty()) {
+        title = "MCP";
+    }
+    if (!servers_.empty()) {
+        const std::string pattern = ui_shell("sidebar.mcp_title_count");
+        title = ui_format(pattern.empty() ? "MCP ({count})" : pattern, "count", std::to_string(servers_.size()));
     }
     ctx.canvas.fill_rect({0, 0, bounds_.width, 1}, ' ', mcp_row_fill_style());
-    ctx.canvas.draw_text({pad, 0}, title_buf, heading);
+    ctx.canvas.draw_text({pad, 0}, title, heading);
 
     int y = 1;
     if (servers_.empty()) {
-        const std::string state = status_line_.empty() ? "not connected" : status_line_;
+        const std::string disconnected = ui_shell("sidebar.mcp_not_connected");
+        const std::string state = status_line_.empty() ? (disconnected.empty() ? "not connected" : disconnected)
+                                                        : status_line_;
         if (y < bounds_.height) {
             ctx.canvas.fill_rect({0, y, bounds_.width, 1}, ' ', mcp_row_fill_style());
             tuinator::Style dot = mcp_dot_style(false);

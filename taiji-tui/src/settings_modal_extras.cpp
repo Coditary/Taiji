@@ -252,6 +252,68 @@ std::string SettingsModal::skill_state(const std::string& name) const {
     return "auto";
 }
 
+namespace {
+
+std::string mcp_tool_ref_key(const std::string& server, const std::string& tool) {
+    return server + ":" + tool;
+}
+
+} // namespace
+
+bool SettingsModal::mcp_server_expanded(const std::string& server) const {
+    return std::find(mcp_expanded_servers_.begin(), mcp_expanded_servers_.end(), server) !=
+           mcp_expanded_servers_.end();
+}
+
+bool SettingsModal::mcp_server_has_tools(const std::string& server) const {
+    for (const Draft::MCPToolEntry& tool : draft_.mcp_tools) {
+        if (tool.server == server) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void SettingsModal::toggle_mcp_server_expanded(const std::string& server) {
+    auto it = std::find(mcp_expanded_servers_.begin(), mcp_expanded_servers_.end(), server);
+    if (it == mcp_expanded_servers_.end()) {
+        mcp_expanded_servers_.push_back(server);
+        std::sort(mcp_expanded_servers_.begin(), mcp_expanded_servers_.end());
+    } else {
+        mcp_expanded_servers_.erase(it);
+    }
+}
+
+bool SettingsModal::mcp_tool_denied(const std::string& server, const std::string& tool) const {
+    const std::string ref = mcp_tool_ref_key(server, tool);
+    for (const std::string& deny : draft_.mcp_tools_deny) {
+        if (deny == ref) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void SettingsModal::toggle_mcp_tool_denied(const std::string& server, const std::string& tool) {
+    const std::string ref = mcp_tool_ref_key(server, tool);
+    auto it = std::find(draft_.mcp_tools_deny.begin(), draft_.mcp_tools_deny.end(), ref);
+    if (it == draft_.mcp_tools_deny.end()) {
+        draft_.mcp_tools_deny.push_back(ref);
+        std::sort(draft_.mcp_tools_deny.begin(), draft_.mcp_tools_deny.end());
+    } else {
+        draft_.mcp_tools_deny.erase(it);
+    }
+}
+
+std::string SettingsModal::mcp_tool_description(const std::string& server, const std::string& tool) const {
+    for (const Draft::MCPToolEntry& entry : draft_.mcp_tools) {
+        if (entry.server == server && entry.name == tool) {
+            return entry.description;
+        }
+    }
+    return {};
+}
+
 void SettingsModal::cycle_skill_state(const std::string& name) {
     const std::string state = skill_state(name);
     auto erase_name = [&](std::vector<std::string>& list) {

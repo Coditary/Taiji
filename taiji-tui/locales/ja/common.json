@@ -1,0 +1,37 @@
+{
+  "composer": {
+    "placeholder": "メッセージを入力..."
+  },
+  "app": {
+    "settings_title": "設定",
+    "sidebar_settings": "設定",
+    "settings_apply_hint": "Ctrl+S で適用  ·  Esc で閉じる",
+    "settings_footer_help": " Esc: 閉じる   Tab: ペイン   Space/Enter: 変更   <-/->: 切り替え",
+    "settings_footer_apply": " Ctrl+S: 適用 "
+  },
+  "theme_picker": {
+    "title": "カラーテーマ",
+    "filter_placeholder": "カラーテーマをフィルター...",
+    "filter_placeholder_draft": "テーマをフィルター — Esc でメッセージを復元",
+    "no_matches": "（一致なし）",
+    "draft_saved": "下書きを保存 — Esc でメッセージを復元"
+  },
+  "locale_names": {
+    "en": "英語",
+    "de": "Deutsch",
+    "es": "Español",
+    "fr": "Français",
+    "it": "Italiano",
+    "pt": "Português",
+    "nl": "Nederlands",
+    "pl": "Polski",
+    "ru": "Russian",
+    "ja": "日本語",
+    "zh": "Chinese",
+    "tr": "Türkçe",
+    "hi": "Hindi",
+    "ar": "Arabic",
+    "id": "Indonesian",
+    "vi": "Vietnamese"
+  }
+}

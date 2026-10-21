@@ -1,0 +1,94 @@
+{
+  "sidebar": {
+    "projects": "PROJEKTY",
+    "projects_menu_hint": "Kliknięcie prawym przyciskiem myszy: menu",
+    "new_session": "Nowa sesja",
+    "agent_laya": "AGENT I LAYA",
+    "skills": "Umiejętności",
+    "decisions": "Decyzje",
+    "lsp": "Przetłumacz tę etykietę interfejsu użytkownika oprogramowania na język docelowy: \"LSP\"",
+    "connected": "Połączone",
+    "empty_none": "brak",
+    "empty_inactive": "nieaktywny",
+    "mcp_title": "Przetłumacz tę etykietę z interfejsu użytkownika oprogramowania na język docelowy: \"MCP\"",
+    "mcp_title_count": "Przetłumacz tę etykietę interfejsu użytkownika oprogramowania na język docelowy: \"MCP ({count})\"",
+    "mcp_not_connected": "niepodłączone"
+  },
+  "context": {
+    "title": "KONTEKST",
+    "skills": "Umiejętności",
+    "system_prompt": "Komunikat systemowy",
+    "tools_mcp": "Definicje narzędzi i MCP",
+    "conversation": "Rozmowa"
+  },
+  "empty": {
+    "hint_send": "Wyślij wiadomość, aby rozpocząć",
+    "quick_index_codebase": "Kod źródłowy indeksu",
+    "quick_generate_tests": "Wygeneruj testy",
+    "quick_analyze_git": "Analiza pliku git diff",
+    "uncommitted_one": "{count} niezapisane zmiany",
+    "uncommitted_many": "{count} niezapisane zmiany"
+  },
+  "session_menu": {
+    "open": "Otwórz",
+    "delete": "Usuń"
+  },
+  "footer": {
+    "shortcuts_default": "Zakładka: fokus · Shift+Enter: nowy wiersz · Enter: wyślij · Esc: zatrzymaj"
+  },
+  "chat": {
+    "author_you": "Ty",
+    "author_summary": "podsumowanie",
+    "thinking": "Myślenie"
+  },
+  "composer_menu": {
+    "skills": "Umiejętności",
+    "skills_hint": "Wymuś umiejętność",
+    "mcp_servers": "Serwery MCP"
+  },
+  "question": {
+    "custom_placeholder": "Odpowiedź na zamówienie...",
+    "custom_label": "Odpowiedź niestandardowa",
+    "footer_apply": "Enter: zastosuj  ·  Esc: wstecz"
+  },
+  "activity": {
+    "mcp": "Przetłumacz tę etykietę z interfejsu użytkownika oprogramowania na język docelowy: \"MCP\"",
+    "thinking": "Myślenie",
+    "tool": "Narzędzie",
+    "skill": "Umiejętność",
+    "decision": "Decyzja",
+    "question": "Pytanie",
+    "generating_response": "Generowanie odpowiedzi..."
+  },
+  "metrics": {
+    "tok_per_sec": "..."
+  },
+  "status": {
+    "starting": "Zaczynamy...",
+    "starting_agent": "Środek inicjujący...",
+    "agent_failed_prefix": "Błąd agenta: ",
+    "init_failed_prefix": "Nie udało się wykonać inicjalizacji: ",
+    "answer_question": "Odpowiedz na pytanie  ·  Esc: anuluj",
+    "composer_submit": "[ Wyślij ↵ ]  ·  Shift+Enter: nowy wiersz  ·  Esc: zatrzymaj",
+    "could_not_send_answer": "Nie udało się wysłać odpowiedzi",
+    "agent_still_starting": "Agent wciąż się uruchamia...",
+    "voice_input_off": "Wprowadzanie głosowe jest wyłączone (Ustawienia -> Dźwięk).",
+    "speech_input": "Wprowadzanie głosowe...",
+    "wait_before_compact": "Przed skompresowaniem należy poczekać na bieżącą odpowiedź.",
+    "compacting": "Skrót rozmowy...",
+    "generating_with_queue": "Tworzenie...  ·  {count} w kolejce",
+    "generating_esc_stop": "Tworzenie...  ·  Klawisz Esc, aby przerwać",
+    "enter_queues_message": "Wprowadź kolejną wiadomość do kolejki",
+    "response_copied": "Odpowiedź skopiowana",
+    "failed_switch_session_prefix": "Nie udało się zmienić sesji: ",
+    "failed_delete_session_prefix": "Nie udało się usunąć sesji: ",
+    "failed_create_session_prefix": "Nie udało się utworzyć sesji: ",
+    "request_failed": "Wystąpił błąd podczas wysyłania żądania",
+    "transcription_inserted": "Wstawiono transkrypcję.",
+    "recording_hint": "Nagrywanie... aktualizacji tekstu podczas mówienia. Po zakończeniu naciśnij przycisk \"Stop\".",
+    "compacted_ok": "Rozmowa w skrócie.",
+    "compaction_failed": "Zagęszczenie nie powiodło się.",
+    "could_not_load_skills": "Nie udało się załadować umiejętności.",
+    "could_not_load_decisions": "Nie udało się załadować decyzji."
+  }
+}

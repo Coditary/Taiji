@@ -1,0 +1,94 @@
+{
+  "sidebar": {
+    "projects": "项目",
+    "projects_menu_hint": "右键单击：菜单",
+    "new_session": "新会话",
+    "agent_laya": "将此软件界面标签翻译成目标语言：\"AGENT & LAYA\"",
+    "skills": "技能",
+    "decisions": "决定",
+    "lsp": "将此软件界面标签翻译成目标语言：\"LSP\"",
+    "connected": "已连接",
+    "empty_none": "无",
+    "empty_inactive": "非活动状态",
+    "mcp_title": "将此软件界面标签翻译成目标语言：\"MCP\"",
+    "mcp_title_count": "将此软件界面标签翻译成目标语言：\"MCP ({count})\"",
+    "mcp_not_connected": "未连接"
+  },
+  "context": {
+    "title": "背景",
+    "skills": "技能",
+    "system_prompt": "系统提示",
+    "tools_mcp": "工具定义与MCP",
+    "conversation": "对话"
+  },
+  "empty": {
+    "hint_send": "发送一条消息开始吧",
+    "quick_index_codebase": "索引代码库",
+    "quick_generate_tests": "生成测试",
+    "quick_analyze_git": "分析 git diff",
+    "uncommitted_one": "{count} 未提交的更改",
+    "uncommitted_many": "{count} 未提交的更改"
+  },
+  "session_menu": {
+    "open": "打开",
+    "delete": "删除"
+  },
+  "footer": {
+    "shortcuts_default": "Tab：焦点 · Shift+Enter：换行 · Enter：发送 · Esc：停止"
+  },
+  "chat": {
+    "author_you": "你",
+    "author_summary": "摘要",
+    "thinking": "思考"
+  },
+  "composer_menu": {
+    "skills": "技能",
+    "skills_hint": "强制学习技能",
+    "mcp_servers": "MCP 服务器"
+  },
+  "question": {
+    "custom_placeholder": "自定义答案......",
+    "custom_label": "自定义答案",
+    "footer_apply": "Enter：应用  ·  Esc：返回"
+  },
+  "activity": {
+    "mcp": "将此软件界面标签翻译成目标语言：\"MCP\"",
+    "thinking": "思考",
+    "tool": "工具",
+    "skill": "技能",
+    "decision": "决定",
+    "question": "问题",
+    "generating_response": "正在生成响应......"
+  },
+  "metrics": {
+    "tok_per_sec": "{value} 托克/秒"
+  },
+  "status": {
+    "starting": "开始......",
+    "starting_agent": "启动代理......",
+    "agent_failed_prefix": "代理操作失败：",
+    "init_failed_prefix": "初始化失败：",
+    "answer_question": "回答问题  ·  Esc：取消",
+    "composer_submit": "[ 发送 ↵ ]  ·  Shift+Enter：换行  ·  Esc：停止",
+    "could_not_send_answer": "无法发送答案",
+    "agent_still_starting": "代理程序仍在启动中......",
+    "voice_input_off": "语音输入已关闭（\"设置\"->\"音频\"）。",
+    "speech_input": "语音输入......",
+    "wait_before_compact": "在进行压缩操作之前，请先等待当前回复。",
+    "compacting": "精简对话......",
+    "generating_with_queue": "正在生成......  ·  {count} 已加入队列",
+    "generating_esc_stop": "正在生成......  ·  按 Esc 键停止",
+    "enter_queues_message": "向队列中插入另一条消息",
+    "response_copied": "已复制回复",
+    "failed_switch_session_prefix": "无法切换会话：",
+    "failed_delete_session_prefix": "删除会话失败：",
+    "failed_create_session_prefix": "无法创建会话：",
+    "request_failed": "请求失败",
+    "transcription_inserted": "已插入转录文本。",
+    "recording_hint": "正在录音......边说边更新文字内容。完成后请点击\"停止\"。",
+    "compacted_ok": "对话已压缩。",
+    "compaction_failed": "压缩失败。",
+    "could_not_load_skills": "无法加载技能。",
+    "could_not_load_decisions": "无法加载决策。"
+  }
+}

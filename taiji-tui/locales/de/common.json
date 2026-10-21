@@ -1,0 +1,37 @@
+{
+  "composer": {
+    "placeholder": "Nachricht schreiben..."
+  },
+  "app": {
+    "settings_title": "Einstellungen",
+    "sidebar_settings": "Einstellungen",
+    "settings_apply_hint": "Strg+S übernehmen  ·  Esc schließen",
+    "settings_footer_help": " Esc: schließen   Tab: Bereich   Leertaste/Enter: ändern   <-/->: durchblättern",
+    "settings_footer_apply": " Strg+S: übernehmen "
+  },
+  "theme_picker": {
+    "title": "Farbthemen",
+    "filter_placeholder": "Farbthemen filtern...",
+    "filter_placeholder_draft": "Themen filtern — Esc stellt Nachricht wieder her",
+    "no_matches": "(keine Treffer)",
+    "draft_saved": "Entwurf gespeichert — Esc stellt Nachricht wieder her"
+  },
+  "locale_names": {
+    "en": "Englisch",
+    "de": "Deutsch",
+    "es": "Spanisch",
+    "fr": "Französisch",
+    "it": "Italienisch",
+    "pt": "Portugiesisch",
+    "nl": "Niederländisch",
+    "pl": "Polnisch",
+    "ru": "Russisch",
+    "ja": "Japanisch",
+    "zh": "Chinesisch",
+    "tr": "Türkisch",
+    "hi": "Hindi",
+    "ar": "Arabisch",
+    "id": "Indonesisch",
+    "vi": "Vietnamesisch"
+  }
+}

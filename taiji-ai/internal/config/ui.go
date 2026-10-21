@@ -8,6 +8,8 @@ type UIConfig struct {
 	ToolLabels  ToolLabelsUIConfig  `yaml:"tool_labels"`
 	// Theme is a taiji-tui stylesheet id (built-in: dark, high_contrast; or ~/.config/taiji/themes/<id>.theme).
 	Theme string `yaml:"theme,omitempty"`
+	// Locale is the TUI interface language id (en, de, es, …).
+	Locale string `yaml:"locale,omitempty"`
 	// CornerStyle is "square", "rounded", or "flat" (fill only, no outline) for composer and user bubbles.
 	CornerStyle string `yaml:"corner_style,omitempty"`
 	// CodeBlockWrap enables soft-wrapping inside fenced code blocks.
@@ -75,6 +77,7 @@ func DefaultUIConfig() UIConfig {
 	assistantMessageFillBackground := true
 	return UIConfig{
 		Theme:             "dark",
+		Locale:            "en",
 		UserMessageStyle:            "messenger",
 		UserMessageAlign:            "auto",
 		UserMessageMaxWidthPct:      80,
@@ -473,4 +476,19 @@ func normalizeTurnMetricField(raw string) string {
 	default:
 		return ""
 	}
+}
+
+// NormalizeUILocale returns a supported TUI locale id or "en".
+func NormalizeUILocale(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "de", "es", "fr", "it", "pt", "nl", "pl", "ru", "ja", "zh", "hi", "ar", "id", "vi", "tr":
+		return strings.ToLower(strings.TrimSpace(raw))
+	default:
+		return "en"
+	}
+}
+
+// LocaleOrDefault reports the interface language for settings labels.
+func (c UIConfig) LocaleOrDefault() string {
+	return NormalizeUILocale(c.Locale)
 }

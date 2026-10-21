@@ -1,0 +1,37 @@
+{
+  "app": {
+    "settings_title": "Instellingen",
+    "sidebar_settings": "Instellingen",
+    "settings_apply_hint": "Ctrl+S opslaan  ·  Esc sluiten",
+    "settings_footer_help": " Esc: sluiten   Tab: paneel   Spatiebalk/Enter: wijzigen   <-/->: doorlopen",
+    "settings_footer_apply": " Ctrl+S: toepassen "
+  },
+  "locale_names": {
+    "en": "Engels",
+    "de": "Deutsch",
+    "es": "Español",
+    "fr": "Français",
+    "it": "Italiano",
+    "pt": "Português",
+    "nl": "Nederlands",
+    "pl": "Polski",
+    "ru": "Russisch",
+    "ja": "Japans",
+    "zh": "Chinees",
+    "tr": "Türkçe",
+    "hi": "Hindi",
+    "ar": "Arabisch",
+    "id": "Indonesisch",
+    "vi": "Vietnamees"
+  },
+  "composer": {
+    "placeholder": "Schrijf een bericht..."
+  },
+  "theme_picker": {
+    "title": "Kleurthema's",
+    "filter_placeholder": "Kleurenthema’s filteren...",
+    "filter_placeholder_draft": "Thema's filteren — Met Esc zet je je bericht terug",
+    "no_matches": "(geen resultaten)",
+    "draft_saved": "Concept opgeslagen — Met Esc kun je je bericht herstellen"
+  }
+}

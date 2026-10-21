@@ -226,6 +226,7 @@ func applySettingsReplace(dst *Settings, src Settings) {
 	dst.SkillsAllow = append([]string(nil), src.SkillsAllow...)
 	dst.SkillsDeny = append([]string(nil), src.SkillsDeny...)
 	dst.MCPServers = append([]string(nil), src.MCPServers...)
+	dst.MCPToolsDeny = append([]string(nil), src.MCPToolsDeny...)
 	if v := strings.TrimSpace(src.Presentation); v != "" {
 		dst.Presentation = v
 	}

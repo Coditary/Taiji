@@ -41,6 +41,8 @@
 
 class SpeechMicButton;
 
+class LeftLabel;
+
 class ChatApp {
   public:
     explicit ChatApp(tuinator::Application& app);
@@ -185,6 +187,7 @@ class ChatApp {
     void sync_activity_handles();
     void open_settings_modal();
     void refresh_appearance_prefs();
+    void refresh_shell_strings();
     void apply_message_time_prefs(bool enabled, const std::string& clock_pref);
     void apply_sticky_user_message_pref(bool enabled);
     const ChatMessage* resolve_sticky_user_message() const;
@@ -247,6 +250,7 @@ class ChatApp {
     SidebarKvRow* decisions_row_ = nullptr;
     SidebarKvRow* lsp_row_ = nullptr;
     SidebarFooter* sidebar_footer_ = nullptr;
+    LeftLabel* sidebar_agent_heading_ = nullptr;
     bool context_show_cost_ = true;
     double last_gen_tok_per_sec_ = 0.0;
     QueueStatusBar* queue_bar_ = nullptr;

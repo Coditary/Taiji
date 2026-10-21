@@ -1,0 +1,94 @@
+{
+  "sidebar": {
+    "projects": "PROJECTS",
+    "projects_menu_hint": "R-Click: menu",
+    "new_session": "New Session",
+    "agent_laya": "AGENT & LAYA",
+    "skills": "Skills",
+    "decisions": "Decisions",
+    "lsp": "LSP",
+    "connected": "Connected",
+    "empty_none": "none",
+    "empty_inactive": "inactive",
+    "mcp_title": "MCP",
+    "mcp_title_count": "MCP ({count})",
+    "mcp_not_connected": "not connected"
+  },
+  "context": {
+    "title": "CONTEXT",
+    "skills": "Skills",
+    "system_prompt": "System prompt",
+    "tools_mcp": "Tool definitions & MCP",
+    "conversation": "Conversation"
+  },
+  "empty": {
+    "hint_send": "Send a message to start",
+    "quick_index_codebase": "Index codebase",
+    "quick_generate_tests": "Generate tests",
+    "quick_analyze_git": "Analyze git diff",
+    "uncommitted_one": "{count} uncommitted change",
+    "uncommitted_many": "{count} uncommitted changes"
+  },
+  "session_menu": {
+    "open": "Open",
+    "delete": "Delete"
+  },
+  "footer": {
+    "shortcuts_default": "Tab: focus · Shift+Enter: newline · Enter: send · Esc: stop"
+  },
+  "chat": {
+    "author_you": "You",
+    "author_summary": "summary",
+    "thinking": "Thinking"
+  },
+  "composer_menu": {
+    "skills": "Skills",
+    "skills_hint": "Force a skill",
+    "mcp_servers": "MCP servers"
+  },
+  "question": {
+    "custom_placeholder": "Custom answer...",
+    "custom_label": "Custom answer",
+    "footer_apply": "Enter: apply  ·  Esc: back"
+  },
+  "activity": {
+    "mcp": "MCP",
+    "thinking": "Thinking",
+    "tool": "Tool",
+    "skill": "Skill",
+    "decision": "Decision",
+    "question": "Question",
+    "generating_response": "Generating response..."
+  },
+  "metrics": {
+    "tok_per_sec": "{value} tok/s"
+  },
+  "status": {
+    "starting": "Starting...",
+    "starting_agent": "Starting agent...",
+    "agent_failed_prefix": "Agent failed: ",
+    "init_failed_prefix": "Init failed: ",
+    "answer_question": "Answer the question  ·  Esc: cancel",
+    "composer_submit": "[ Send ↵ ]  ·  Shift+Enter: newline  ·  Esc: stop",
+    "could_not_send_answer": "Could not send answer",
+    "agent_still_starting": "Agent is still starting...",
+    "voice_input_off": "Voice input is off (Settings -> Audio).",
+    "speech_input": "Speech input...",
+    "wait_before_compact": "Wait for the current reply before compacting.",
+    "compacting": "Compacting conversation...",
+    "generating_with_queue": "Generating...  ·  {count} queued",
+    "generating_esc_stop": "Generating...  ·  Esc to stop",
+    "enter_queues_message": "Enter queues another message",
+    "response_copied": "Response copied",
+    "failed_switch_session_prefix": "Failed to switch session: ",
+    "failed_delete_session_prefix": "Failed to delete session: ",
+    "failed_create_session_prefix": "Failed to create session: ",
+    "request_failed": "Request failed",
+    "transcription_inserted": "Transcription inserted.",
+    "recording_hint": "Recording... text updates while you speak. Press Stop when done.",
+    "compacted_ok": "Conversation compacted.",
+    "compaction_failed": "Compaction failed.",
+    "could_not_load_skills": "Could not load skills.",
+    "could_not_load_decisions": "Could not load decisions."
+  }
+}

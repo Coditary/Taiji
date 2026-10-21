@@ -108,7 +108,7 @@ void ChatTextInput::layout(tuinator::Rect bounds) {
 bool ChatTextInput::handle_event(const tuinator::Event& event) {
     if (composer_intercept_key_) {
         if (const auto* key = std::get_if<tuinator::KeyPress>(&event)) {
-            if (is_focused() && composer_intercept_key_(*key)) {
+            if (composer_intercept_key_(*key)) {
                 note_caret_activity();
                 return true;
             }

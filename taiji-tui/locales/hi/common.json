@@ -1,0 +1,37 @@
+{
+  "composer": {
+    "placeholder": "एक संदेश लिखें..."
+  },
+  "app": {
+    "settings_title": "सेटिंग्स",
+    "sidebar_settings": "सेटिंग्स",
+    "settings_apply_hint": "Ctrl+S लागू करें · Esc बंद करें",
+    "settings_footer_help": " Esc: बंद   Tab: पैन   Space/Enter: बदलें   <-/->: चक्र",
+    "settings_footer_apply": " Ctrl+S: लागू करें "
+  },
+  "theme_picker": {
+    "title": "रंग थीम",
+    "filter_placeholder": "रंग थीम फ़िल्टर करें...",
+    "filter_placeholder_draft": "थीम फ़िल्टर करें — Esc आपका संदेश पुनर्स्थापित करता है",
+    "no_matches": "(कोई मेल नहीं मिला)",
+    "draft_saved": "ड्राफ़्ट सहेजा गया — Esc आपका संदेश पुनर्स्थापित करता है"
+  },
+  "locale_names": {
+    "en": "अंग्रेज़ी",
+    "de": "जर्मन",
+    "es": "स्पेनिश",
+    "fr": "फ्रांसीसी",
+    "it": "इटालियन",
+    "pt": "पुर्तगाली",
+    "nl": "डच",
+    "pl": "पॉलिश",
+    "ru": "रूसी",
+    "ja": "जापानी",
+    "zh": "चीनी",
+    "hi": "हिन्दी",
+    "ar": "अरबी",
+    "id": "इंडोनेशियाई",
+    "vi": "वियतनामी",
+    "tr": "तुर्की"
+  }
+}

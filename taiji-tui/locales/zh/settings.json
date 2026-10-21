@@ -1,0 +1,341 @@
+{
+  "categories": {
+    "general": "常规与聊天",
+    "general_short": "常规",
+    "model": "模型",
+    "agent": "智能体与行为",
+    "agent_short": "智能体",
+    "tools": "工具与技能",
+    "tools_short": "工具",
+    "audio": "音频与语音",
+    "audio_short": "音频",
+    "appearance": "外观",
+    "appearance_short": "外观",
+    "shortcuts": "键盘快捷键",
+    "shortcuts_short": "按键"
+  },
+  "nav": {
+    "categories": "分类"
+  },
+  "scope": {
+    "save_to": "保存到：",
+    "project": "项目",
+    "chat": "聊天"
+  },
+  "values": {
+    "empty": "（空）",
+    "driver_default": "（驱动默认）",
+    "default_paren": "（默认）",
+    "unlimited": "0（无限制）",
+    "silence_off": "0（关）",
+    "chars_suffix": "{count} 字",
+    "capture_device_default": "默认",
+    "enum_sep": "、"
+  },
+  "sections": {
+    "execution": "执行",
+    "thinking": "思考",
+    "prompt": "提示词",
+    "mcp_servers": "MCP 服务器",
+    "skills": "技能",
+    "speech_to_text": "语音转文字 (Wuji)",
+    "theme": "主题",
+    "agent_chat": "智能体与聊天",
+    "your_messages": "你的消息",
+    "assistant_messages": "助手消息",
+    "labels_motion": "标签与动画",
+    "global": "全局",
+    "language": "语言"
+  },
+  "empty": {
+    "mcp_none": "（未连接）",
+    "skills_none": "（未加载）"
+  },
+  "rows": {
+    "session_name": {
+      "label": "聊天名称",
+      "hint": "此聊天会话的显示名称。"
+    },
+    "preset_combo": {
+      "label": "预设与模板",
+      "hint": "切换预设、YAML 模板和消息展示样式。"
+    },
+    "provider": {
+      "label": "提供商",
+      "hint": "Enter：模糊选择  <-/->：切换提供商。"
+    },
+    "project_provider": {
+      "label": "默认提供商",
+      "hint": "Enter：模糊选择  <-/->：切换提供商。"
+    },
+    "model": {
+      "label": "模型",
+      "hint": "Enter/Space：选择模型。点击 (?)：Wuji 目录详情。"
+    },
+    "temperature": {
+      "label": "温度",
+      "hint": "采样温度；越低越确定。"
+    },
+    "max_tokens": {
+      "label": "最大 token",
+      "hint": "每次模型回复的最大 token 数。"
+    },
+    "context_window": {
+      "label": "上下文窗口",
+      "hint": "Enter：输入 token 上限。<-/->：按步调整。"
+    },
+    "context_window_fixed": {
+      "label": "上下文窗口",
+      "hint": "上下文窗口由模型目录固定。"
+    },
+    "max_steps": {
+      "label": "最大步数",
+      "hint": "每次请求的最大自主工具调用步数。"
+    },
+    "decisions_enabled": {
+      "label": "决策记录",
+      "hint": "允许智能体记录项目决策。"
+    },
+    "memory_enabled": {
+      "label": "记忆",
+      "hint": "为此聊天启用长期记忆。"
+    },
+    "chain_of_thought": {
+      "label": "思维链",
+      "hint": "推理的展示方式（{modes}）。"
+    },
+    "thought_max_chars": {
+      "label": "思维最大字符",
+      "hint": "可见思维链长度上限（0 为无限制）。"
+    },
+    "system_prompt_extra": {
+      "label": "额外系统提示",
+      "hint": "附加到此聊天的系统指令。"
+    },
+    "stt_enabled": {
+      "label": "启用语音输入",
+      "hint": "聊天输入框中的麦克风按钮 (|O|)。"
+    },
+    "stt_driver": {
+      "label": "STT 驱动",
+      "hint": "wuji text --audio 的 Wuji 驱动（如 llama）。应用时保存 capability_drivers.text。"
+    },
+    "stt_model": {
+      "label": "STT 模型",
+      "hint": "传给 STT 驱动的模型 ID（空为驱动默认）。"
+    },
+    "stt_language": {
+      "label": "转写语言",
+      "hint": "转写提示语言；{auto_lang} 为自动检测。"
+    },
+    "stt_quality": {
+      "label": "转写质量",
+      "hint": "转写速度/精度预设（取决于驱动）。"
+    },
+    "stt_trim_silence": {
+      "label": "修剪静音",
+      "hint": "STT 前去掉录音首尾静音。"
+    },
+    "stt_silence_level": {
+      "label": "静音阈值",
+      "hint": "启用修剪时的音量静音判定阈值。"
+    },
+    "stt_capture_device": {
+      "label": "采集设备",
+      "hint": "音频输入设备名或路径（空为系统默认）。"
+    },
+    "stt_sample_rate": {
+      "label": "采样率",
+      "hint": "采集采样率（Hz，8000–48000）。"
+    },
+    "ui_theme": {
+      "label": "配色主题",
+      "hint": "Enter：搜索主题。<-/->：切换。用户主题：~/.config/taiji/themes/"
+    },
+    "ui_corners": {
+      "label": "圆角样式",
+      "hint": "方角/圆角边框，或无外框的扁平样式。"
+    },
+    "ui_locale": {
+      "label": "界面语言",
+      "hint": "设置标签与通用界面文字的语言。"
+    },
+    "tool_call_density": {
+      "label": "工具调用密度",
+      "hint": "活动日志中工具行的简洁或详细显示。"
+    },
+    "turn_metrics_preset": {
+      "label": "轮次指标",
+      "hint": "聊天日志中每轮指标的详细程度。"
+    },
+    "turn_metrics_show_actions": {
+      "label": "轮次操作",
+      "hint": "在已完成的轮次下显示重做/复制。"
+    },
+    "presentation": {
+      "label": "展示形式",
+      "hint": "此聊天中助手消息的渲染方式。"
+    },
+    "user_message_style": {
+      "label": "消息样式",
+      "hint": "此角色的气泡样式（{examples} 等）。"
+    },
+    "user_message_align": {
+      "label": "对齐",
+      "hint": "水平位置；{auto} 随角色（你：右，助手：左）。"
+    },
+    "user_message_max_width_pct": {
+      "label": "最大宽度",
+      "hint": "<-/-> 或点击滑条设置气泡最大宽度（40–100%）。"
+    },
+    "user_message_fill_background": {
+      "label": "填充背景",
+      "hint": "{on}：消息框内实心填充（含边框）。{off}：仅在聊天背景上显示轮廓。"
+    },
+    "assistant_message_style": {
+      "label": "消息样式",
+      "hint": "此角色的气泡样式（{examples} 等）。"
+    },
+    "assistant_message_align": {
+      "label": "对齐",
+      "hint": "水平位置；{auto} 随角色（你：右，助手：左）。"
+    },
+    "assistant_message_max_width_pct": {
+      "label": "最大宽度",
+      "hint": "<-/-> 或点击滑条设置气泡最大宽度（40–100%）。"
+    },
+    "assistant_message_fill_background": {
+      "label": "填充背景",
+      "hint": "{on}：消息框内实心填充（含边框）。{off}：仅在聊天背景上显示轮廓。"
+    },
+    "message_timestamps": {
+      "label": "时间戳",
+      "hint": "在你的消息气泡上显示发送时间。"
+    },
+    "sticky_user_message": {
+      "label": "固定提示",
+      "hint": "阅读长回复时，固定你上次滚动到的提示顶部。"
+    },
+    "auto_compact_context_pct": {
+      "label": "自动压缩",
+      "hint": "当上下文达到窗口的此 % 时，自动摘要较早的轮次。"
+    },
+    "message_time_clock": {
+      "label": "时钟格式",
+      "hint": "24 小时制或 12 小时制（AM/PM）。"
+    },
+    "chat_width": {
+      "label": "聊天宽度",
+      "hint": "聊天列的最大宽度（终端列数）。"
+    },
+    "code_block_wrap": {
+      "label": "代码换行",
+      "hint": "在代码块内换行长行。"
+    },
+    "tool_labels_locale": {
+      "label": "工具标签",
+      "hint": "界面中工具状态标签的语言。"
+    },
+    "reduce_motion": {
+      "label": "减少动画",
+      "hint": "尽量减少界面动效（预留给未来动画）。"
+    },
+    "key_open_theme_picker": {
+      "label": "主题选择快捷键",
+      "hint": "打开配色主题选择的全局快捷键（如 Ctrl+T）。"
+    },
+    "mcp_toggle": {
+      "label": "",
+      "hint": "Space：在此聊天中启用/禁用服务器。Enter：展开或收起工具列表。"
+    },
+    "mcp_tool_toggle": {
+      "label": "",
+      "hint": "Space：允许或阻止此工具用于聊天。"
+    },
+    "skill_toggle": {
+      "label": "",
+      "hint": "将技能限制为允许列表，或允许全部。"
+    }
+  },
+  "options": {
+    "bool": {
+      "on": "开",
+      "off": "关"
+    },
+    "chain_of_thought": {
+      "off": "关",
+      "prompt": "提示",
+      "full": "原生"
+    },
+    "turn_metrics_preset": {
+      "off": "关",
+      "compact": "简洁",
+      "dev": "开发"
+    },
+    "ui_corners": {
+      "square": "方角",
+      "rounded": "圆角",
+      "flat": "扁平"
+    },
+    "tool_call_density": {
+      "compact": "简洁",
+      "detailed": "详细"
+    },
+    "presentation": {
+      "markdown": "将此软件界面标签翻译成目标语言：\"Markdown\"",
+      "whatsapp": "会话型（短文）",
+      "story": "故事",
+      "minimal": "极简",
+      "bubbles": "气泡",
+      "narrative": "叙事"
+    },
+    "message_style": {
+      "chat": "聊天",
+      "cornered": "角框",
+      "block": "块",
+      "plain": "纯文本",
+      "header": "标题",
+      "terminal": "终端",
+      "log": "日志",
+      "card": "卡片",
+      "section": "分区"
+    },
+    "message_align": {
+      "auto": "自动",
+      "left": "左",
+      "right": "右",
+      "center": "居中"
+    },
+    "auto_compact": {
+      "off": "关"
+    },
+    "chat_width": {
+      "auto": "自动",
+      "narrow": "窄",
+      "medium": "中",
+      "wide": "宽"
+    },
+    "message_time_clock": {
+      "24h": "24 小时",
+      "12h": "12 小时（AM/PM）"
+    },
+    "stt_language": {
+      "auto": "自动检测"
+    },
+    "stt_quality": {
+      "default": "（默认）",
+      "fast": "快",
+      "balanced": "平衡",
+      "careful": "精确"
+    },
+    "skill_state": {
+      "auto": "默认",
+      "pinned": "固定",
+      "off": "阻止"
+    },
+    "mcp_tool_state": {
+      "allowed": "允许",
+      "blocked": "阻止"
+    }
+  }
+}

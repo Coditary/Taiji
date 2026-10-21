@@ -1,0 +1,37 @@
+{
+  "composer": {
+    "placeholder": "Tulis pesan..."
+  },
+  "app": {
+    "settings_title": "Pengaturan",
+    "sidebar_settings": "Pengaturan",
+    "settings_apply_hint": "Ctrl+S untuk menyimpan  ·  Esc untuk menutup",
+    "settings_footer_help": " Esc: tutup   Tab: panel   Spasi/Enter: ubah   <-/->: berganti-ganti",
+    "settings_footer_apply": " Ctrl+S: terapkan "
+  },
+  "theme_picker": {
+    "title": "Tema warna",
+    "filter_placeholder": "Saring tema warna...",
+    "filter_placeholder_draft": "Filter tema — Esc mengembalikan pesan Anda",
+    "no_matches": "(tidak ada hasil)",
+    "draft_saved": "Draf telah disimpan — Tekan Esc untuk mengembalikan pesan Anda"
+  },
+  "locale_names": {
+    "en": "Bahasa Inggris",
+    "de": "Bahasa Jerman",
+    "es": "Bahasa Spanyol",
+    "fr": "Bahasa Prancis",
+    "it": "Italia",
+    "pt": "Bahasa Portugis",
+    "nl": "Belanda",
+    "pl": "Bahasa Polandia",
+    "ru": "Rusia",
+    "ja": "Bahasa Jepang",
+    "zh": "Bahasa Mandarin",
+    "hi": "Bahasa Hindi",
+    "ar": "Bahasa Arab",
+    "id": "Bahasa Indonesia",
+    "vi": "Bahasa Vietnam",
+    "tr": "Turki"
+  }
+}

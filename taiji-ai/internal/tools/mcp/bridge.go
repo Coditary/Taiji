@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -79,6 +80,45 @@ func (b *Bridge) Connect(ctx context.Context, cfg ServerConfig) error {
 	}
 	b.servers[cfg.Name] = s
 	return nil
+}
+
+// CatalogEntry describes one tool exposed by a connected MCP server.
+type CatalogEntry struct {
+	Server      string
+	Name        string
+	Description string
+}
+
+// ToolCatalog lists tools (with descriptions) from all connected servers.
+func (b *Bridge) ToolCatalog(ctx context.Context) ([]CatalogEntry, error) {
+	b.mu.Lock()
+	sessions := make(map[string]*session, len(b.servers))
+	for name, s := range b.servers {
+		sessions[name] = s
+	}
+	b.mu.Unlock()
+
+	var out []CatalogEntry
+	for serverName, s := range sessions {
+		list, err := s.listTools(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("mcp %q list tools: %w", serverName, err)
+		}
+		for _, t := range list {
+			out = append(out, CatalogEntry{
+				Server:      serverName,
+				Name:        t.Name,
+				Description: t.Description,
+			})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Server != out[j].Server {
+			return out[i].Server < out[j].Server
+		}
+		return out[i].Name < out[j].Name
+	})
+	return out, nil
 }
 
 // ConnectedServers returns names of connected MCP servers.

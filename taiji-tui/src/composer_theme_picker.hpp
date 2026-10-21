@@ -17,7 +17,6 @@ class ComposerThemePicker {
     void set_filter(const std::string& query);
     const std::string& selected_theme_id() const;
 
-    int panel_height(int max_rows = 10) const;
     tuinator::Size preferred_size(int width, int max_rows = 10) const;
 
     void layout(tuinator::Rect bounds);
@@ -25,6 +24,7 @@ class ComposerThemePicker {
 
     bool move_selection(int delta);
     bool move_page(int rows);
+    bool jump_selection(bool to_end);
     bool select_visible_row(int visible_index);
     bool hit_test_row(tuinator::Point local, int& visible_index) const;
 
@@ -33,12 +33,18 @@ class ComposerThemePicker {
   private:
     struct Entry {
         std::string id;
+        std::string subtitle;
         std::string line;
         std::string meta;
     };
 
+    tuinator::Rect panel_rect() const;
+    int panel_height(int max_rows = 10) const;
+    int visible_list_rows(int panel_h) const;
+    int list_start_y(const tuinator::Rect& panel) const;
+
     void rebuild_entries();
-    void rebuild_filter();
+    void rebuild_filter(bool preview = true);
     void sync_scroll(int max_visible);
     void preview_selection();
 

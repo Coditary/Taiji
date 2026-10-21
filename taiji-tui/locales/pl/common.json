@@ -1,0 +1,37 @@
+{
+  "app": {
+    "settings_title": "Ustawienia",
+    "sidebar_settings": "Ustawienia",
+    "settings_apply_hint": "Ctrl+S – zapisz  ·  Esc – zamknij",
+    "settings_footer_help": " Esc: zamknij   Tab: panel   Spacja/Enter: zmiana   <-/->: przełączanie",
+    "settings_footer_apply": " Ctrl+S: zastosuj "
+  },
+  "locale_names": {
+    "en": "angielski",
+    "de": "Deutsch",
+    "es": "Español",
+    "fr": "Français",
+    "it": "Italiano",
+    "pt": "Português",
+    "nl": "Nederlands",
+    "pl": "Polski",
+    "ru": "rosyjski",
+    "ja": "japoński",
+    "zh": "chiński",
+    "tr": "Türkçe",
+    "hi": "hindi",
+    "ar": "arabski",
+    "id": "indonezyjski",
+    "vi": "wietnamski"
+  },
+  "composer": {
+    "placeholder": "Napisz wiadomość..."
+  },
+  "theme_picker": {
+    "title": "Motywy kolorystyczne",
+    "filter_placeholder": "Filtruj motywy kolorystyczne...",
+    "filter_placeholder_draft": "Filtruj tematy — klawisz Esc przywraca Twoją wiadomość",
+    "no_matches": "(brak wyników)",
+    "draft_saved": "Wersja robocza zapisana — klawisz Esc przywraca wiadomość"
+  }
+}

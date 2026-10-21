@@ -1,6 +1,7 @@
 #include "mcp_sidebar.hpp"
 
 #include "left_label.hpp"
+#include "ui_locale.hpp"
 
 tuinator::Style mcp_dot_style() {
     tuinator::Style style;
@@ -21,6 +22,7 @@ std::unique_ptr<tuinator::HBox> make_mcp_server_row(const std::string& name, con
     auto spacer = std::make_unique<LeftLabel>("", theme.label);
     spacer->set_flex(1);
     row->add_child(std::move(spacer));
-    row->add_child(std::make_unique<LeftLabel>("Connected", mcp_connected_style()));
+    const std::string connected = ui_shell("sidebar.connected");
+    row->add_child(std::make_unique<LeftLabel>(connected.empty() ? "Connected" : connected, mcp_connected_style()));
     return row;
 }

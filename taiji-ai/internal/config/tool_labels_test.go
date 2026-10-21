@@ -40,3 +40,23 @@ func TestGermanToolLabels(t *testing.T) {
 		t.Fatalf("got %q want Lesen", got)
 	}
 }
+
+func TestJapaneseToolLabels(t *testing.T) {
+	cfg := &Config{}
+	cfg.UI.ToolLabels.Locale = "ja"
+	if got := cfg.ToolDisplayTitle("grep"); got != "検索" {
+		t.Fatalf("got %q want 検索", got)
+	}
+	if got := cfg.ToolDisplayTitle("turn_route"); got != "ルート" {
+		t.Fatalf("got %q want ルート", got)
+	}
+}
+
+func TestToolLabelsFollowUILocaleWhenUnset(t *testing.T) {
+	cfg := &Config{}
+	cfg.UI.Locale = "ja"
+	cfg.UI.ToolLabels.Locale = ""
+	if got := cfg.ToolDisplayTitle("grep"); got != "検索" {
+		t.Fatalf("got %q want 検索", got)
+	}
+}

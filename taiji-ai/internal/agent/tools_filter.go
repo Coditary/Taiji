@@ -14,7 +14,7 @@ func filterProviderTools(reg *tools.Registry, rt session.AgentRuntime) []provide
 	out := make([]tools.Definition, 0, len(defs))
 	for _, d := range defs {
 		if server, ok := mcpServerOf(reg, d.Name); ok {
-			if !rt.MCPServerAllowed(server) {
+			if !rt.MCPToolAllowed(server, d.Name) {
 				continue
 			}
 		}

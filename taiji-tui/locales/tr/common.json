@@ -1,0 +1,37 @@
+{
+  "composer": {
+    "placeholder": "Mesaj yaz..."
+  },
+  "app": {
+    "settings_title": "Ayarlar",
+    "sidebar_settings": "Ayarlar",
+    "settings_apply_hint": "Ctrl+S uygula  ·  Esc kapat",
+    "settings_footer_help": " Esc: kapat   Tab: bölüm   Boşluk/Enter: değiştir   <-/->: gezin",
+    "settings_footer_apply": " Ctrl+S: uygula "
+  },
+  "theme_picker": {
+    "title": "Renk temaları",
+    "filter_placeholder": "Renk temalarını filtrele...",
+    "filter_placeholder_draft": "Temaları filtrele — Esc mesajı geri yükler",
+    "no_matches": "(eşleşme yok)",
+    "draft_saved": "Taslak kaydedildi — Esc mesajı geri yükler"
+  },
+  "locale_names": {
+    "en": "İngilizce",
+    "de": "Deutsch",
+    "es": "Español",
+    "fr": "Français",
+    "it": "Italiano",
+    "pt": "Português",
+    "nl": "Nederlands",
+    "pl": "Polski",
+    "ru": "Rusça",
+    "ja": "Japonca",
+    "zh": "Çince",
+    "tr": "Türkçe",
+    "hi": "Hintçe",
+    "ar": "Arapça",
+    "id": "Endonezce",
+    "vi": "Vietnamca"
+  }
+}

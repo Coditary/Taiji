@@ -1,0 +1,94 @@
+{
+  "sidebar": {
+    "projects": "परियोजनाएँ",
+    "projects_menu_hint": "दक्षिण-क्लिक: मेनू",
+    "new_session": "नया सत्र",
+    "agent_laya": "एजेंट और लाया",
+    "skills": "कौशल",
+    "decisions": "निर्णय",
+    "lsp": "एलएसपी",
+    "connected": "जुड़ा हुआ",
+    "empty_none": "कोई नहीं",
+    "empty_inactive": "निष्क्रिय",
+    "mcp_title": "एमसीपी",
+    "mcp_title_count": "एमसीपी ({count})",
+    "mcp_not_connected": "जुड़ा नहीं है"
+  },
+  "context": {
+    "title": "संदर्भ",
+    "skills": "कौशल",
+    "system_prompt": "सिस्टम प्रॉम्प्ट",
+    "tools_mcp": "टूल परिभाषाएँ और MCP",
+    "conversation": "संवाद"
+  },
+  "empty": {
+    "hint_send": "शुरू करने के लिए एक संदेश भेजें",
+    "quick_index_codebase": "कोडबेस अनुक्रमणिका",
+    "quick_generate_tests": "परीक्षण उत्पन्न करें",
+    "quick_analyze_git": "गिट डिफ का विश्लेषण करें",
+    "uncommitted_one": "{count} अनिर्णीत परिवर्तन",
+    "uncommitted_many": "{count} अनिर्णीत परिवर्तन"
+  },
+  "session_menu": {
+    "open": "खोलें",
+    "delete": "मिटाएँ"
+  },
+  "footer": {
+    "shortcuts_default": "टैब: फोकस · शिफ्ट+एंटर: नया लाइन · एंटर: भेजें · एस्क: रोकें"
+  },
+  "chat": {
+    "author_you": "तुम",
+    "author_summary": "सारांश",
+    "thinking": "सोचना"
+  },
+  "composer_menu": {
+    "skills": "कौशल",
+    "skills_hint": "कौशल लागू करें",
+    "mcp_servers": "एमसीपी सर्वर"
+  },
+  "question": {
+    "custom_placeholder": "अनुकूलित उत्तर...",
+    "custom_label": "अनुकूलित उत्तर",
+    "footer_apply": "प्रवेश: लागू करें · Esc: वापस"
+  },
+  "activity": {
+    "mcp": "एमसीपी",
+    "thinking": "सोचना",
+    "tool": "उपकरण",
+    "skill": "कौशल",
+    "decision": "निर्णय",
+    "question": "प्रश्न",
+    "generating_response": "प्रतिक्रिया उत्पन्न हो रही है..."
+  },
+  "metrics": {
+    "tok_per_sec": "{value} टोक/एस"
+  },
+  "status": {
+    "starting": "शुरू...",
+    "starting_agent": "शुरुआती एजेंट...",
+    "agent_failed_prefix": "एजेंट विफल हो गया: ",
+    "init_failed_prefix": "इनिट विफल: ",
+    "answer_question": "प्रश्न का उत्तर दें · Esc: रद्द करें",
+    "composer_submit": "[ भेजें ↵ ] · Shift+Enter: नया पंक्ति · Esc: रोकें",
+    "could_not_send_answer": "उत्तर नहीं भेजा जा सका",
+    "agent_still_starting": "एजेंट अभी भी शुरू हो रहा है...",
+    "voice_input_off": "वॉयस इनपुट बंद है (सेटिंग्स -> ऑडियो)।",
+    "speech_input": "भाषण इनपुट...",
+    "wait_before_compact": "संकुचन करने से पहले वर्तमान उत्तर की प्रतीक्षा करें।",
+    "compacting": "संवाद को संक्षिप्त करना...",
+    "generating_with_queue": "उत्पादन... · {count} कतारबद्ध",
+    "generating_esc_stop": "उत्पादित हो रहा है... · रोकने के लिए Esc दबाएँ",
+    "enter_queues_message": "पंक्तियों में प्रवेश करें, एक और संदेश",
+    "response_copied": "प्रतिक्रिया कॉपी हो गई",
+    "failed_switch_session_prefix": "सत्र स्विच करने में असफल: ",
+    "failed_delete_session_prefix": "सत्र हटाने में विफल: ",
+    "failed_create_session_prefix": "सत्र बनाने में विफल: ",
+    "request_failed": "अनुरोध विफल हो गया",
+    "transcription_inserted": "प्रतिलिपि सम्मिलित।",
+    "recording_hint": "रिकॉर्डिंग... आप बोलते समय टेक्स्ट अपडेट्स। समाप्त होने पर स्टॉप दबाएँ।",
+    "compacted_ok": "संवाद संक्षिप्त।",
+    "compaction_failed": "संपीड़न विफल हो गया।",
+    "could_not_load_skills": "कौशल लोड नहीं हो सके।",
+    "could_not_load_decisions": "निर्णय लोड नहीं हो सके।"
+  }
+}

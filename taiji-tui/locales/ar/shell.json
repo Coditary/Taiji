@@ -1,0 +1,94 @@
+{
+  "sidebar": {
+    "projects": "المشاريع",
+    "projects_menu_hint": "النقر بزر الفأرة الأيمن: القائمة",
+    "new_session": "جلسة جديدة",
+    "agent_laya": "أجينت ولايا",
+    "skills": "المهارات",
+    "decisions": "القرارات",
+    "lsp": "...",
+    "connected": "متصل",
+    "empty_none": "لا شيء",
+    "empty_inactive": "غير نشط",
+    "mcp_title": "...",
+    "mcp_title_count": "...",
+    "mcp_not_connected": "غير متصل"
+  },
+  "context": {
+    "title": "السياق",
+    "skills": "المهارات",
+    "system_prompt": "موجه النظام",
+    "tools_mcp": "تعريفات الأدوات وMCP",
+    "conversation": "محادثة"
+  },
+  "empty": {
+    "hint_send": "أرسل رسالة للبدء",
+    "quick_index_codebase": "قاعدة كود الفهرس",
+    "quick_generate_tests": "إنشاء الاختبارات",
+    "quick_analyze_git": "تحليل git diff",
+    "uncommitted_one": "{count} تغييرات لم يتم حفظها",
+    "uncommitted_many": "{count} التغييرات غير المحفوظة"
+  },
+  "session_menu": {
+    "open": "فتح",
+    "delete": "حذف"
+  },
+  "footer": {
+    "shortcuts_default": "علامة التبويب: التركيز · Shift+Enter: سطر جديد · Enter: إرسال · Esc: إيقاف"
+  },
+  "chat": {
+    "author_you": "أنت",
+    "author_summary": "ملخص",
+    "thinking": "التفكير"
+  },
+  "composer_menu": {
+    "skills": "المهارات",
+    "skills_hint": "فرض مهارة",
+    "mcp_servers": "خوادم MCP"
+  },
+  "question": {
+    "custom_placeholder": "إجابة مخصصة...",
+    "custom_label": "إجابة مخصصة",
+    "footer_apply": "الإدخال: تطبيق  ·  Esc: رجوع"
+  },
+  "activity": {
+    "mcp": "...",
+    "thinking": "التفكير",
+    "tool": "أداة",
+    "skill": "المهارة",
+    "decision": "القرار",
+    "question": "سؤال",
+    "generating_response": "جاري إنشاء الرد..."
+  },
+  "metrics": {
+    "tok_per_sec": "{value} توك/ثانية"
+  },
+  "status": {
+    "starting": "البدء...",
+    "starting_agent": "العامل المُحفِّز...",
+    "agent_failed_prefix": "فشل الوكيل: ",
+    "init_failed_prefix": "فشل التمهيد: ",
+    "answer_question": "أجب عن السؤال  ·  مفتاح Esc: إلغاء",
+    "composer_submit": "[ إرسال ↵ ]  ·  Shift+Enter: سطر جديد  ·  Esc: إيقاف",
+    "could_not_send_answer": "تعذر إرسال الإجابة",
+    "agent_still_starting": "لا يزال الوكيل قيد التشغيل...",
+    "voice_input_off": "الإدخال الصوتي معطل (الإعدادات -> الصوت).",
+    "speech_input": "الإدخال الصوتي...",
+    "wait_before_compact": "انتظر الرد الحالي قبل إجراء عملية الضغط.",
+    "compacting": "تلخيص المحادثة...",
+    "generating_with_queue": "جاري الإنشاء...  ·  {count} في قائمة الانتظار",
+    "generating_esc_stop": "جاري الإنشاء...  ·  اضغط على مفتاح Esc لإيقاف العملية",
+    "enter_queues_message": "أدخل رسالة أخرى في قائمة الانتظار",
+    "response_copied": "تم نسخ الرد",
+    "failed_switch_session_prefix": "فشل التبديل بين الجلسات: ",
+    "failed_delete_session_prefix": "فشل حذف الجلسة: ",
+    "failed_create_session_prefix": "فشل إنشاء الجلسة: ",
+    "request_failed": "فشل الطلب",
+    "transcription_inserted": "تم إدراج النص المكتوب.",
+    "recording_hint": "التسجيل... يتم تحديث النص أثناء حديثك. اضغط على «إيقاف» عند الانتهاء.",
+    "compacted_ok": "تم اختصار المحادثة.",
+    "compaction_failed": "فشل عملية الضغط.",
+    "could_not_load_skills": "تعذر تحميل المهارات.",
+    "could_not_load_decisions": "تعذر تحميل القرارات."
+  }
+}

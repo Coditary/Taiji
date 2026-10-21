@@ -1,0 +1,37 @@
+{
+  "app": {
+    "settings_title": "Настройки",
+    "sidebar_settings": "Настройки",
+    "settings_apply_hint": "Ctrl+S — применить  ·  Esc — закрыть",
+    "settings_footer_help": " Esc: закрыть   Tab: панель   Пробел/Enter: изменить   <-/->: переключение",
+    "settings_footer_apply": " Ctrl+S: применить "
+  },
+  "locale_names": {
+    "en": "Английский",
+    "de": "Deutsch",
+    "es": "Español",
+    "fr": "Français",
+    "it": "Italiano",
+    "pt": "Português",
+    "nl": "Nederlands",
+    "pl": "Polski",
+    "ru": "Русский",
+    "ja": "Japanese",
+    "zh": "Chinese",
+    "tr": "Türkçe",
+    "hi": "Hindi",
+    "ar": "Arabic",
+    "id": "Indonesian",
+    "vi": "Vietnamese"
+  },
+  "composer": {
+    "placeholder": "Напишите сообщение..."
+  },
+  "theme_picker": {
+    "title": "Цветовые схемы",
+    "filter_placeholder": "Фильтр цветовых схем...",
+    "filter_placeholder_draft": "Фильтр тем — Нажатие клавиши Esc восстанавливает ваше сообщение",
+    "no_matches": "(нет результатов)",
+    "draft_saved": "Черновик сохранен — нажатие клавиши Esc восстанавливает ваше сообщение"
+  }
+}

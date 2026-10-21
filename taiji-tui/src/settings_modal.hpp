@@ -54,8 +54,15 @@ class SettingsModal : public tuinator::Widget {
         std::string presentation = "markdown";
         std::string turn_metrics_preset = "dev";
         std::string tool_labels_locale = "en";
+        struct MCPToolEntry {
+            std::string server;
+            std::string name;
+            std::string description;
+        };
         std::vector<std::string> mcp_available;
         std::vector<std::string> mcp_enabled;
+        std::vector<MCPToolEntry> mcp_tools;
+        std::vector<std::string> mcp_tools_deny;
         std::vector<std::string> skills_available;
         std::vector<std::string> skills_allow;
         std::vector<std::string> skills_deny;
@@ -69,6 +76,7 @@ class SettingsModal : public tuinator::Widget {
         int model_catalog_context = 0;
         int model_catalog_output = 0;
         std::string ui_theme = "dark";
+        std::string ui_locale = "en";
         std::string ui_corners = "square";
         std::string tool_call_density = "detailed";
         bool turn_metrics_show_actions = true;
@@ -113,6 +121,8 @@ class SettingsModal : public tuinator::Widget {
     bool is_open() const { return open_; }
     void persist_chat_ui_theme(const std::string& theme_id);
     void sync_pointer_from_screen(tuinator::Point root_point);
+    /// Rebuild row labels after ui_set_locale (live preview while settings are open).
+    void refresh_translated_content();
 
     std::string_view widget_type_name() const override { return "SettingsModal"; }
     bool wants_full_screen() const override { return true; }
@@ -167,6 +177,7 @@ class SettingsModal : public tuinator::Widget {
             EnumCycle,
             BoolToggle,
             MCPToggle,
+            MCPToolToggle,
             SkillAllowToggle,
             PresetCombo,
             FixedValue,
@@ -178,6 +189,8 @@ class SettingsModal : public tuinator::Widget {
         int int_min = 0;
         int int_max = 9999;
         int mcp_index = -1;
+        std::string mcp_tool_server;
+        std::string mcp_tool_name;
         int skill_index = -1;
     };
 
@@ -186,6 +199,7 @@ class SettingsModal : public tuinator::Widget {
     PanelRect panel_rect() const;
     tuinator::Point to_local(tuinator::Point point) const;
     void rebuild_rows();
+    void localize_settings_row(Row& row);
     std::vector<Row> rows_for_category() const;
     int nav_width() const { return 22; }
     int key_col_width() const { return 24; }
@@ -208,6 +222,7 @@ class SettingsModal : public tuinator::Widget {
     std::string category_title(Category cat, bool short_nav) const;
     std::string category_subtitle() const;
     std::string row_value_text(const Row& row) const;
+    bool row_bool_toggle_on(const Row& row) const;
     std::string row_hint_text(const Row& row) const;
     std::string provider_display_id() const;
     std::string provider_display_label() const;
@@ -232,6 +247,12 @@ class SettingsModal : public tuinator::Widget {
     bool handle_fuzzy_event(const tuinator::Event& event);
     std::string skill_state(const std::string& name) const;
     void cycle_skill_state(const std::string& name);
+    bool mcp_server_expanded(const std::string& server) const;
+    bool mcp_server_has_tools(const std::string& server) const;
+    void toggle_mcp_server_expanded(const std::string& server);
+    bool mcp_tool_denied(const std::string& server, const std::string& tool) const;
+    void toggle_mcp_tool_denied(const std::string& server, const std::string& tool);
+    std::string mcp_tool_description(const std::string& server, const std::string& tool) const;
     void paint_content_row(tuinator::Canvas& clipped, const Row& row, int y, int content_x, int value_x, int value_w,
                            bool selected) const;
     void paint_frame(tuinator::Canvas& clipped, const PanelRect& panel) const;
@@ -261,6 +282,7 @@ class SettingsModal : public tuinator::Widget {
     std::string text_edit_target_;
     Draft draft_;
     std::vector<Row> rows_;
+    std::vector<std::string> mcp_expanded_servers_;
     std::string saved_snapshot_;
     bool dirty_ = false;
 

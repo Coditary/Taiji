@@ -1,0 +1,94 @@
+{
+  "sidebar": {
+    "projects": "PROJEKTE",
+    "projects_menu_hint": "Rechtsklick: Menü",
+    "new_session": "Neue Session",
+    "agent_laya": "Agent & LAYA",
+    "skills": "Fertigkeiten",
+    "decisions": "Entscheidungen",
+    "lsp": "Sprachserver",
+    "connected": "Verbunden",
+    "empty_none": "keine",
+    "empty_inactive": "inaktiv",
+    "mcp_title": "MCP-Server",
+    "mcp_title_count": "MCP",
+    "mcp_not_connected": "nicht verbunden"
+  },
+  "context": {
+    "title": "KONTEXT",
+    "skills": "Fertigkeiten",
+    "system_prompt": "System-Prompt",
+    "tools_mcp": "Tool-Definitionen & MCP",
+    "conversation": "Konversation"
+  },
+  "empty": {
+    "hint_send": "Nachricht senden zum Starten",
+    "quick_index_codebase": "Codebasis indexieren",
+    "quick_generate_tests": "Tests erzeugen",
+    "quick_analyze_git": "Git-Diff analysieren",
+    "uncommitted_one": "{count} uncommittete Änderung",
+    "uncommitted_many": "{count} uncommittete Änderungen"
+  },
+  "session_menu": {
+    "open": "Öffnen",
+    "delete": "Löschen"
+  },
+  "footer": {
+    "shortcuts_default": "Tab: Fokus · Umsch+Enter: Zeile · Enter: Senden · Esc: Stopp"
+  },
+  "chat": {
+    "author_you": "Du",
+    "author_summary": "Zusammenfassung",
+    "thinking": "Denkt nach"
+  },
+  "composer_menu": {
+    "skills": "Fertigkeiten",
+    "skills_hint": "Skill erzwingen",
+    "mcp_servers": "MCP-Server"
+  },
+  "question": {
+    "custom_placeholder": "Eigene Antwort...",
+    "custom_label": "Eigene Antwort",
+    "footer_apply": "Enter: übernehmen  ·  Esc: zurück"
+  },
+  "activity": {
+    "mcp": "MCP-Aufruf",
+    "thinking": "Denken",
+    "tool": "Werkzeug",
+    "skill": "Fertigkeit",
+    "decision": "Entscheidung",
+    "question": "Frage",
+    "generating_response": "Antwort wird generiert..."
+  },
+  "status": {
+    "starting": "Startet...",
+    "starting_agent": "Agent startet...",
+    "agent_failed_prefix": "Agent fehlgeschlagen: ",
+    "init_failed_prefix": "Init fehlgeschlagen: ",
+    "answer_question": "Frage beantworten  ·  Esc: abbrechen",
+    "composer_submit": "[ Senden ↵ ]  ·  Umsch+Enter: Zeile  ·  Esc: Stopp",
+    "could_not_send_answer": "Antwort konnte nicht gesendet werden",
+    "agent_still_starting": "Agent startet noch...",
+    "voice_input_off": "Spracheingabe aus (Einstellungen -> Audio).",
+    "speech_input": "Spracheingabe...",
+    "wait_before_compact": "Warte auf die aktuelle Antwort vor dem Komprimieren.",
+    "compacting": "Konversation wird komprimiert...",
+    "generating_with_queue": "Generiert...  ·  {count} in Warteschlange",
+    "generating_esc_stop": "Generiert...  ·  Esc zum Stoppen",
+    "enter_queues_message": "Enter stellt Nachricht in Warteschlange",
+    "response_copied": "Antwort kopiert",
+    "failed_switch_session_prefix": "Sessionwechsel fehlgeschlagen: ",
+    "failed_delete_session_prefix": "Löschen fehlgeschlagen: ",
+    "failed_create_session_prefix": "Erstellen fehlgeschlagen: ",
+    "request_failed": "Anfrage fehlgeschlagen",
+    "transcription_inserted": "Transkription eingefügt.",
+    "recording_hint": "Aufnahme... Text wird live aktualisiert. Stopp drücken wenn fertig.",
+    "compacted_ok": "Konversation komprimiert.",
+    "compaction_failed": "Komprimieren fehlgeschlagen.",
+    "could_not_load_skills": "Skills konnten nicht geladen werden.",
+    "could_not_load_decisions": "Entscheidungen konnten nicht geladen werden."
+  },
+  "metrics": {
+    "tok_per_sec": "{value} Tok/s"
+  }
+}

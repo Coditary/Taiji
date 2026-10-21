@@ -1,0 +1,94 @@
+{
+  "sidebar": {
+    "projects": "PROJECTEN",
+    "projects_menu_hint": "Rechtsklikken: menu",
+    "new_session": "Nieuwe sessie",
+    "agent_laya": "...",
+    "skills": "Vaardigheden",
+    "decisions": "Besluiten",
+    "lsp": "...",
+    "connected": "Verbonden",
+    "empty_none": "geen",
+    "empty_inactive": "inactief",
+    "mcp_title": "...",
+    "mcp_title_count": "...",
+    "mcp_not_connected": "geen verbinding"
+  },
+  "context": {
+    "title": "...",
+    "skills": "Vaardigheden",
+    "system_prompt": "Systeemmelding",
+    "tools_mcp": "Definities van gereedschappen & MCP",
+    "conversation": "Gesprek"
+  },
+  "empty": {
+    "hint_send": "Stuur een bericht om te beginnen",
+    "quick_index_codebase": "Index van de codebase",
+    "quick_generate_tests": "Tests genereren",
+    "quick_analyze_git": "Git diff analyseren",
+    "uncommitted_one": "{count} niet-vastgelegde wijziging",
+    "uncommitted_many": "{count} niet-opgeslagen wijzigingen"
+  },
+  "session_menu": {
+    "open": "Openen",
+    "delete": "Verwijderen"
+  },
+  "footer": {
+    "shortcuts_default": "Tab: focus · Shift+Enter: nieuwe regel · Enter: verzenden · Esc: stoppen"
+  },
+  "chat": {
+    "author_you": "Jij",
+    "author_summary": "samenvatting",
+    "thinking": "Nadenken"
+  },
+  "composer_menu": {
+    "skills": "Vaardigheden",
+    "skills_hint": "Een vaardigheid afdwingen",
+    "mcp_servers": "MCP-servers"
+  },
+  "question": {
+    "custom_placeholder": "Aangepast antwoord...",
+    "custom_label": "Aangepast antwoord",
+    "footer_apply": "Enter: toepassen  ·  Esc: terug"
+  },
+  "activity": {
+    "mcp": "...",
+    "thinking": "Nadenken",
+    "tool": "Hulpmiddel",
+    "skill": "Vaardigheid",
+    "decision": "Besluit",
+    "question": "Vraag",
+    "generating_response": "Reactie wordt gegenereerd..."
+  },
+  "metrics": {
+    "tok_per_sec": "..."
+  },
+  "status": {
+    "starting": "We beginnen...",
+    "starting_agent": "Startmiddel...",
+    "agent_failed_prefix": "Fout bij agent: ",
+    "init_failed_prefix": "Initialisatie mislukt: ",
+    "answer_question": "Beantwoord de vraag  ·  Esc: annuleren",
+    "composer_submit": "[ Verzenden ↵ ]  ·  Shift+Enter: nieuwe regel  ·  Esc: stoppen",
+    "could_not_send_answer": "Het antwoord kon niet worden verzonden",
+    "agent_still_starting": "De agent is nog aan het opstarten...",
+    "voice_input_off": "Spraakinvoer is uitgeschakeld (Instellingen -> Audio).",
+    "speech_input": "Spraakinvoer...",
+    "wait_before_compact": "Wacht op het huidige antwoord voordat je gaat comprimeren.",
+    "compacting": "Een kort gesprek...",
+    "generating_with_queue": "Bezig met genereren...  ·  {count} in de wachtrij",
+    "generating_esc_stop": "Bezig met genereren...  ·  Druk op Esc om te stoppen",
+    "enter_queues_message": "Voer nog een bericht in de wachtrij in",
+    "response_copied": "Antwoord gekopieerd",
+    "failed_switch_session_prefix": "Het wisselen van sessie is mislukt: ",
+    "failed_delete_session_prefix": "Het verwijderen van de sessie is mislukt: ",
+    "failed_create_session_prefix": "Het is niet gelukt om een sessie aan te maken: ",
+    "request_failed": "Het verzoek is mislukt",
+    "transcription_inserted": "Transcriptie toegevoegd.",
+    "recording_hint": "Opnemen... tekstupdates terwijl je spreekt. Druk op ‘Stop’ als je klaar bent.",
+    "compacted_ok": "Gesprek ingekort.",
+    "compaction_failed": "Het verdichten is mislukt.",
+    "could_not_load_skills": "Vaardigheden konden niet worden geladen.",
+    "could_not_load_decisions": "Beslissingen konden niet worden geladen."
+  }
+}

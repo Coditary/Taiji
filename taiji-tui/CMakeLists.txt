@@ -41,6 +41,45 @@ set_target_properties(taiji_fuzzy PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${TAIJI_FUZZY_CRATE_DIR}/include"
 )
 
+file(GLOB_RECURSE TAIJI_UI_LOCALE_JSON CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/locales/*.json"
+)
+set(TAIJI_UI_LOCALES_EMBED_CPP "${CMAKE_CURRENT_BINARY_DIR}/ui_locales_embed.cpp")
+set(TAIJI_UI_LOCALES_CATALOG_GO "${TAIJI_AI_DIR}/internal/uilocale/catalog_gen.go")
+add_custom_target(
+    taiji_tui_locales_check
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONUTF8=1
+            python3 "${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_locales.py"
+            "${CMAKE_CURRENT_SOURCE_DIR}/locales"
+            --require-complete
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    COMMENT "Verify UI locale key coverage (100% per language)"
+    VERBATIM
+)
+
+add_custom_command(
+    OUTPUT "${TAIJI_UI_LOCALES_EMBED_CPP}" "${TAIJI_UI_LOCALES_CATALOG_GO}"
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONUTF8=1
+            python3 "${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_locales.py"
+            "${CMAKE_CURRENT_SOURCE_DIR}/locales"
+            --require-complete
+            --quiet
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONUTF8=1
+            python3 "${CMAKE_CURRENT_SOURCE_DIR}/scripts/embed_locales.py"
+            "${CMAKE_CURRENT_SOURCE_DIR}/locales"
+            "${TAIJI_UI_LOCALES_EMBED_CPP}"
+            --go "${TAIJI_UI_LOCALES_CATALOG_GO}"
+    DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/scripts/embed_locales.py"
+        "${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_locales.py"
+        "${CMAKE_CURRENT_SOURCE_DIR}/scripts/locale_lib.py"
+        "${CMAKE_CURRENT_SOURCE_DIR}/locales/manifest.json"
+        ${TAIJI_UI_LOCALE_JSON}
+    COMMENT "Check and embed UI locale strings (C++ and Go)"
+    VERBATIM
+)
+add_custom_target(taiji_tui_locales_embed DEPENDS "${TAIJI_UI_LOCALES_EMBED_CPP}" "${TAIJI_UI_LOCALES_CATALOG_GO}")
+
 file(GLOB_RECURSE TAIJI_GO_SOURCES CONFIGURE_DEPENDS
     "${TAIJI_AI_DIR}/*.go"
 )
@@ -55,11 +94,13 @@ add_custom_command(
     DEPENDS
         ${TAIJI_GO_SOURCES}
         "${TAIJI_EMBED_DIR}/include/taiji_embed.h"
+        "${TAIJI_UI_LOCALES_CATALOG_GO}"
     COMMENT "Building static Taiji embed archive"
     VERBATIM
 )
 
-add_custom_target(taiji_embed_build DEPENDS "${TAIJI_EMBED_ARCHIVE}" "${TAIJI_EMBED_HEADER}")
+add_custom_target(taiji_embed_build DEPENDS "${TAIJI_EMBED_ARCHIVE}" "${TAIJI_EMBED_HEADER}" "${TAIJI_UI_LOCALES_CATALOG_GO}")
+add_dependencies(taiji_embed_build taiji_tui_locales_embed)
 
 add_library(taiji_embed STATIC IMPORTED GLOBAL)
 add_dependencies(taiji_embed taiji_embed_build)
@@ -161,6 +202,8 @@ add_executable(taiji-tui
     src/status_footer.cpp
     src/ui_layout.cpp
     src/ui_theme.cpp
+    src/ui_locale.cpp
+    "${TAIJI_UI_LOCALES_EMBED_CPP}"
     src/ui_keybindings.cpp
     src/composer_theme_picker.cpp
     src/ui_themes_bundled_lookup.cpp
@@ -187,7 +230,7 @@ add_executable(taiji-tui
     src/speech_mic_button.cpp
 )
 
-add_dependencies(taiji-tui taiji_embed_build taiji_fuzzy_build taiji_tui_themes taiji_tui_themes_embed)
+add_dependencies(taiji-tui taiji_embed_build taiji_fuzzy_build taiji_tui_themes taiji_tui_themes_embed taiji_tui_locales_check taiji_tui_locales_embed)
 target_include_directories(taiji-tui PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
     "${CMAKE_CURRENT_BINARY_DIR}"

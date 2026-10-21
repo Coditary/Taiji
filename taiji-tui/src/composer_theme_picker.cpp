@@ -1,6 +1,7 @@
 #include "composer_theme_picker.hpp"
 
 #include "skim_fuzzy.hpp"
+#include "ui_locale.hpp"
 #include "ui_theme.hpp"
 
 #include <tuinator/render/glyphs.hpp>
@@ -10,8 +11,29 @@
 
 namespace {
 
-int visible_row_count(int panel_h) {
-    return std::max(1, panel_h - 3);
+constexpr int kPanelMaxWidth = 52;
+constexpr int kPanelMaxListRows = 10;
+
+int header_row_count(bool draft_saved) {
+    return draft_saved ? 1 : 0;
+}
+
+void draw_bottom_border_caption(tuinator::PaintContext& ctx, const tuinator::Rect& panel, const std::string& text,
+                                const tuinator::Style& frame) {
+    if (panel.width <= 4 || text.empty()) {
+        return;
+    }
+    const int y = panel.y + panel.height - 1;
+    const int text_w = tuinator::text_display_width(text);
+    const int x = panel.x + panel.width - 2 - text_w;
+    tuinator::Style erase = frame;
+    erase.background_rgb = ui_input_chrome_fill();
+    ctx.canvas.fill_rect({x - 1, y, text_w + 2, 1}, ' ', erase);
+    tuinator::Style label = frame;
+    label.dim = true;
+    label.foreground_rgb = ui_secondary_text();
+    label.background_rgb = ui_input_chrome_fill();
+    ctx.canvas.draw_text({x, y}, text, label);
 }
 
 } // namespace
@@ -25,16 +47,17 @@ void ComposerThemePicker::rebuild_entries() {
         Entry entry;
         entry.id = id;
         if (ui_is_bundled_theme(id)) {
-            entry.line = id + "  ·  " + ui_theme_display_name(id);
+            entry.subtitle = ui_theme_display_name(id);
         } else {
-            entry.line = id + "  ·  user";
+            entry.subtitle = "user theme";
         }
-        entry.meta = id + " " + ui_theme_display_name(id) + " theme color palette stylesheet";
+        entry.line = id + "  ·  " + entry.subtitle;
+        entry.meta = id + " " + entry.subtitle + " theme color palette stylesheet";
         entries_.push_back(std::move(entry));
     }
 }
 
-void ComposerThemePicker::rebuild_filter() {
+void ComposerThemePicker::rebuild_filter(bool preview) {
     filtered_.clear();
     std::vector<std::string> lines;
     std::vector<std::string> meta;
@@ -48,8 +71,10 @@ void ComposerThemePicker::rebuild_filter() {
     if (selected_ >= static_cast<int>(filtered_.size())) {
         selected_ = std::max(0, static_cast<int>(filtered_.size()) - 1);
     }
-    sync_scroll(visible_row_count(panel_height()));
-    preview_selection();
+    sync_scroll(visible_list_rows(panel_height()));
+    if (preview) {
+        preview_selection();
+    }
 }
 
 void ComposerThemePicker::sync_scroll(int max_visible) {
@@ -83,7 +108,7 @@ void ComposerThemePicker::open(const std::string& active_theme_id, bool draft_me
     selected_ = 0;
     list_scroll_ = 0;
     rebuild_entries();
-    rebuild_filter();
+    rebuild_filter(false);
     for (int row = 0; row < static_cast<int>(filtered_.size()); ++row) {
         const Entry& entry = entries_[static_cast<std::size_t>(filtered_[row])];
         if (entry.id == active_theme_id) {
@@ -91,7 +116,7 @@ void ComposerThemePicker::open(const std::string& active_theme_id, bool draft_me
             break;
         }
     }
-    sync_scroll(visible_row_count(panel_height()));
+    sync_scroll(visible_list_rows(panel_height()));
     preview_selection();
 }
 
@@ -122,16 +147,32 @@ const std::string& ComposerThemePicker::selected_theme_id() const {
     return entries_[static_cast<std::size_t>(filtered_[selected_])].id;
 }
 
+int ComposerThemePicker::visible_list_rows(int panel_h) const {
+    if (panel_h <= 0) {
+        return 1;
+    }
+    return std::max(1, panel_h - 2 - header_row_count(draft_message_saved_));
+}
+
 int ComposerThemePicker::panel_height(int max_rows) const {
     if (!open_) {
         return 0;
     }
-    const int rows = std::max(1, static_cast<int>(filtered_.empty() ? 1 : filtered_.size()));
-    int h = std::min(max_rows + 3, rows + 3);
-    if (draft_message_saved_) {
-        h += 1;
-    }
-    return h;
+    const int row_count = std::max(1, static_cast<int>(filtered_.empty() ? 1 : filtered_.size()));
+    const int visible = std::min(std::min(max_rows, kPanelMaxListRows), row_count);
+    const int inner = header_row_count(draft_message_saved_) + visible;
+    return std::min(kPanelMaxListRows + header_row_count(draft_message_saved_) + 2, inner + 2);
+}
+
+tuinator::Rect ComposerThemePicker::panel_rect() const {
+    const int h = panel_height();
+    const int w = bounds_.width <= 0 ? kPanelMaxWidth : std::min(bounds_.width, kPanelMaxWidth);
+    const int x = bounds_.width <= 0 ? 0 : std::max(0, (bounds_.width - w) / 2);
+    return {x, 0, w, h};
+}
+
+int ComposerThemePicker::list_start_y(const tuinator::Rect& panel) const {
+    return panel.y + 1 + header_row_count(draft_message_saved_);
 }
 
 tuinator::Size ComposerThemePicker::preferred_size(int width, int max_rows) const {
@@ -150,35 +191,65 @@ void ComposerThemePicker::paint(tuinator::PaintContext& ctx) const {
         return;
     }
 
-    const tuinator::Rect panel{0, 0, bounds_.width, bounds_.height};
+    const tuinator::Rect panel = panel_rect();
+    if (panel.width <= 2 || panel.height <= 2) {
+        return;
+    }
+
     const tuinator::BorderGlyphs border = tuinator::unicode_rounded_border_glyphs();
     tuinator::Style frame = theme_.label;
     frame.background_rgb = ui_input_chrome_fill();
     frame.foreground_rgb = ui_border_chrome();
     ctx.canvas.draw_box(panel, frame, border);
 
-    tuinator::Style title = theme_.heading;
-    title.bold = true;
-    title.background_rgb = ui_input_chrome_fill();
-    ctx.canvas.draw_text({2, 0}, " Color themes ", title);
+    const int inner_x = panel.x + 1;
+    const int inner_y = panel.y + 1;
+    const int inner_w = panel.width - 2;
+    const int inner_h = panel.height - 2;
+
+    tuinator::Style panel_fill = ui_overlay_panel_style();
+    panel_fill.background_rgb = ui_input_chrome_fill();
+    ctx.canvas.fill_rect({inner_x, inner_y, inner_w, inner_h}, ' ', panel_fill);
+
+    tuinator::Style caption = ui_resolve_main_text(theme_.heading);
+    caption.bold = true;
+    caption.background_rgb = ui_input_chrome_fill();
+    const std::string picker_title = ui_tr("common", "theme_picker.title");
+    ctx.canvas.draw_text({panel.x + 2, panel.y},
+                         " " + (picker_title.empty() ? "Color themes" : picker_title) + " ", caption);
 
     tuinator::Style row_style = ui_resolve_main_text(theme_.label);
     row_style.background_rgb = ui_input_chrome_fill();
+    tuinator::Style row_active = row_style;
+    row_active.background_rgb = ui_list_active_bg();
+    row_active.foreground_rgb = ui_list_active_fg();
+    tuinator::Style hint = ui_resolve_main_text(ui_secondary_style(theme_));
+    hint.background_rgb = ui_input_chrome_fill();
 
-    int list_y = 2;
+    int y = panel.y + 1;
+
     if (draft_message_saved_) {
-        tuinator::Style draft = row_style;
+        tuinator::Style draft = hint;
         draft.dim = true;
-        draft.foreground_rgb = ui_secondary_text();
-        ctx.canvas.draw_text({2, 1}, " Draft message saved — Esc restores it ", draft);
-        list_y = 3;
+        const std::string draft_line = ui_tr("common", "theme_picker.draft_saved");
+        const std::string draft_display =
+            draft_line.empty() ? "Draft saved — Esc restores your message" : draft_line;
+        ctx.canvas.fill_rect({inner_x, y, inner_w, 1}, ' ', panel_fill);
+        const std::size_t draft_bytes = tuinator::text_byte_length_for_width(draft_display, inner_w);
+        ctx.canvas.draw_text({inner_x, y}, draft_display.substr(0, draft_bytes), draft);
+        ++y;
     }
-    const int max_rows = std::max(1, visible_row_count(panel.height - (list_y - 1)));
+
+    const int max_rows = visible_list_rows(panel.height);
+    const int list_y = y;
 
     if (filtered_.empty()) {
         tuinator::Style empty = row_style;
         empty.dim = true;
-        ctx.canvas.draw_text({2, list_y}, " (no matches)", empty);
+        ctx.canvas.fill_rect({inner_x, list_y, inner_w, 1}, ' ', panel_fill);
+        const std::string no_matches = ui_tr("common", "theme_picker.no_matches");
+        const std::string no_matches_display = no_matches.empty() ? "(no matches)" : no_matches;
+        ctx.canvas.draw_text({inner_x, list_y}, " " + no_matches_display, empty);
         return;
     }
 
@@ -188,21 +259,21 @@ void ComposerThemePicker::paint(tuinator::PaintContext& ctx) const {
             break;
         }
         const Entry& entry = entries_[static_cast<std::size_t>(filtered_[idx])];
-        tuinator::Style line_style = idx == selected_ ? ui_list_selection_style(true) : row_style;
-        std::string prefix = idx == selected_ ? "> " : "  ";
-        std::string line = prefix + entry.line;
-        const std::size_t bytes = tuinator::text_byte_length_for_width(line, panel.width - 4);
-        ctx.canvas.draw_text({2, list_y + row}, line.substr(0, bytes), line_style);
+        const bool active = idx == selected_;
+        const tuinator::Style row_bg = active ? row_active : panel_fill;
+        ctx.canvas.fill_rect({inner_x, list_y + row, inner_w, 1}, ' ', row_bg);
+
+        tuinator::Style label_style = active ? row_active : row_style;
+        const std::string label = ui_is_bundled_theme(entry.id) ? entry.subtitle : entry.id;
+        const std::size_t label_bytes = tuinator::text_byte_length_for_width(label, inner_w);
+        ctx.canvas.draw_text({inner_x, list_y + row}, label.substr(0, label_bytes), label_style);
     }
 
+    std::string scroll_text = std::to_string(selected_ + 1) + "/" + std::to_string(filtered_.size());
     if (static_cast<int>(filtered_.size()) > max_rows) {
-        tuinator::Style hint = row_style;
-        hint.dim = true;
-        const std::string scroll_hint =
-            std::to_string(selected_ + 1) + "/" + std::to_string(filtered_.size()) + "  ↑↓";
-        ctx.canvas.draw_text({panel.width - static_cast<int>(scroll_hint.size()) - 2, panel.height - 1}, scroll_hint,
-                             hint);
+        scroll_text += "  ↑↓";
     }
+    draw_bottom_border_caption(ctx, panel, scroll_text, frame);
 }
 
 bool ComposerThemePicker::move_selection(int delta) {
@@ -211,13 +282,23 @@ bool ComposerThemePicker::move_selection(int delta) {
     }
     const int n = static_cast<int>(filtered_.size());
     selected_ = std::clamp(selected_ + delta, 0, n - 1);
-    sync_scroll(visible_row_count(panel_height()));
+    sync_scroll(visible_list_rows(panel_height()));
     preview_selection();
     return true;
 }
 
 bool ComposerThemePicker::move_page(int rows) {
     return move_selection(rows);
+}
+
+bool ComposerThemePicker::jump_selection(bool to_end) {
+    if (!open_ || filtered_.empty()) {
+        return false;
+    }
+    selected_ = to_end ? static_cast<int>(filtered_.size()) - 1 : 0;
+    sync_scroll(visible_list_rows(panel_height()));
+    preview_selection();
+    return true;
 }
 
 bool ComposerThemePicker::select_visible_row(int visible_index) {
@@ -237,9 +318,14 @@ bool ComposerThemePicker::hit_test_row(tuinator::Point local, int& visible_index
     if (!open_ || bounds_.width <= 0 || bounds_.height <= 0) {
         return false;
     }
-    const int list_y = 2;
-    const int max_rows = visible_row_count(bounds_.height);
-    if (local.y < list_y || local.y >= list_y + max_rows || local.x < 0 || local.x >= bounds_.width) {
+    const tuinator::Rect panel = panel_rect();
+    if (local.x < panel.x || local.x >= panel.x + panel.width || local.y < panel.y ||
+        local.y >= panel.y + panel.height) {
+        return false;
+    }
+    const int list_y = list_start_y(panel);
+    const int max_rows = visible_list_rows(panel.height);
+    if (local.y < list_y || local.y >= list_y + max_rows) {
         return false;
     }
     visible_index = local.y - list_y;

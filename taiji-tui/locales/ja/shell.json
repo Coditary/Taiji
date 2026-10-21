@@ -1,0 +1,94 @@
+{
+  "sidebar": {
+    "projects": "プロジェクト",
+    "projects_menu_hint": "右クリック: メニュー",
+    "new_session": "新しいセッション",
+    "agent_laya": "エージェント & LAYA",
+    "skills": "スキル",
+    "decisions": "決定",
+    "lsp": "言語サーバー",
+    "connected": "接続済み",
+    "empty_none": "なし",
+    "empty_inactive": "非アクティブ",
+    "mcp_title": "MCPサーバー",
+    "mcp_title_count": "MCP（{count}）",
+    "mcp_not_connected": "未接続"
+  },
+  "context": {
+    "title": "コンテキスト",
+    "skills": "スキル",
+    "system_prompt": "システムプロンプト",
+    "tools_mcp": "ツール定義と MCP",
+    "conversation": "会話"
+  },
+  "empty": {
+    "hint_send": "メッセージを送って開始",
+    "quick_index_codebase": "コードベースを索引",
+    "quick_generate_tests": "テストを生成",
+    "quick_analyze_git": "Git diff を分析",
+    "uncommitted_one": "未コミット {count} 件",
+    "uncommitted_many": "未コミット {count} 件"
+  },
+  "session_menu": {
+    "open": "開く",
+    "delete": "削除"
+  },
+  "footer": {
+    "shortcuts_default": "Tab: フォーカス · Shift+Enter: 改行 · Enter: 送信 · Esc: 停止"
+  },
+  "chat": {
+    "author_you": "あなた",
+    "author_summary": "要約",
+    "thinking": "思考中"
+  },
+  "composer_menu": {
+    "skills": "スキル",
+    "skills_hint": "スキルを強制",
+    "mcp_servers": "MCP サーバー"
+  },
+  "question": {
+    "custom_placeholder": "自由回答...",
+    "custom_label": "自由回答",
+    "footer_apply": "Enter: 適用  ·  Esc: 戻る"
+  },
+  "activity": {
+    "mcp": "MCP連携",
+    "thinking": "思考",
+    "tool": "ツール",
+    "skill": "スキル",
+    "decision": "決定",
+    "question": "質問",
+    "generating_response": "応答を生成中..."
+  },
+  "status": {
+    "starting": "起動中...",
+    "starting_agent": "エージェント起動中...",
+    "agent_failed_prefix": "エージェント失敗: ",
+    "init_failed_prefix": "初期化失敗: ",
+    "answer_question": "質問に回答  ·  Esc: キャンセル",
+    "composer_submit": "[ 送信 ↵ ]  ·  Shift+Enter: 改行  ·  Esc: 停止",
+    "could_not_send_answer": "回答を送信できませんでした",
+    "agent_still_starting": "エージェントはまだ起動中...",
+    "voice_input_off": "音声入力オフ（設定 -> 音声）。",
+    "speech_input": "音声入力...",
+    "wait_before_compact": "圧縮前に現在の返信を待ってください。",
+    "compacting": "会話を圧縮中...",
+    "generating_with_queue": "生成中...  ·  {count} 件待ち",
+    "generating_esc_stop": "生成中...  ·  Esc で停止",
+    "enter_queues_message": "Enter で次のメッセージをキュー",
+    "response_copied": "返答をコピーしました",
+    "failed_switch_session_prefix": "セッション切替失敗: ",
+    "failed_delete_session_prefix": "削除失敗: ",
+    "failed_create_session_prefix": "作成失敗: ",
+    "request_failed": "リクエスト失敗",
+    "transcription_inserted": "文字起こしを挿入しました。",
+    "recording_hint": "録音中... 話すとテキストが更新されます。終わったら停止。",
+    "compacted_ok": "会話を圧縮しました。",
+    "compaction_failed": "圧縮に失敗しました。",
+    "could_not_load_skills": "スキルを読み込めませんでした。",
+    "could_not_load_decisions": "決定を読み込めませんでした。"
+  },
+  "metrics": {
+    "tok_per_sec": "{value} トークン/秒"
+  }
+}

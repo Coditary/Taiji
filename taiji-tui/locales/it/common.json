@@ -1,0 +1,37 @@
+{
+  "app": {
+    "settings_title": "Impostazioni",
+    "sidebar_settings": "Impostazioni",
+    "settings_apply_hint": "Ctrl+S per confermare  ·  Esc per chiudere",
+    "settings_footer_help": " Esc: chiudi   Tab: riquadro   Spazio/Invio: modifica   <-/->: scorrere",
+    "settings_footer_apply": " Ctrl+S: applica "
+  },
+  "locale_names": {
+    "en": "Inglese",
+    "de": "Deutsch",
+    "es": "Español",
+    "fr": "Français",
+    "it": "Italiano",
+    "pt": "Português",
+    "nl": "Nederlands",
+    "pl": "Polski",
+    "ru": "russo",
+    "ja": "giapponese",
+    "zh": "cinese",
+    "tr": "Türkçe",
+    "hi": "hindi",
+    "ar": "arabo",
+    "id": "indonesiano",
+    "vi": "vietnamita"
+  },
+  "composer": {
+    "placeholder": "Scrivi un messaggio..."
+  },
+  "theme_picker": {
+    "title": "Temi cromatici",
+    "filter_placeholder": "Filtra i temi cromatici...",
+    "filter_placeholder_draft": "Filtra i temi — Esc ripristina il messaggio",
+    "no_matches": "(nessun risultato)",
+    "draft_saved": "Bozza salvata — Premendo Esc si ripristina il messaggio"
+  }
+}

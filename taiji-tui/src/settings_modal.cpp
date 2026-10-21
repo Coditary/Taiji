@@ -1,5 +1,7 @@
 #include "settings_modal.hpp"
 
+#include "ui_locale.hpp"
+
 #include <libtaiji.h>
 
 #include <algorithm>
@@ -234,16 +236,20 @@ std::vector<std::string> json_extract_string_array(const std::string& json, cons
 }
 
 std::string clip(std::string text, int max_cols) {
-    if (max_cols <= 0) {
-        return "";
+    if (max_cols <= 0 || text.empty()) {
+        return {};
     }
-    if (static_cast<int>(text.size()) <= max_cols) {
+    if (tuinator::text_display_width(text) <= max_cols) {
         return text;
     }
     if (max_cols <= 1) {
-        return text.substr(0, static_cast<std::size_t>(max_cols));
+        return "…";
     }
-    return text.substr(0, static_cast<std::size_t>(max_cols - 1)) + "…";
+    const std::size_t bytes = tuinator::text_byte_length_for_width(text, max_cols - 1);
+    if (bytes == 0) {
+        return "…";
+    }
+    return text.substr(0, bytes) + "…";
 }
 
 } // namespace
@@ -319,12 +325,19 @@ bool settings_parse_draft(const std::string& json, SettingsModal::Draft& out) {
     } else if (out.turn_metrics_preset == "verbose") {
         out.turn_metrics_preset = "dev";
     }
-    out.tool_labels_locale = json_extract_string(json, "tool_labels_locale");
-    if (out.tool_labels_locale.empty()) {
-        out.tool_labels_locale = "en";
-    }
+    out.tool_labels_locale = out.ui_locale.empty() ? "en" : out.ui_locale;
     out.mcp_available = json_extract_string_array(json, "mcp_available");
     out.mcp_enabled = json_extract_string_array(json, "mcp_enabled");
+    out.mcp_tools_deny = json_extract_string_array(json, "mcp_tools_deny");
+    for (const std::string& obj : json_extract_object_strings(json, "mcp_tools")) {
+        SettingsModal::Draft::MCPToolEntry entry;
+        entry.server = json_extract_string(obj, "server");
+        entry.name = json_extract_string(obj, "name");
+        entry.description = json_extract_string(obj, "description");
+        if (!entry.server.empty() && !entry.name.empty()) {
+            out.mcp_tools.push_back(std::move(entry));
+        }
+    }
     out.skills_available = json_extract_string_array(json, "skills_available");
     out.skills_allow = json_extract_string_array(json, "skills_allow");
     out.skills_deny = json_extract_string_array(json, "skills_deny");
@@ -355,6 +368,7 @@ bool settings_parse_draft(const std::string& json, SettingsModal::Draft& out) {
     if (out.ui_theme.empty()) {
         out.ui_theme = "dark";
     }
+    out.ui_locale = ui_normalize_locale_id(json_extract_string(json, "ui_locale"));
     out.ui_corners = json_extract_string(json, "ui_corners");
     if (out.ui_corners.empty()) {
         out.ui_corners = "square";
@@ -496,6 +510,7 @@ void SettingsModal::json_escape_append(std::string& out, const std::string& valu
 }
 
 std::string SettingsModal::build_apply_json() const {
+    const std::string tool_labels_locale = draft_.ui_locale.empty() ? "en" : draft_.ui_locale;
     std::string body;
     body += '{';
     body += "\"scope\":";
@@ -531,9 +546,11 @@ std::string SettingsModal::build_apply_json() const {
     body += ",\"turn_metrics_preset\":";
     json_escape_append(body, draft_.turn_metrics_preset);
     body += ",\"tool_labels_locale\":";
-    json_escape_append(body, draft_.tool_labels_locale);
+    json_escape_append(body, tool_labels_locale);
     body += ",\"ui_theme\":";
     json_escape_append(body, draft_.ui_theme);
+    body += ",\"ui_locale\":";
+    json_escape_append(body, ui_normalize_locale_id(draft_.ui_locale));
     body += ",\"ui_corners\":";
     json_escape_append(body, draft_.ui_corners);
     body += ",\"tool_call_density\":";
@@ -576,6 +593,13 @@ std::string SettingsModal::build_apply_json() const {
             body += ",";
         }
         json_escape_append(body, draft_.mcp_enabled[i]);
+    }
+    body += "],\"mcp_tools_deny\":[";
+    for (std::size_t i = 0; i < draft_.mcp_tools_deny.size(); ++i) {
+        if (i > 0) {
+            body += ",";
+        }
+        json_escape_append(body, draft_.mcp_tools_deny[i]);
     }
     body += "],\"skills_allow\":[";
     for (std::size_t i = 0; i < draft_.skills_allow.size(); ++i) {

@@ -7,7 +7,7 @@
 
 class SidebarFooter : public tuinator::Widget {
   public:
-    SidebarFooter(tuinator::Theme theme, std::function<void()> on_settings);
+    explicit SidebarFooter(tuinator::Theme theme);
 
     std::string_view widget_type_name() const override { return "SidebarFooter"; }
 
@@ -20,6 +20,4 @@ class SidebarFooter : public tuinator::Widget {
 
   private:
     tuinator::Theme theme_;
-    std::function<void()> on_settings_;
-    bool settings_hover_ = false;
 };

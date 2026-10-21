@@ -1,0 +1,341 @@
+{
+  "categories": {
+    "general": "一般とチャット",
+    "general_short": "一般",
+    "model": "モデル",
+    "agent": "エージェントと動作",
+    "agent_short": "エージェント",
+    "tools": "ツールとスキル",
+    "tools_short": "ツール",
+    "audio": "音声と読み上げ",
+    "audio_short": "音声",
+    "appearance": "表示",
+    "appearance_short": "表示",
+    "shortcuts": "キーボードショートカット",
+    "shortcuts_short": "キー"
+  },
+  "nav": {
+    "categories": "カテゴリ"
+  },
+  "scope": {
+    "save_to": "保存先:",
+    "project": "プロジェクト",
+    "chat": "チャット"
+  },
+  "values": {
+    "empty": "（空）",
+    "driver_default": "（ドライバー既定）",
+    "default_paren": "（既定）",
+    "unlimited": "0（無制限）",
+    "silence_off": "0（オフ）",
+    "chars_suffix": "{count} 文字",
+    "capture_device_default": "既定",
+    "enum_sep": "、"
+  },
+  "sections": {
+    "execution": "実行",
+    "thinking": "思考",
+    "prompt": "プロンプト",
+    "mcp_servers": "MCP サーバー",
+    "skills": "スキル",
+    "speech_to_text": "音声認識 (Wuji)",
+    "theme": "テーマ",
+    "agent_chat": "エージェントとチャット",
+    "your_messages": "自分のメッセージ",
+    "assistant_messages": "アシスタントのメッセージ",
+    "labels_motion": "ラベルとアニメーション",
+    "global": "全体",
+    "language": "言語"
+  },
+  "empty": {
+    "mcp_none": "（接続なし）",
+    "skills_none": "（読み込みなし）"
+  },
+  "rows": {
+    "session_name": {
+      "label": "チャット名",
+      "hint": "このチャットセッションの表示名。"
+    },
+    "preset_combo": {
+      "label": "プリセットとテンプレート",
+      "hint": "プリセット、YAML テンプレート、表示スタイルを切り替えます。"
+    },
+    "provider": {
+      "label": "プロバイダー",
+      "hint": "Enter: 検索ピッカー  <-/->: プロバイダーを切り替え。"
+    },
+    "project_provider": {
+      "label": "既定のプロバイダー",
+      "hint": "Enter: 検索ピッカー  <-/->: プロバイダーを切り替え。"
+    },
+    "model": {
+      "label": "モデル",
+      "hint": "Enter/Space: モデル選択。 (?) をクリック: Wuji カタログの詳細。"
+    },
+    "temperature": {
+      "label": "温度",
+      "hint": "サンプリング温度。低いほど決定的になります。"
+    },
+    "max_tokens": {
+      "label": "最大トークン数",
+      "hint": "モデル応答あたりの最大トークン数。"
+    },
+    "context_window": {
+      "label": "コンテキストウィンドウ",
+      "hint": "Enter: トークン上限を入力。<-/->: 段階的に調整。"
+    },
+    "context_window_fixed": {
+      "label": "コンテキストウィンドウ",
+      "hint": "コンテキストウィンドウはモデルカタログで固定されています。"
+    },
+    "max_steps": {
+      "label": "最大ステップ数",
+      "hint": "1 リクエストあたりの自律ツール呼び出しの上限。"
+    },
+    "decisions_enabled": {
+      "label": "決定の記録",
+      "hint": "エージェントがプロジェクトの決定を記録できるようにします。"
+    },
+    "memory_enabled": {
+      "label": "メモリ",
+      "hint": "このチャットの長期メモリを有効にします。"
+    },
+    "chain_of_thought": {
+      "label": "思考の連鎖",
+      "hint": "推論の表示方法（{modes}）。"
+    },
+    "thought_max_chars": {
+      "label": "思考の最大文字数",
+      "hint": "表示する思考の上限（0 は無制限）。"
+    },
+    "system_prompt_extra": {
+      "label": "追加システムプロンプト",
+      "hint": "このチャットに追加するシステム指示。"
+    },
+    "stt_enabled": {
+      "label": "音声入力を有効",
+      "hint": "チャット入力のマイクボタン (|O|)。"
+    },
+    "stt_driver": {
+      "label": "STT ドライバー",
+      "hint": "wuji text --audio 用の Wuji ドライバー（例: llama）。適用時に capability_drivers.text を保存。"
+    },
+    "stt_model": {
+      "label": "STT モデル",
+      "hint": "STT ドライバーに渡すモデル ID（空はドライバー既定）。"
+    },
+    "stt_language": {
+      "label": "文字起こしの言語",
+      "hint": "文字起こしのヒント言語。{auto_lang} は自動検出。"
+    },
+    "stt_quality": {
+      "label": "文字起こしの品質",
+      "hint": "速度と精度のプリセット（ドライバー依存）。"
+    },
+    "stt_trim_silence": {
+      "label": "無音をトリム",
+      "hint": "STT 前に録音の先頭・末尾の無音を除去します。"
+    },
+    "stt_silence_level": {
+      "label": "無音レベル",
+      "hint": "トリム時の無音判定の音量しきい値。"
+    },
+    "stt_capture_device": {
+      "label": "入力デバイス",
+      "hint": "音声入力デバイス名またはパス（空はシステム既定）。"
+    },
+    "stt_sample_rate": {
+      "label": "サンプルレート",
+      "hint": "録音サンプルレート（Hz、8000–48000）。"
+    },
+    "ui_theme": {
+      "label": "カラーテーマ",
+      "hint": "Enter: テーマ検索。<-/->: 切り替え。ユーザー定義: ~/.config/taiji/themes/"
+    },
+    "ui_corners": {
+      "label": "角のスタイル",
+      "hint": "四角・丸枠、または外枠なしのフラット表示。"
+    },
+    "ui_locale": {
+      "label": "表示言語",
+      "hint": "設定ラベルと共通 UI テキストの言語。"
+    },
+    "tool_call_density": {
+      "label": "ツール呼び出しの密度",
+      "hint": "アクティビティログのツール行を簡潔または詳細に表示。"
+    },
+    "turn_metrics_preset": {
+      "label": "ターン指標",
+      "hint": "チャットログのターンごとの指標の詳しさ。"
+    },
+    "turn_metrics_show_actions": {
+      "label": "ターン操作",
+      "hint": "完了したターンの下にやり直し/コピーを表示。"
+    },
+    "presentation": {
+      "label": "表示形式",
+      "hint": "このチャットでアシスタントメッセージをどう描画するか。"
+    },
+    "user_message_style": {
+      "label": "メッセージスタイル",
+      "hint": "この役割の吹き出し（{examples} など）。"
+    },
+    "user_message_align": {
+      "label": "配置",
+      "hint": "水平位置。「{auto}」は役割に従います（自分: 右、アシスタント: 左）。"
+    },
+    "user_message_max_width_pct": {
+      "label": "最大幅",
+      "hint": "<-/-> またはバーをクリックして吹き出しの最大幅（40–100%）。"
+    },
+    "user_message_fill_background": {
+      "label": "背景を塗りつぶす",
+      "hint": "{on}: 枠込みで塗りつぶし。{off}: チャット背景上に枠線のみ。"
+    },
+    "assistant_message_style": {
+      "label": "メッセージスタイル",
+      "hint": "この役割の吹き出し（{examples} など）。"
+    },
+    "assistant_message_align": {
+      "label": "配置",
+      "hint": "水平位置。「{auto}」は役割に従います（自分: 右、アシスタント: 左）。"
+    },
+    "assistant_message_max_width_pct": {
+      "label": "最大幅",
+      "hint": "<-/-> またはバーをクリックして吹き出しの最大幅（40–100%）。"
+    },
+    "assistant_message_fill_background": {
+      "label": "背景を塗りつぶす",
+      "hint": "{on}: 枠込みで塗りつぶし。{off}: チャット背景上に枠線のみ。"
+    },
+    "message_timestamps": {
+      "label": "タイムスタンプ",
+      "hint": "自分のメッセージに送信時刻を表示。"
+    },
+    "sticky_user_message": {
+      "label": "プロンプトを固定",
+      "hint": "長い返信を読むとき、最後にスクロールしたプロンプトの先頭を固定。"
+    },
+    "auto_compact_context_pct": {
+      "label": "自動コンパクト",
+      "hint": "コンテキストがこの % に達したら古いターンを要約。"
+    },
+    "message_time_clock": {
+      "label": "時刻形式",
+      "hint": "24 時間制または 12 時間制（AM/PM）。"
+    },
+    "chat_width": {
+      "label": "チャット幅",
+      "hint": "チャット列の最大幅（ターミナル桁数）。"
+    },
+    "code_block_wrap": {
+      "label": "コードの折り返し",
+      "hint": "コードブロック内の長い行を折り返します。"
+    },
+    "tool_labels_locale": {
+      "label": "ツールラベル",
+      "hint": "UI のツール状態ラベルの言語。"
+    },
+    "reduce_motion": {
+      "label": "動きを抑える",
+      "hint": "UI の動きを最小化（将来のアニメーション用）。"
+    },
+    "key_open_theme_picker": {
+      "label": "テーマピッカーのショートカット",
+      "hint": "カラーテーマピッカーを開く全体ショートカット（例: Ctrl+T）。"
+    },
+    "mcp_toggle": {
+      "label": "",
+      "hint": "Space: このチャットでサーバーを有効/無効。Enter: ツール一覧の開閉。"
+    },
+    "mcp_tool_toggle": {
+      "label": "",
+      "hint": "Space: このツールを許可またはブロック。"
+    },
+    "skill_toggle": {
+      "label": "",
+      "hint": "スキルを許可リストに制限するか、すべて許可します。"
+    }
+  },
+  "options": {
+    "bool": {
+      "on": "オン",
+      "off": "オフ"
+    },
+    "chain_of_thought": {
+      "off": "オフ",
+      "prompt": "プロンプト",
+      "full": "ネイティブ"
+    },
+    "turn_metrics_preset": {
+      "off": "オフ",
+      "compact": "簡潔",
+      "dev": "開発者"
+    },
+    "ui_corners": {
+      "square": "四角",
+      "rounded": "丸み",
+      "flat": "フラット"
+    },
+    "tool_call_density": {
+      "compact": "簡潔",
+      "detailed": "詳細"
+    },
+    "presentation": {
+      "markdown": "マークダウン",
+      "whatsapp": "会話型（短文）",
+      "story": "ストーリー",
+      "minimal": "ミニマル",
+      "bubbles": "吹き出し",
+      "narrative": "ナラティブ"
+    },
+    "message_style": {
+      "chat": "チャット",
+      "cornered": "角枠",
+      "block": "ブロック",
+      "plain": "プレーン",
+      "header": "ヘッダー",
+      "terminal": "ターミナル",
+      "log": "ログ",
+      "card": "カード",
+      "section": "セクション"
+    },
+    "message_align": {
+      "auto": "自動",
+      "left": "左",
+      "right": "右",
+      "center": "中央"
+    },
+    "auto_compact": {
+      "off": "オフ"
+    },
+    "chat_width": {
+      "auto": "自動",
+      "narrow": "狭い",
+      "medium": "標準",
+      "wide": "広い"
+    },
+    "message_time_clock": {
+      "24h": "24時間",
+      "12h": "12時間（AM/PM）"
+    },
+    "stt_language": {
+      "auto": "自動検出"
+    },
+    "stt_quality": {
+      "default": "（既定）",
+      "fast": "高速",
+      "balanced": "バランス",
+      "careful": "高精度"
+    },
+    "skill_state": {
+      "auto": "既定",
+      "pinned": "固定",
+      "off": "ブロック"
+    },
+    "mcp_tool_state": {
+      "allowed": "許可",
+      "blocked": "ブロック"
+    }
+  }
+}

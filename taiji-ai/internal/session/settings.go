@@ -19,6 +19,7 @@ type Settings struct {
 	SkillsAllow       []string `json:"skills_allow,omitempty" yaml:"skills_allow,omitempty"`
 	SkillsDeny        []string `json:"skills_deny,omitempty" yaml:"skills_deny,omitempty"`
 	MCPServers        []string `json:"mcp_servers,omitempty" yaml:"mcp_servers,omitempty"`
+	MCPToolsDeny      []string `json:"mcp_tools_deny,omitempty" yaml:"mcp_tools_deny,omitempty"`
 	Presentation      string   `json:"presentation,omitempty" yaml:"presentation,omitempty"`
 	TurnMetricsPreset string   `json:"turn_metrics_preset,omitempty" yaml:"turn_metrics_preset,omitempty"`
 	ToolLabelsLocale  string   `json:"tool_labels_locale,omitempty" yaml:"tool_labels_locale,omitempty"`
@@ -41,6 +42,7 @@ type AgentRuntime struct {
 	SkillsAllow        []string
 	SkillsDeny         []string
 	MCPServers         []string
+	MCPToolsDeny       []string
 	DecisionsEnabled   bool
 	MemoryEnabled      bool
 }
@@ -113,6 +115,9 @@ func (s *Session) AgentRuntimeForRun(cfg *taijicfg.Config) AgentRuntime {
 	if len(st.MCPServers) > 0 {
 		out.MCPServers = append([]string(nil), st.MCPServers...)
 	}
+	if len(st.MCPToolsDeny) > 0 {
+		out.MCPToolsDeny = append([]string(nil), st.MCPToolsDeny...)
+	}
 	if st.DecisionsEnabled != nil {
 		out.DecisionsEnabled = *st.DecisionsEnabled
 	}
@@ -136,8 +141,8 @@ func (s *Session) UISettingsForDisplay(cfg *taijicfg.Config) taijicfg.UIConfig {
 		out.TurnMetrics.Preset = preset
 		out.TurnMetrics.Fields = nil
 	}
-	if locale := strings.TrimSpace(st.ToolLabelsLocale); locale != "" {
-		out.ToolLabels.Locale = locale
+	if loc := out.LocaleOrDefault(); loc != "" {
+		out.ToolLabels.Locale = loc
 	}
 	return out
 }
@@ -177,6 +182,47 @@ func (rt AgentRuntime) SkillAllowed(name string) bool {
 		}
 	}
 	return false
+}
+
+// MCPToolRef builds a stable session deny-list key for a server tool.
+func MCPToolRef(server, tool string) string {
+	return strings.TrimSpace(server) + ":" + strings.TrimSpace(tool)
+}
+
+// ParseMCPToolRef splits a server:tool deny-list entry.
+func ParseMCPToolRef(ref string) (server, tool string, ok bool) {
+	parts := strings.SplitN(strings.TrimSpace(ref), ":", 2)
+	if len(parts) != 2 {
+		return "", "", false
+	}
+	server = strings.TrimSpace(parts[0])
+	tool = strings.TrimSpace(parts[1])
+	if server == "" || tool == "" {
+		return "", "", false
+	}
+	return server, tool, true
+}
+
+// MCPToolAllowed reports whether an MCP tool may run (server enabled and not denied).
+func (rt AgentRuntime) MCPToolAllowed(server, tool string) bool {
+	if !rt.MCPServerAllowed(server) {
+		return false
+	}
+	tool = strings.TrimSpace(tool)
+	if tool == "" {
+		return false
+	}
+	server = strings.TrimSpace(server)
+	for _, deny := range rt.MCPToolsDeny {
+		ds, dt, ok := ParseMCPToolRef(deny)
+		if !ok {
+			continue
+		}
+		if strings.EqualFold(ds, server) && dt == tool {
+			return false
+		}
+	}
+	return true
 }
 
 // MCPServerAllowed reports whether an MCP server is enabled for this session.
