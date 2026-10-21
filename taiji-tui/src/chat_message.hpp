@@ -22,6 +22,8 @@ class ChatMessage : public tuinator::Widget {
     /// Compacted history summaries always render as a section row (label e.g. "summary").
     void set_compact_summary(bool compact);
     bool is_compact_summary() const { return compact_summary_; }
+    void set_edit_highlight(bool highlight);
+    bool edit_highlight() const { return edit_highlight_; }
     std::string_view widget_type_name() const override { return "ChatMessage"; }
 
     tuinator::Size preferred_size() const override;
@@ -54,4 +56,5 @@ class ChatMessage : public tuinator::Widget {
     std::string time_label_;
     std::string author_label_;
     bool compact_summary_ = false;
+    bool edit_highlight_ = false;
 };

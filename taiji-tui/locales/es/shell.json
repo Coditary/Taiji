@@ -86,7 +86,11 @@
     "compacted_ok": "Conversación compactada.",
     "compaction_failed": "Compactación fallida.",
     "could_not_load_skills": "No se pudieron cargar skills.",
-    "could_not_load_decisions": "No se pudieron cargar decisiones."
+    "could_not_load_decisions": "No se pudieron cargar decisiones.",
+    "wait_before_branch": "...",
+    "branch_failed": "...",
+    "branch_failed_prefix": "...",
+    "branched": "..."
   },
   "metrics": {
     "tok_per_sec": "Etiqueta de interfaz de usuario: {value} tok/s"

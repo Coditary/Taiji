@@ -89,6 +89,10 @@
     "compacted_ok": "Conversazione sintetizzata.",
     "compaction_failed": "La compattazione non è andata a buon fine.",
     "could_not_load_skills": "Impossibile caricare le abilità.",
-    "could_not_load_decisions": "Impossibile caricare le decisioni."
+    "could_not_load_decisions": "Impossibile caricare le decisioni.",
+    "wait_before_branch": "...",
+    "branch_failed": "...",
+    "branch_failed_prefix": "...",
+    "branched": "..."
   }
 }

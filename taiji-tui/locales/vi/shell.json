@@ -89,6 +89,10 @@
     "compacted_ok": "Cuộc trò chuyện được tóm tắt.",
     "compaction_failed": "Quá trình nén không thành công.",
     "could_not_load_skills": "Không thể tải các kỹ năng.",
-    "could_not_load_decisions": "Không thể tải các quyết định."
+    "could_not_load_decisions": "Không thể tải các quyết định.",
+    "wait_before_branch": "...",
+    "branch_failed": "...",
+    "branch_failed_prefix": "...",
+    "branched": "..."
   }
 }

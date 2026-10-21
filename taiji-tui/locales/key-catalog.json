@@ -24,7 +24,7 @@
     "vi",
     "tr"
   ],
-  "key_count": 341,
+  "key_count": 348,
   "keys_by_module": {
     "common": [
       "app.settings_apply_hint",
@@ -296,6 +296,9 @@
       "status.agent_failed_prefix",
       "status.agent_still_starting",
       "status.answer_question",
+      "status.branch_failed",
+      "status.branch_failed_prefix",
+      "status.branched",
       "status.compacted_ok",
       "status.compacting",
       "status.compaction_failed",
@@ -303,6 +306,7 @@
       "status.could_not_load_decisions",
       "status.could_not_load_skills",
       "status.could_not_send_answer",
+      "status.editing_message",
       "status.enter_queues_message",
       "status.failed_create_session_prefix",
       "status.failed_delete_session_prefix",
@@ -310,6 +314,7 @@
       "status.generating_esc_stop",
       "status.generating_with_queue",
       "status.init_failed_prefix",
+      "status.message_copied",
       "status.recording_hint",
       "status.request_failed",
       "status.response_copied",
@@ -318,7 +323,9 @@
       "status.starting_agent",
       "status.transcription_inserted",
       "status.voice_input_off",
-      "status.wait_before_compact"
+      "status.wait_before_branch",
+      "status.wait_before_compact",
+      "status.wait_before_edit"
     ],
     "tools": [
       "metrics.ctx",
@@ -1704,6 +1711,21 @@
     },
     {
       "module": "shell",
+      "key": "status.branch_failed",
+      "en": "Could not branch chat"
+    },
+    {
+      "module": "shell",
+      "key": "status.branch_failed_prefix",
+      "en": "Branch failed: "
+    },
+    {
+      "module": "shell",
+      "key": "status.branched",
+      "en": "Opened branched chat"
+    },
+    {
+      "module": "shell",
       "key": "status.compacted_ok",
       "en": "Conversation compacted."
     },
@@ -1739,6 +1761,11 @@
     },
     {
       "module": "shell",
+      "key": "status.editing_message",
+      "en": "Editing message — Enter to resend · Esc to cancel"
+    },
+    {
+      "module": "shell",
       "key": "status.enter_queues_message",
       "en": "Enter queues another message"
     },
@@ -1771,6 +1798,11 @@
       "module": "shell",
       "key": "status.init_failed_prefix",
       "en": "Init failed: "
+    },
+    {
+      "module": "shell",
+      "key": "status.message_copied",
+      "en": "Message copied"
     },
     {
       "module": "shell",
@@ -1814,8 +1846,18 @@
     },
     {
       "module": "shell",
+      "key": "status.wait_before_branch",
+      "en": "Wait for the current reply before branching."
+    },
+    {
+      "module": "shell",
       "key": "status.wait_before_compact",
       "en": "Wait for the current reply before compacting."
+    },
+    {
+      "module": "shell",
+      "key": "status.wait_before_edit",
+      "en": "Wait for the current reply before editing."
     },
     {
       "module": "tools",

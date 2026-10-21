@@ -350,6 +350,30 @@ constexpr int kPollIntervalMs = 33;
 constexpr int kStreamUiRefreshMs = 33;
 constexpr int kQueueUiRefreshMs = 200;
 
+std::optional<tuinator::Point> terminal_to_chat_content(tuinator::ScrollView* scroll,
+                                                        const tuinator::Point& terminal) {
+    if (scroll == nullptr) {
+        return std::nullopt;
+    }
+    const tuinator::Rect viewport = scroll->bounds();
+    if (!viewport.contains(terminal)) {
+        return std::nullopt;
+    }
+    return tuinator::Point{terminal.x - viewport.x + scroll->scroll_x(),
+                           terminal.y - viewport.y + scroll->scroll_y()};
+}
+
+bool content_point_over_widget(const tuinator::Widget* widget, const tuinator::Point& content) {
+    if (widget == nullptr) {
+        return false;
+    }
+    const tuinator::Rect bounds = widget->bounds();
+    if (bounds.width <= 0 || bounds.height <= 0) {
+        return false;
+    }
+    return bounds.contains(content);
+}
+
 std::string truncate_preview(const std::string& text, std::size_t max_len = 42) {
     if (text.size() <= max_len) {
         return text;
@@ -803,8 +827,7 @@ void ChatApp::set_root() {
         app_.repaint_all();
     });
     settings_modal_->set_on_closed([this](bool applied) {
-        const bool menu_open = session_context_menu_ != nullptr && session_context_menu_->is_open();
-        app_.set_pointer_hover_tracking(menu_open);
+        app_.set_pointer_hover_tracking(true);
         // Always restore appearance prefs from the saved settings: reverts live
         // preview changes when the modal was cancelled, and picks up new values
         // after apply.
@@ -825,9 +848,8 @@ void ChatApp::set_root() {
         focus_input();
         app_.repaint_all();
     });
-    session_context_menu_->set_on_open_changed([this](bool open) {
-        const bool settings_open = settings_modal_ != nullptr && settings_modal_->is_open();
-        app_.set_pointer_hover_tracking(open || settings_open);
+    session_context_menu_->set_on_open_changed([this](bool /*open*/) {
+        app_.set_pointer_hover_tracking(true);
     });
 
     auto workspace_root = std::make_unique<MainPanelVBox>(tuinator::BoxOptions{.gap = 0, .padding = 0});
@@ -997,6 +1019,14 @@ void ChatApp::set_root() {
             }
             return false;
         }
+        if (pending_edit_turn_.has_value() && key->key == tuinator::Key::Escape && !key->ctrl && !key->alt) {
+            const bool overlay_open =
+                message_composer_ != nullptr && message_composer_->is_composer_overlay_open();
+            if (!overlay_open) {
+                cancel_edit_turn();
+                return true;
+            }
+        }
         if (ui_keybinding_matches(key_open_theme_picker_, *key)) {
             if (message_composer_ != nullptr) {
                 message_composer_->open_theme_picker(current_ui_theme_);
@@ -1081,6 +1111,7 @@ void ChatApp::set_root() {
     shell->add_child(std::move(workspace_root));
     refresh_appearance_prefs();
     app_.set_root(std::move(shell));
+    app_.set_pointer_hover_tracking(true);
     sync_workspace_layout();
     refresh_input_model_info();
     refresh_status_footer();
@@ -1825,10 +1856,6 @@ void ChatApp::submit_message(const std::string& text) {
         return;
     }
 
-    if (input_ != nullptr) {
-        input_->set_value("");
-    }
-
     if (trimmed == "/compact") {
         handle_compact_command();
         return;
@@ -1844,6 +1871,27 @@ void ChatApp::submit_message(const std::string& text) {
     if (trimmed == "/settings") {
         open_settings_modal();
         return;
+    }
+
+    if (pending_edit_turn_.has_value()) {
+        const std::size_t turn_index = *pending_edit_turn_;
+        pending_edit_turn_ = std::nullopt;
+        refresh_user_edit_highlights();
+
+        if (worker_busy_) {
+            pending_regenerate_turn_ = turn_index;
+            pending_regenerate_goal_ = trimmed;
+            taiji_cancel(taiji_handle_);
+            return;
+        }
+
+        start_regenerate(turn_index, &trimmed);
+        pump_worker();
+        return;
+    }
+
+    if (input_ != nullptr) {
+        input_->set_value("");
     }
 
     enqueue_message(trimmed);
@@ -2257,6 +2305,80 @@ void ChatApp::promote_front_queued() {
     pump_worker();
 }
 
+void ChatApp::copy_turn_user(std::size_t turn_index) {
+    std::string text;
+    {
+        std::lock_guard<std::mutex> lock(state_mu_);
+        if (turn_index >= turns_.size()) {
+            return;
+        }
+        text = turns_[turn_index].user;
+    }
+    if (text.empty()) {
+        return;
+    }
+    tuinator::clipboard::set(text);
+    const std::string copied = ui_shell("status.message_copied");
+    set_footer_status(copied.empty() ? "Message copied" : copied);
+}
+
+void ChatApp::cancel_edit_turn() {
+    if (!pending_edit_turn_.has_value()) {
+        return;
+    }
+    pending_edit_turn_ = std::nullopt;
+    if (input_ != nullptr) {
+        input_->set_value("");
+    }
+    refresh_user_edit_highlights();
+    refresh_queue_ui(false);
+    app_.repaint_all();
+}
+
+void ChatApp::begin_edit_turn(std::size_t turn_index) {
+    std::string user_text;
+    {
+        std::lock_guard<std::mutex> lock(state_mu_);
+        if (turn_index >= turns_.size()) {
+            return;
+        }
+        const ChatTurn& turn = turns_[turn_index];
+        if (turn.user.empty() || turn.status == TurnStatus::Queued || turn.user_kind == "compact") {
+            return;
+        }
+        user_text = turn.user;
+    }
+
+    if (worker_busy_) {
+        set_footer_status(ui_shell("status.wait_before_edit"));
+        return;
+    }
+
+    if (pending_edit_turn_.has_value() && *pending_edit_turn_ != turn_index) {
+        cancel_edit_turn();
+    }
+
+    pending_edit_turn_ = turn_index;
+    if (input_ != nullptr) {
+        input_->set_value(user_text);
+    }
+    refresh_user_edit_highlights();
+    const std::string hint = ui_shell("status.editing_message");
+    set_footer_status(hint.empty() ? "Editing message — Enter to resend" : hint);
+    focus_input();
+}
+
+void ChatApp::refresh_user_edit_highlights() {
+    const std::optional<std::size_t> editing = pending_edit_turn_;
+    for (std::size_t i = 0; i < turn_views_.size(); ++i) {
+        if (turn_views_[i].user == nullptr) {
+            continue;
+        }
+        turn_views_[i].user->set_edit_highlight(editing.has_value() && *editing == i);
+    }
+    app_.invalidate();
+}
+
 void ChatApp::copy_turn_response(std::size_t turn_index) {
     std::string text;
     {
@@ -2298,7 +2420,43 @@ void ChatApp::step_turn_version(std::size_t turn_index, int delta) {
     flush_chat_layout(false);
 }
 
-void ChatApp::start_regenerate(std::size_t turn_index) {
+void ChatApp::truncate_turns_after(std::size_t turn_index) {
+    {
+        std::lock_guard<std::mutex> lock(state_mu_);
+        if (turn_index >= turns_.size()) {
+            return;
+        }
+    }
+
+    if (taiji_handle_ != 0) {
+        taiji_session_truncate_after_turn(taiji_handle_, static_cast<int32_t>(turn_index));
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(state_mu_);
+        if (turn_index + 1 < turns_.size()) {
+            turns_.resize(turn_index + 1);
+        }
+        std::deque<std::size_t> kept_queue;
+        for (const std::size_t idx : job_queue_) {
+            if (idx < turn_index) {
+                kept_queue.push_back(idx);
+            }
+        }
+        job_queue_ = std::move(kept_queue);
+    }
+
+    for (std::size_t idx = turn_index + 1; idx < turn_views_.size(); ++idx) {
+        clear_turn_view(idx);
+    }
+    refresh_chat_log();
+    refresh_queue_ui(true);
+    sync_empty_state();
+    refresh_context_sidebar();
+    refresh_skills_sidebar();
+}
+
+void ChatApp::start_regenerate(std::size_t turn_index, const std::string* override_user) {
     std::string goal;
     {
         std::lock_guard<std::mutex> lock(state_mu_);
@@ -2309,7 +2467,22 @@ void ChatApp::start_regenerate(std::size_t turn_index) {
         if (turn.user.empty()) {
             return;
         }
-        goal = turn.user;
+        goal = override_user != nullptr ? *override_user : turn.user;
+    }
+
+    truncate_turns_after(turn_index);
+
+    {
+        std::lock_guard<std::mutex> lock(state_mu_);
+        if (turn_index >= turns_.size()) {
+            return;
+        }
+        ChatTurn& turn = turns_[turn_index];
+        if (override_user != nullptr) {
+            turn.user = *override_user;
+            turn.user_sent_at = message_time_now_iso_utc();
+            turn.user_time_label = format_message_time_label(turn.user_sent_at, message_time_clock_);
+        }
 
         if (turn.status == TurnStatus::Done) {
             const std::string full = combined_assistant_text(turn.assistant_preamble, turn.assistant);
@@ -2334,7 +2507,73 @@ void ChatApp::start_regenerate(std::size_t turn_index) {
         }
     }
 
+    refresh_turn_view(turn_index);
+    flush_chat_layout(false);
+
     run_job(turn_index, goal);
+}
+
+void ChatApp::branch_turn(std::size_t turn_index) {
+    if (taiji_handle_ == 0) {
+        return;
+    }
+    if (worker_busy_) {
+        set_footer_status(ui_shell("status.wait_before_branch"));
+        return;
+    }
+    {
+        std::lock_guard<std::mutex> lock(state_mu_);
+        if (turn_index >= turns_.size()) {
+            return;
+        }
+        const ChatTurn& turn = turns_[turn_index];
+        if (turn.user.empty() || turn.status == TurnStatus::Queued) {
+            return;
+        }
+    }
+
+    int32_t through_turn = static_cast<int32_t>(turn_index);
+    {
+        std::lock_guard<std::mutex> lock(state_mu_);
+        if (!turns_.empty() && turn_index == turns_.size() - 1) {
+            through_turn = -1;
+        }
+    }
+
+    char* error = nullptr;
+    if (taiji_session_branch(taiji_handle_, through_turn, &error) == 0) {
+        const std::string msg =
+            error != nullptr ? ui_shell("status.branch_failed_prefix") + error : ui_shell("status.branch_failed");
+        if (error != nullptr) {
+            std::free(error);
+        }
+        set_footer_status(msg);
+        return;
+    }
+    if (error != nullptr) {
+        std::free(error);
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(state_mu_);
+        turns_.clear();
+        job_queue_.clear();
+    }
+    for (std::size_t idx = 0; idx < turn_views_.size(); ++idx) {
+        clear_turn_view(idx);
+    }
+
+    reload_turns_from_backend();
+    refresh_session_sidebar();
+    refresh_session_nav();
+    refresh_context_sidebar();
+    refresh_mcp_sidebar();
+    refresh_skills_sidebar();
+    refresh_status_footer();
+    sync_empty_state();
+    flush_chat_layout(true);
+    set_footer_status(ui_shell("status.branched"));
+    focus_input();
 }
 
 void ChatApp::redo_turn(std::size_t turn_index) {
@@ -2388,7 +2627,42 @@ bool ChatApp::ui_needs_animation_frame() const {
     return false;
 }
 
+void ChatApp::update_turn_action_hovers() {
+    const std::optional<tuinator::Point> pointer = app_.pointer_position();
+    const std::optional<tuinator::Point> content =
+        pointer.has_value() ? terminal_to_chat_content(chat_scroll_, *pointer) : std::nullopt;
+
+    bool hover_paint_changed = false;
+    for (TurnView& view : turn_views_) {
+        if (view.metrics != nullptr) {
+            bool hover = false;
+            if (content.has_value()) {
+                hover = content_point_over_widget(view.metrics, *content) ||
+                        content_point_over_widget(view.assistant, *content) ||
+                        content_point_over_widget(view.assistant_lead, *content);
+            }
+            if (view.metrics->set_actions_hover(hover)) {
+                hover_paint_changed = true;
+            }
+        }
+        if (view.user_actions != nullptr) {
+            bool hover = false;
+            if (content.has_value()) {
+                hover = content_point_over_widget(view.user_actions, *content) ||
+                        content_point_over_widget(view.user, *content);
+            }
+            if (view.user_actions->set_actions_hover(hover)) {
+                hover_paint_changed = true;
+            }
+        }
+    }
+    if (hover_paint_changed) {
+        app_.invalidate();
+    }
+}
+
 void ChatApp::tick_ui_animations() {
+    update_turn_action_hovers();
     if (message_composer_ != nullptr) {
         message_composer_->tick(kPollIntervalMs);
     }
@@ -2442,6 +2716,17 @@ void ChatApp::ensure_turn_widgets(std::size_t count) {
         auto assistant = std::make_unique<AssistantMarkdown>(assistant_options);
 
         const std::size_t index = turn_views_.size();
+        auto user_actions = std::make_unique<UserTurnActionsNote>(theme_, [this, index](UserTurnActionsNote::Action action) {
+            switch (action) {
+            case UserTurnActionsNote::Action::Edit:
+                begin_edit_turn(index);
+                break;
+            case UserTurnActionsNote::Action::Copy:
+                copy_turn_user(index);
+                break;
+            }
+        });
+
         auto metrics = std::make_unique<TurnMetricsNote>(theme_, [this, index](TurnMetricsNote::Action action) {
             switch (action) {
             case TurnMetricsNote::Action::Redo:
@@ -2449,6 +2734,9 @@ void ChatApp::ensure_turn_widgets(std::size_t count) {
                 break;
             case TurnMetricsNote::Action::Copy:
                 copy_turn_response(index);
+                break;
+            case TurnMetricsNote::Action::Branch:
+                branch_turn(index);
                 break;
             case TurnMetricsNote::Action::PrevVersion:
                 step_turn_version(index, -1);
@@ -2470,17 +2758,25 @@ void ChatApp::ensure_turn_widgets(std::size_t count) {
             .activity = activity.get(),
             .assistant = assistant.get(),
             .metrics = metrics.get(),
+            .user_actions = user_actions.get(),
         };
         turn_views_.push_back(view);
+
+        auto user_column = std::make_unique<MainPanelVBox>(tuinator::BoxOptions{.gap = 0, .padding = 0});
+        user_column->add_child(std::move(user));
+        user_column->add_child(std::move(user_actions));
 
         // Activity (route, skill search, tools) before the thinking spinner so
         // deterministic prefetch steps appear above "Thinking…" while the LLM runs.
         response->add_child(std::move(activity));
         response->add_child(std::move(thinking));
         response->add_child(std::move(assistant_lead));
-        response->add_child(std::move(assistant));
-        response->add_child(std::move(metrics));
-        block->add_child(std::move(user));
+        auto assistant_with_metrics =
+            std::make_unique<MainPanelVBox>(tuinator::BoxOptions{.gap = 0, .padding = 0});
+        assistant_with_metrics->add_child(std::move(assistant));
+        assistant_with_metrics->add_child(std::move(metrics));
+        response->add_child(std::move(assistant_with_metrics));
+        block->add_child(std::move(user_column));
         block->add_child(std::move(response));
         chat_log_->add_child(std::move(block));
     }
@@ -2513,6 +2809,9 @@ void ChatApp::sync_turn_view(std::size_t index, const ChatTurn& turn, bool worke
         if (view.metrics != nullptr) {
             view.metrics->clear();
         }
+        if (view.user_actions != nullptr) {
+            view.user_actions->clear();
+        }
         return;
     }
 
@@ -2528,6 +2827,17 @@ void ChatApp::sync_turn_view(std::size_t index, const ChatTurn& turn, bool worke
         user_style.foreground_rgb = ui_user_bubble();
         view.user->set_style(user_style);
         view.user->set_time_label(compact ? "" : user_time_label_for_turn(turn));
+    }
+
+    if (view.user_actions != nullptr) {
+        const bool can_act =
+            turn.status == TurnStatus::Done && !turn.user.empty() && turn.user_kind != "compact";
+        const bool show = can_act && taiji_turn_metrics_show_actions(taiji_handle_) != 0;
+        if (!show) {
+            view.user_actions->clear();
+        } else {
+            view.user_actions->set_actions_visible(true);
+        }
     }
 
     const bool is_active_turn =
@@ -2584,6 +2894,9 @@ void ChatApp::sync_turn_view(std::size_t index, const ChatTurn& turn, bool worke
         view.assistant->clear();
         if (view.metrics != nullptr) {
             view.metrics->clear();
+        }
+        if (view.user_actions != nullptr) {
+            view.user_actions->clear();
         }
         return;
     }
@@ -2660,6 +2973,7 @@ void ChatApp::sync_turn_view(std::size_t index, const ChatTurn& turn, bool worke
             view.metrics->set_content(note, show_actions, turn.active_version, version_count);
         }
     }
+    refresh_user_edit_highlights();
 }
 
 void ChatApp::refresh_turn_view(std::size_t index) {
@@ -2964,6 +3278,12 @@ void ChatApp::clear_turn_view(std::size_t index) {
     if (view.metrics != nullptr) {
         view.metrics->clear();
     }
+    if (view.user_actions != nullptr) {
+        view.user_actions->clear();
+    }
+    if (view.user != nullptr) {
+        view.user->set_edit_highlight(false);
+    }
 }
 
 void ChatApp::reload_turns_from_backend() {
@@ -3088,6 +3408,7 @@ void ChatApp::switch_to_session(const std::string& project_root, const std::stri
     if (taiji_handle_ == 0 || session_id.empty()) {
         return;
     }
+    cancel_edit_turn();
     if (worker_busy_) {
         taiji_cancel(taiji_handle_);
     }
@@ -3194,6 +3515,7 @@ void ChatApp::create_new_session(const std::string& project_root) {
     if (taiji_handle_ == 0) {
         return;
     }
+    cancel_edit_turn();
     if (worker_busy_) {
         taiji_cancel(taiji_handle_);
     }
@@ -3242,8 +3564,10 @@ void ChatApp::create_new_session(const std::string& project_root) {
 }
 
 void ChatApp::on_job_finished(std::size_t turn_index, bool ok, const std::string& error, const std::string& answer) {
+    std::optional<std::size_t> pending_regen;
     {
         std::lock_guard<std::mutex> lock(state_mu_);
+        pending_regen = pending_regenerate_turn_;
         if (turn_index < turns_.size()) {
             ChatTurn& turn = turns_[turn_index];
             if (ok) {
@@ -3281,7 +3605,11 @@ void ChatApp::on_job_finished(std::size_t turn_index, bool ok, const std::string
                     }
                 }
             } else if (is_cancellation_error(error)) {
-                if (turn.assistant.empty() && turn.assistant_preamble.empty()) {
+                const bool regen_cancel =
+                    pending_regen.has_value() && *pending_regen == turn_index;
+                if (regen_cancel) {
+                    turn.status = TurnStatus::Running;
+                } else if (turn.assistant.empty() && turn.assistant_preamble.empty()) {
                     if (!turn.versions.empty()) {
                         turn.active_version = turn.versions.size() - 1;
                         turn.assistant = turn.versions[turn.active_version];
@@ -3338,8 +3666,14 @@ void ChatApp::on_job_finished(std::size_t turn_index, bool ok, const std::string
 
     if (pending_regenerate_turn_.has_value()) {
         const std::size_t regenerate_index = *pending_regenerate_turn_;
+        std::optional<std::string> goal = pending_regenerate_goal_;
         pending_regenerate_turn_ = std::nullopt;
-        start_regenerate(regenerate_index);
+        pending_regenerate_goal_.reset();
+        if (goal.has_value()) {
+            start_regenerate(regenerate_index, &*goal);
+        } else {
+            start_regenerate(regenerate_index);
+        }
         return;
     }
 

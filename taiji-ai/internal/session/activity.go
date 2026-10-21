@@ -27,8 +27,30 @@ func TurnsWithActivity(messages []provider.Message, all []events.Event) []ChatTu
 		if sent := userSentAtFromEvents(groups[i]); !sent.IsZero() {
 			turns[i].UserSentAt = sent
 		}
+		if strings.TrimSpace(turns[i].Assistant) == "" {
+			if text := assistantTextFromEvents(groups[i]); text != "" {
+				turns[i].Assistant = text
+			}
+		}
 	}
 	return turns
+}
+
+func assistantTextFromEvents(evts []events.Event) string {
+	for i := len(evts) - 1; i >= 0; i-- {
+		ev := evts[i]
+		if ev.Type == events.TypeDone {
+			if text := strings.TrimSpace(ev.Text); text != "" {
+				return text
+			}
+		}
+		if ev.Type == events.TypeMessage {
+			if text := strings.TrimSpace(ev.Text); text != "" {
+				return text
+			}
+		}
+	}
+	return ""
 }
 
 func userSentAtFromEvents(evts []events.Event) time.Time {
@@ -180,6 +202,33 @@ func groupEventsByTurn(all []events.Event) [][]events.Event {
 	}
 	flush()
 	return groups
+}
+
+// EventsBeforeTurn returns events for turns with index < turnIndex.
+func EventsBeforeTurn(all []events.Event, turnIndex int) []events.Event {
+	if turnIndex <= 0 {
+		return nil
+	}
+	groups := groupEventsByTurn(all)
+	var out []events.Event
+	for i := 0; i < turnIndex && i < len(groups); i++ {
+		out = append(out, groups[i]...)
+	}
+	return out
+}
+
+// EventsThroughTurn returns persisted events for turns [0, throughTurn] inclusive.
+// throughTurn < 0 returns all events.
+func EventsThroughTurn(all []events.Event, throughTurn int) []events.Event {
+	if throughTurn < 0 {
+		return append([]events.Event(nil), all...)
+	}
+	groups := groupEventsByTurn(all)
+	var out []events.Event
+	for i := 0; i <= throughTurn && i < len(groups); i++ {
+		out = append(out, groups[i]...)
+	}
+	return out
 }
 
 func filterActivityEvents(evts []events.Event) []events.Event {

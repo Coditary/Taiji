@@ -89,6 +89,10 @@
     "compacted_ok": "संवाद संक्षिप्त।",
     "compaction_failed": "संपीड़न विफल हो गया।",
     "could_not_load_skills": "कौशल लोड नहीं हो सके।",
-    "could_not_load_decisions": "निर्णय लोड नहीं हो सके।"
+    "could_not_load_decisions": "निर्णय लोड नहीं हो सके।",
+    "wait_before_branch": "...",
+    "branch_failed": "...",
+    "branch_failed_prefix": "...",
+    "branched": "..."
   }
 }

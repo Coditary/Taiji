@@ -1084,6 +1084,91 @@ func taiji_session_turns(handle C.uint64_t) *C.char {
 	return C.CString(raw)
 }
 
+//export taiji_session_truncate_after_turn
+func taiji_session_truncate_after_turn(handle C.uint64_t, turnIndex C.int32_t) C.int {
+	handlesMu.Lock()
+	h, ok := handles[uint64(handle)]
+	handlesMu.Unlock()
+	if !ok || h == nil || h.session == nil {
+		return 0
+	}
+	idx := int(turnIndex)
+	if idx < 0 {
+		return 0
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	visible := session.VisibleTurnCount(h.session.State.Messages)
+	if visible == 0 {
+		return 0
+	}
+	if idx >= visible {
+		idx = visible - 1
+	}
+	h.session.State.Messages = session.TruncateAfterTurn(h.session.State.Messages, idx)
+	h.activeSkills = skills.ActiveFromMessages(h.session.State.Messages)
+	if h.session.Events != nil {
+		eventsPath := h.session.Events.Path()
+		if all, err := events.ReadFile(eventsPath); err == nil {
+			kept := session.EventsBeforeTurn(all, idx)
+			if err := events.WriteFile(eventsPath, kept); err != nil {
+				return 0
+			}
+		}
+	}
+	if err := h.session.Save(); err != nil {
+		return 0
+	}
+	return 1
+}
+
+//export taiji_session_branch
+func taiji_session_branch(handle C.uint64_t, throughTurn C.int32_t, errorOut **C.char) C.int {
+	handlesMu.Lock()
+	h, ok := handles[uint64(handle)]
+	handlesMu.Unlock()
+	if !ok || h == nil || h.cfg == nil || h.session == nil {
+		if errorOut != nil {
+			*errorOut = C.CString("invalid taiji handle")
+		}
+		return 0
+	}
+
+	root := h.cfg.Root
+	through := int(throughTurn)
+	if through >= 0 {
+		visible := session.VisibleTurnCount(h.session.State.Messages)
+		if visible == 0 {
+			if errorOut != nil {
+				*errorOut = C.CString("session has no turns to branch")
+			}
+			return 0
+		}
+		if through >= visible {
+			through = visible - 1
+		}
+	}
+
+	br, err := session.BranchFrom(root, h.session, through)
+	if err != nil {
+		if errorOut != nil {
+			*errorOut = C.CString(err.Error())
+		}
+		return 0
+	}
+	if err := session.SaveDirBinding(root, h.workDir, br.State.ID); err != nil {
+		if errorOut != nil {
+			*errorOut = C.CString(err.Error())
+		}
+		return 0
+	}
+	h.mu.Lock()
+	h.setSession(br)
+	h.mu.Unlock()
+	_ = taijicfg.RegisterProject(root, h.localMode)
+	return 1
+}
+
 func maybeAutoCompactSession(ctx context.Context, h *runtimeHandle, providerID string, rt *runtime.Runtime) {
 	if h == nil || h.cfg == nil || h.session == nil || rt == nil {
 		return

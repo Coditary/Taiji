@@ -89,6 +89,10 @@
     "compacted_ok": "Rozmowa w skrócie.",
     "compaction_failed": "Zagęszczenie nie powiodło się.",
     "could_not_load_skills": "Nie udało się załadować umiejętności.",
-    "could_not_load_decisions": "Nie udało się załadować decyzji."
+    "could_not_load_decisions": "Nie udało się załadować decyzji.",
+    "wait_before_branch": "...",
+    "branch_failed": "...",
+    "branch_failed_prefix": "...",
+    "branched": "..."
   }
 }

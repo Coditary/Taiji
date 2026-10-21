@@ -42,6 +42,7 @@ inline constexpr const char kNfTest[] = u8"󰙨";
 inline constexpr const char kNfGit[] = u8"󰊢";
 inline constexpr const char kNfAdd[] = u8"󰐕";
 inline constexpr const char kNfFolder[] = u8"󰉋";
+inline constexpr const char kNfPencil[] = u8"󰏫";
 
 // Semantic colors (from the active stylesheet @theme block).
 tuinator::Rgb ui_main_bg();

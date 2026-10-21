@@ -89,6 +89,10 @@
     "compacted_ok": "Conversation condensée.",
     "compaction_failed": "Le compactage a échoué.",
     "could_not_load_skills": "Impossible de charger les compétences.",
-    "could_not_load_decisions": "Impossible de charger les décisions."
+    "could_not_load_decisions": "Impossible de charger les décisions.",
+    "wait_before_branch": "...",
+    "branch_failed": "...",
+    "branch_failed_prefix": "...",
+    "branched": "..."
   }
 }

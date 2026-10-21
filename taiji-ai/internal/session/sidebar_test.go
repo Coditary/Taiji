@@ -60,6 +60,23 @@ func TestTurnsFromMessagesSkipsHiddenInternalUserPrompts(t *testing.T) {
 	}
 }
 
+func TestTurnsFromMessagesMergesRepeatUserPromptAfterSkill(t *testing.T) {
+	turns := TurnsFromMessages([]provider.Message{
+		{Role: provider.RoleUser, Content: "Hallo, sag mal hallo zu Tim"},
+		{Role: provider.RoleAssistant, Content: "", ToolCalls: []provider.ToolCall{{ID: "c1", Name: skills.InvokeSkillToolName, Args: "{}"}}},
+		{Role: provider.RoleTool, Name: skills.InvokeSkillToolName, Content: "## Skill: hallo\n\nBody"},
+		{Role: provider.RoleSystem, Content: skills.ContinuationPrompt},
+		{Role: provider.RoleUser, Content: "Hallo, sag mal hallo zu Tim"},
+		{Role: provider.RoleAssistant, Content: "Hallo Tim! 👋"},
+	})
+	if len(turns) != 1 {
+		t.Fatalf("turns = %d, want 1: %#v", len(turns), turns)
+	}
+	if turns[0].Assistant != "Hallo Tim! 👋" {
+		t.Fatalf("turn = %#v", turns[0])
+	}
+}
+
 func TestTurnsFromMessagesIgnoresSkillContinuationSystem(t *testing.T) {
 	turns := TurnsFromMessages([]provider.Message{
 		{Role: provider.RoleUser, Content: "Hallo"},

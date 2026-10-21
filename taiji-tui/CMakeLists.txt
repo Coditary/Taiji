@@ -191,6 +191,7 @@ add_executable(taiji-tui
     src/session_context_menu.cpp
     src/mcp_sidebar.cpp
     src/turn_metrics_note.cpp
+    src/user_turn_actions_note.cpp
     src/activity_log.cpp
     src/thinking_indicator.cpp
     src/chat_input.cpp

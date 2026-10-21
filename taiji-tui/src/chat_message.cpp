@@ -236,6 +236,14 @@ void ChatMessage::set_compact_summary(bool compact) {
     mark_layout_dirty();
 }
 
+void ChatMessage::set_edit_highlight(bool highlight) {
+    if (edit_highlight_ == highlight) {
+        return;
+    }
+    edit_highlight_ = highlight;
+    mark_dirty();
+}
+
 std::string ChatMessage::speaker_name() const {
     if (author_label_.empty()) {
         const std::string you = ui_shell("chat.author_you");
@@ -337,8 +345,8 @@ void ChatMessage::paint_user_block(tuinator::PaintContext& ctx, const tuinator::
 
     tuinator::Style accent = ui_resolve_main_text(style_);
     accent.bold = true;
-    accent.foreground_rgb = ui_user_bubble();
-    const tuinator::Rgb panel_bg = ui_user_message_panel_bg();
+    accent.foreground_rgb = edit_highlight_ ? ui_thinking_style().foreground_rgb : ui_user_bubble();
+    const tuinator::Rgb panel_bg = edit_highlight_ ? ui_quick_action_pill_bg() : ui_user_message_panel_bg();
     accent.background_rgb = panel_bg;
 
     tuinator::Style body = ui_resolve_main_text(style_);
@@ -564,7 +572,18 @@ void ChatMessage::paint_user_message(tuinator::PaintContext& ctx, const tuinator
             const int bubble_w = frame.content_w;
             if (bubble_y + bubble_h <= layout.height) {
                 const tuinator::Rect bubble{bubble_x, bubble_y, bubble_w, bubble_h};
-                ui_paint_user_bubble_panel(ctx, bubble, ui_quick_action_pill_bg());
+                const tuinator::Rgb bubble_bg =
+                    edit_highlight_ ? ui_quick_action_pill_bg() : ui_quick_action_pill_bg();
+                ui_paint_user_bubble_panel(ctx, bubble, bubble_bg);
+                if (edit_highlight_) {
+                    tuinator::Style ring = ui_resolve_main_text(ui_thinking_style());
+                    for (int edge_x = bubble_x; edge_x < bubble_x + bubble_w; ++edge_x) {
+                        ctx.canvas.draw_text({edge_x, bubble_y}, "─", ring);
+                        if (bubble_y + bubble_h - 1 < layout.height) {
+                            ctx.canvas.draw_text({edge_x, bubble_y + bubble_h - 1}, "─", ring);
+                        }
+                    }
+                }
                 int by = bubble_y + 1;
                 for (const auto& line : lines) {
                     if (by >= bubble_y + bubble_h - (time_label_.empty() ? 1 : 2)) {

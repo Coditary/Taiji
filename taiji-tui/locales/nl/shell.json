@@ -89,6 +89,10 @@
     "compacted_ok": "Gesprek ingekort.",
     "compaction_failed": "Het verdichten is mislukt.",
     "could_not_load_skills": "Vaardigheden konden niet worden geladen.",
-    "could_not_load_decisions": "Beslissingen konden niet worden geladen."
+    "could_not_load_decisions": "Beslissingen konden niet worden geladen.",
+    "wait_before_branch": "...",
+    "branch_failed": "...",
+    "branch_failed_prefix": "...",
+    "branched": "..."
   }
 }

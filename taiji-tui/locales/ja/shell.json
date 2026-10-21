@@ -86,7 +86,11 @@
     "compacted_ok": "会話を圧縮しました。",
     "compaction_failed": "圧縮に失敗しました。",
     "could_not_load_skills": "スキルを読み込めませんでした。",
-    "could_not_load_decisions": "決定を読み込めませんでした。"
+    "could_not_load_decisions": "決定を読み込めませんでした。",
+    "wait_before_branch": "...",
+    "branch_failed": "...",
+    "branch_failed_prefix": "...",
+    "branched": "..."
   },
   "metrics": {
     "tok_per_sec": "{value} トークン/秒"

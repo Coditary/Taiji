@@ -23,6 +23,7 @@
 #include "status_footer.hpp"
 #include "thinking_indicator.hpp"
 #include "turn_metrics_note.hpp"
+#include "user_turn_actions_note.hpp"
 #include "ui_message_time.hpp"
 
 #include <tuinator/tuinator.hpp>
@@ -94,6 +95,7 @@ class ChatApp {
         ActivityLog* activity = nullptr;
         AssistantMarkdown* assistant = nullptr;
         TurnMetricsNote* metrics = nullptr;
+        UserTurnActionsNote* user_actions = nullptr;
     };
 
     struct ToolEventUpdate {
@@ -139,9 +141,15 @@ class ChatApp {
     void drop_front_queued();
     void promote_front_queued();
     void redo_turn(std::size_t turn_index);
+    void branch_turn(std::size_t turn_index);
     void copy_turn_response(std::size_t turn_index);
+    void copy_turn_user(std::size_t turn_index);
+    void begin_edit_turn(std::size_t turn_index);
+    void cancel_edit_turn();
+    void refresh_user_edit_highlights();
     void step_turn_version(std::size_t turn_index, int delta);
-    void start_regenerate(std::size_t turn_index);
+    void start_regenerate(std::size_t turn_index, const std::string* override_user = nullptr);
+    void truncate_turns_after(std::size_t turn_index);
     void ensure_turn_widgets(std::size_t count);
     void sync_turn_view(std::size_t index, const ChatTurn& turn, bool worker_busy, bool has_active_turn,
                         std::size_t active_turn);
@@ -152,6 +160,7 @@ class ChatApp {
     void flush_chat_layout(bool scroll_to_bottom = false);
     void update_chat_wrap_widths();
     void tick_ui_animations();
+    void update_turn_action_hovers();
     bool ui_needs_animation_frame() const;
     void sync_scroll_follow();
     void scroll_chat_to_bottom(bool force = false);
@@ -302,6 +311,8 @@ class ChatApp {
     std::chrono::steady_clock::time_point last_stream_ui_refresh_{};
     std::chrono::steady_clock::time_point last_queue_ui_refresh_{};
     std::optional<std::size_t> pending_regenerate_turn_;
+    std::optional<std::string> pending_regenerate_goal_;
+    std::optional<std::size_t> pending_edit_turn_;
 
     struct PendingSttUpdate {
         bool recording = false;

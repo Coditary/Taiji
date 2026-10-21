@@ -89,6 +89,10 @@
     "compacted_ok": "Conversa resumida.",
     "compaction_failed": "A compactação falhou.",
     "could_not_load_skills": "Não foi possível carregar as competências.",
-    "could_not_load_decisions": "Não foi possível carregar as decisões."
+    "could_not_load_decisions": "Não foi possível carregar as decisões.",
+    "wait_before_branch": "...",
+    "branch_failed": "...",
+    "branch_failed_prefix": "...",
+    "branched": "..."
   }
 }

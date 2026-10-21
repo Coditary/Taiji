@@ -89,6 +89,10 @@
     "compacted_ok": "تم اختصار المحادثة.",
     "compaction_failed": "فشل عملية الضغط.",
     "could_not_load_skills": "تعذر تحميل المهارات.",
-    "could_not_load_decisions": "تعذر تحميل القرارات."
+    "could_not_load_decisions": "تعذر تحميل القرارات.",
+    "wait_before_branch": "...",
+    "branch_failed": "...",
+    "branch_failed_prefix": "...",
+    "branched": "..."
   }
 }

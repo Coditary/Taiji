@@ -89,6 +89,10 @@
     "compacted_ok": "对话已压缩。",
     "compaction_failed": "压缩失败。",
     "could_not_load_skills": "无法加载技能。",
-    "could_not_load_decisions": "无法加载决策。"
+    "could_not_load_decisions": "无法加载决策。",
+    "wait_before_branch": "...",
+    "branch_failed": "...",
+    "branch_failed_prefix": "...",
+    "branched": "..."
   }
 }

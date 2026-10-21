@@ -89,6 +89,10 @@
     "compacted_ok": "Разговор сокращен.",
     "compaction_failed": "Уплотнение не удалось.",
     "could_not_load_skills": "Не удалось загрузить навыки.",
-    "could_not_load_decisions": "Не удалось загрузить решения."
+    "could_not_load_decisions": "Не удалось загрузить решения.",
+    "wait_before_branch": "...",
+    "branch_failed": "...",
+    "branch_failed_prefix": "...",
+    "branched": "..."
   }
 }

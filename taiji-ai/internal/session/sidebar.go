@@ -95,6 +95,9 @@ func TurnsFromMessages(messages []provider.Message) []ChatTurn {
 				turns = append(turns, ChatTurn{User: summary, UserKind: "compact"})
 				continue
 			}
+			if isRepeatUserPrompt(pendingUser, content) {
+				continue
+			}
 			if pendingUser != "" {
 				turns = append(turns, ChatTurn{User: pendingUser})
 			}

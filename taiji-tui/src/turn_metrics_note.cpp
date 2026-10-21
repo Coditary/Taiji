@@ -13,9 +13,10 @@ namespace {
 constexpr int kActionGapCols = 2;
 constexpr int kVersionGapCols = 3;
 constexpr int kNavGapCols = 1;
-// Font Awesome PUA: redo (U+F01E), copy (U+F0C5)
+// Font Awesome PUA: redo (U+F01E), copy (U+F0C5), code-branch (U+F126)
 constexpr char kRedoGlyph[] = "\xEF\x80\x9E";
 constexpr char kCopyGlyph[] = "\xEF\x83\x85";
+constexpr char kBranchGlyph[] = "\xEF\x84\xA6";
 constexpr char kPrevGlyph[] = "<";
 constexpr char kNextGlyph[] = ">";
 
@@ -47,10 +48,10 @@ TurnMetricsNote::TurnMetricsNote(tuinator::Theme theme, std::function<void(Actio
 
 void TurnMetricsNote::set_content(std::string metrics_text, bool actions_visible, std::size_t version_index,
                                   std::size_t version_count) {
-    const bool changed = metrics_text_ != metrics_text || visible_ != actions_visible ||
+    const bool changed = metrics_text_ != metrics_text || actions_enabled_ != actions_visible ||
                          version_index_ != version_index || version_count_ != version_count;
     metrics_text_ = std::move(metrics_text);
-    visible_ = actions_visible;
+    actions_enabled_ = actions_visible;
     version_index_ = version_index;
     version_count_ = version_count;
     if (changed) {
@@ -60,11 +61,12 @@ void TurnMetricsNote::set_content(std::string metrics_text, bool actions_visible
 }
 
 void TurnMetricsNote::clear() {
-    if (!visible_ && metrics_text_.empty()) {
+    if (!actions_enabled_ && metrics_text_.empty()) {
         return;
     }
     metrics_text_.clear();
-    visible_ = false;
+    actions_enabled_ = false;
+    actions_hover_ = false;
     version_index_ = 0;
     version_count_ = 0;
     mark_dirty();
@@ -81,6 +83,18 @@ void TurnMetricsNote::set_wrap_width(int width) {
     mark_dirty();
 }
 
+bool TurnMetricsNote::set_actions_hover(bool hovered) {
+    if (!actions_enabled_) {
+        hovered = false;
+    }
+    if (actions_hover_ == hovered) {
+        return false;
+    }
+    actions_hover_ = hovered;
+    mark_dirty();
+    return true;
+}
+
 void TurnMetricsNote::set_right_inset(int columns) {
     columns = std::max(0, columns);
     if (right_inset_ == columns) {
@@ -94,7 +108,8 @@ void TurnMetricsNote::set_right_inset(int columns) {
 int TurnMetricsNote::reserved_right_width(bool actions_visible, std::size_t version_count) {
     int width = 0;
     if (actions_visible) {
-        width += glyph_width(kRedoGlyph) + kActionGapCols + glyph_width(kCopyGlyph);
+        width += glyph_width(kRedoGlyph) + kActionGapCols + glyph_width(kCopyGlyph) + kActionGapCols +
+                 glyph_width(kBranchGlyph);
     }
     if (version_count > 1) {
         if (width > 0) {
@@ -121,10 +136,22 @@ std::string TurnMetricsNote::version_label() const {
     return out.str();
 }
 
+bool TurnMetricsNote::show_primary_actions() const {
+    return actions_enabled_ && actions_hover_;
+}
+
+int TurnMetricsNote::primary_actions_width() const {
+    if (!actions_enabled_) {
+        return 0;
+    }
+    return glyph_width(kRedoGlyph) + kActionGapCols + glyph_width(kCopyGlyph) + kActionGapCols +
+           glyph_width(kBranchGlyph);
+}
+
 int TurnMetricsNote::actions_cluster_width() const {
     int width = 0;
-    if (visible_) {
-        width += glyph_width(kRedoGlyph) + kActionGapCols + glyph_width(kCopyGlyph);
+    if (show_primary_actions()) {
+        width += primary_actions_width();
     }
     if (version_count_ > 1) {
         if (width > 0) {
@@ -163,10 +190,17 @@ int TurnMetricsNote::redo_x() const {
 }
 
 int TurnMetricsNote::copy_x() const {
-    if (!visible_) {
+    if (!show_primary_actions()) {
         return actions_cluster_start_x();
     }
     return redo_x() + glyph_width(kRedoGlyph) + kActionGapCols;
+}
+
+int TurnMetricsNote::branch_x() const {
+    if (!show_primary_actions()) {
+        return actions_cluster_start_x();
+    }
+    return copy_x() + glyph_width(kCopyGlyph) + kActionGapCols;
 }
 
 int TurnMetricsNote::next_x() const {
@@ -194,7 +228,7 @@ int TurnMetricsNote::metrics_max_width() const {
 
 tuinator::Size TurnMetricsNote::preferred_size() const {
     const auto lines = metric_lines();
-    if (!visible_ && lines.empty()) {
+    if (!actions_enabled_ && lines.empty()) {
         return {0, 0};
     }
     const int line_count = std::max(1, static_cast<int>(lines.empty() ? 1 : lines.size()));
@@ -209,7 +243,7 @@ void TurnMetricsNote::layout(tuinator::Rect bounds) {
 
 void TurnMetricsNote::paint(tuinator::PaintContext& ctx) const {
     const auto lines = metric_lines();
-    if ((!visible_ && lines.empty()) || bounds_.width <= 0 || bounds_.height <= 0) {
+    if ((!actions_enabled_ && lines.empty()) || bounds_.width <= 0 || bounds_.height <= 0) {
         return;
     }
 
@@ -228,19 +262,18 @@ void TurnMetricsNote::paint(tuinator::PaintContext& ctx) const {
         }
     }
 
-    if (visible_) {
-        tuinator::Style action_style = ui_accent_on_main();
-        action_style.bold = true;
+    if (show_primary_actions()) {
+        tuinator::Style action_style = ui_resolve_main_text(ui_thinking_style());
         ctx.canvas.draw_text({redo_x(), 0}, kRedoGlyph, action_style);
         ctx.canvas.draw_text({copy_x(), 0}, kCopyGlyph, action_style);
+        ctx.canvas.draw_text({branch_x(), 0}, kBranchGlyph, action_style);
     }
 
     if (version_count_ <= 1) {
         return;
     }
 
-    tuinator::Style nav_style = ui_accent_on_main();
-    nav_style.bold = true;
+    tuinator::Style nav_style = ui_resolve_main_text(ui_thinking_style());
 
     tuinator::Style disabled_style = ui_resolve_main_text(ui_secondary_style(theme_));
 
@@ -259,28 +292,58 @@ void TurnMetricsNote::paint(tuinator::PaintContext& ctx) const {
 }
 
 bool TurnMetricsNote::handle_event(const tuinator::Event& event) {
-    if (!visible_) {
+    if (!actions_enabled_) {
         return false;
     }
 
     const auto* mouse = std::get_if<tuinator::MouseEvent>(&event);
-    if (mouse == nullptr || mouse->action != tuinator::MouseAction::Press) {
+    if (mouse == nullptr) {
         return false;
     }
+
+    if (mouse->action == tuinator::MouseAction::Move) {
+        const bool inside = bounds_.contains(mouse->position);
+        if (inside != actions_hover_) {
+            set_actions_hover(inside);
+        }
+        return inside;
+    }
+
+    if (mouse->action != tuinator::MouseAction::Press) {
+        return false;
+    }
+
+    if (!bounds_.contains(mouse->position)) {
+        return false;
+    }
+
+    set_actions_hover(true);
 
     const tuinator::Point local{mouse->position.x - bounds_.x, mouse->position.y - bounds_.y};
     if (local.y != 0 || local.x < 0 || local.x >= bounds_.width) {
         return false;
     }
 
-    if (local.x >= copy_x() && local.x < copy_x() + glyph_width(kCopyGlyph)) {
+    const int primary_w = primary_actions_width();
+    const int redo = std::max(0, content_right_x() - right_inset_ - primary_w);
+    const int copy = redo + glyph_width(kRedoGlyph) + kActionGapCols;
+    const int branch = copy + glyph_width(kCopyGlyph) + kActionGapCols;
+
+    if (local.x >= branch && local.x < branch + glyph_width(kBranchGlyph)) {
+        if (on_action_) {
+            on_action_(Action::Branch);
+        }
+        return true;
+    }
+
+    if (local.x >= copy && local.x < copy + glyph_width(kCopyGlyph)) {
         if (on_action_) {
             on_action_(Action::Copy);
         }
         return true;
     }
 
-    if (local.x >= redo_x() && local.x < redo_x() + glyph_width(kRedoGlyph)) {
+    if (local.x >= redo && local.x < redo + glyph_width(kRedoGlyph)) {
         if (on_action_) {
             on_action_(Action::Redo);
         }

@@ -89,6 +89,10 @@
     "compacted_ok": "Percakapan diringkas.",
     "compaction_failed": "Proses pemadatan gagal.",
     "could_not_load_skills": "Tidak dapat memuat keterampilan.",
-    "could_not_load_decisions": "Tidak dapat memuat keputusan."
+    "could_not_load_decisions": "Tidak dapat memuat keputusan.",
+    "wait_before_branch": "...",
+    "branch_failed": "...",
+    "branch_failed_prefix": "...",
+    "branched": "..."
   }
 }

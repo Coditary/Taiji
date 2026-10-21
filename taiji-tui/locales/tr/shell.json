@@ -89,6 +89,10 @@
     "compacted_ok": "Konuşma özetlenmiştir.",
     "compaction_failed": "Sıkıştırma işlemi başarısız oldu.",
     "could_not_load_skills": "Beceriler yüklenemedi.",
-    "could_not_load_decisions": "Kararlar yüklenemedi."
+    "could_not_load_decisions": "Kararlar yüklenemedi.",
+    "wait_before_branch": "...",
+    "branch_failed": "...",
+    "branch_failed_prefix": "...",
+    "branched": "..."
   }
 }
