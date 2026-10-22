@@ -206,6 +206,7 @@ add_executable(taiji-tui
     src/ui_locale.cpp
     "${TAIJI_UI_LOCALES_EMBED_CPP}"
     src/ui_keybindings.cpp
+    src/ui_navigation.cpp
     src/composer_theme_picker.cpp
     src/ui_themes_bundled_lookup.cpp
     "${TAIJI_UI_THEMES_EMBED_CPP}"

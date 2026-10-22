@@ -1,6 +1,7 @@
 #include "chat_middle_pane.hpp"
 
 #include "chat_message.hpp"
+#include "ui_navigation.hpp"
 #include "ui_theme.hpp"
 
 #include <tuinator/render/scrollbar/core.hpp>
@@ -115,6 +116,8 @@ void ChatMiddlePane::paint(tuinator::PaintContext& ctx) const {
 
     const int sticky_h = sticky_overlay_height();
     auto* scroll_view = dynamic_cast<tuinator::ScrollView*>(chat_scroll_.get());
+
+    ui_paint_vim_focus_accent(ctx, UiFocusPane::Chat, bounds_.height);
 
     if (chat_scroll_ != nullptr) {
         const tuinator::Rect local{

@@ -3,6 +3,7 @@
 #include "ui_anim.hpp"
 #include "ui_layout.hpp"
 #include "ui_locale.hpp"
+#include "ui_navigation.hpp"
 #include "ui_theme.hpp"
 
 #include <tuinator/render/text.hpp>
@@ -208,6 +209,7 @@ void ContextPanel::paint(tuinator::PaintContext& ctx) const {
     }
 
     paint_bounds_background(ctx, ui_sidebar_panel_style());
+    ui_paint_vim_focus_accent(ctx, UiFocusPane::Context, bounds_.height);
 
     const int pad = kUiPadX;
     const int inner_w = std::max(0, bounds_.width - pad * 2);
@@ -355,4 +357,8 @@ bool ContextPanel::handle_event(const tuinator::Event& event) {
         return true;
     }
     return bounds_.contains(mouse->position);
+}
+
+void ContextPanel::collect_focusable(std::vector<tuinator::Widget*>& out) {
+    out.push_back(this);
 }

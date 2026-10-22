@@ -116,7 +116,7 @@ bool ChatTextInput::handle_event(const tuinator::Event& event) {
     }
     if (quick_key_handler_) {
         if (const auto* key = std::get_if<tuinator::KeyPress>(&event)) {
-            if (value().empty() && !is_focused() && quick_key_handler_(*key)) {
+            if (quick_key_handler_(*key)) {
                 return true;
             }
         }

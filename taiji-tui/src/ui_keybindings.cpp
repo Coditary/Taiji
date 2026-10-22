@@ -63,3 +63,36 @@ bool ui_keybinding_matches(const std::string& shortcut, const tuinator::KeyPress
 std::string ui_keybinding_default_open_theme_picker() {
     return "Ctrl+T";
 }
+
+bool ui_key_ctrl_navigation(const tuinator::KeyPress& key) {
+    if (!key.ctrl || key.alt) {
+        return false;
+    }
+    if (key.character == '\0') {
+        return false;
+    }
+    const char ch = static_cast<char>(std::tolower(static_cast<unsigned char>(key.character)));
+    return ch == 'h' || ch == 'j' || ch == 'k' || ch == 'l' || ch == 'n' || ch == 'p' || ch == 's' || ch == 'r';
+}
+
+bool ui_key_theme_picker_list_prev(const tuinator::KeyPress& key) {
+    if (key.key == tuinator::Key::Up) {
+        return true;
+    }
+    if (key.ctrl && !key.alt && key.character != '\0') {
+        const char ch = static_cast<char>(std::tolower(static_cast<unsigned char>(key.character)));
+        return ch == 'p' || ch == 'k';
+    }
+    return false;
+}
+
+bool ui_key_theme_picker_list_next(const tuinator::KeyPress& key) {
+    if (key.key == tuinator::Key::Down) {
+        return true;
+    }
+    if (key.ctrl && !key.alt && key.character != '\0') {
+        const char ch = static_cast<char>(std::tolower(static_cast<unsigned char>(key.character)));
+        return ch == 'n' || ch == 'j';
+    }
+    return false;
+}

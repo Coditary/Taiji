@@ -15,6 +15,7 @@
 #include "ui_panel_box.hpp"
 #include "ui_theme.hpp"
 #include "ui_keybindings.hpp"
+#include "ui_navigation.hpp"
 #include "ui_locale.hpp"
 
 #include <tuinator/widgets/menu/menu_bar.hpp>
@@ -807,6 +808,7 @@ void ChatApp::set_root() {
                                     draft.assistant_message_style, draft.assistant_message_align,
                                     draft.assistant_message_max_width_pct);
         ui_apply_message_fill_background(draft.user_message_fill_background, draft.assistant_message_fill_background);
+        apply_navigation_prefs(draft.keybinding_style, draft.vim_escape_sequence, draft.leader_key);
         ui_set_locale(draft.ui_locale);
         sync_go_display_locales(taiji_handle_, draft.ui_locale, draft.tool_labels_locale);
         refresh_shell_strings();
@@ -953,7 +955,7 @@ void ChatApp::set_root() {
     composer_switch_ = composer_switch.get();
     if (input_ != nullptr) {
         input_->set_quick_key_handler([this](const tuinator::KeyPress& key) {
-            if (input_ != nullptr && input_->is_focused()) {
+            if (!prompt_allows_quick_actions()) {
                 return false;
             }
             return empty_state_ != nullptr && empty_state_->is_visible() && empty_state_->try_quick_action(key);
@@ -1002,22 +1004,43 @@ void ChatApp::set_root() {
         if (key == nullptr) {
             return false;
         }
+        if (ui_key_ctrl_char(*key, 's')) {
+            toggle_settings_modal();
+            return true;
+        }
         if (key->alt && !key->ctrl) {
             if (key->character == 'c' || key->character == 'C') {
                 toggle_context_usage_panel();
                 return true;
             }
         }
-        if (settings_modal_ != nullptr && settings_modal_->is_open()) {
+        const bool settings_open = settings_modal_ != nullptr && settings_modal_->is_open();
+        if (settings_open) {
             return false;
         }
-        if (message_composer_ != nullptr && message_composer_->is_theme_picker_open()) {
+        const bool theme_picker_open =
+            message_composer_ != nullptr && message_composer_->is_theme_picker_open();
+        if (theme_picker_open) {
             if (message_composer_->route_theme_picker_key(*key)) {
                 message_composer_->mark_dirty();
                 app_.repaint_all();
                 return true;
             }
             return false;
+        }
+        if (handle_global_keypress(*key)) {
+            return true;
+        }
+        if (vim_modal_enabled_ && input_mode_ == UiInputMode::Insert && input_ != nullptr && input_->is_focused() &&
+            key->key == tuinator::Key::Escape && !key->ctrl && !key->alt && !worker_busy_) {
+            enter_normal_mode();
+            return true;
+        }
+        if (vim_modal_enabled_ && input_mode_ == UiInputMode::Normal) {
+            if (ui_key_plain_char(*key, 'i') || ui_key_plain_char(*key, 'a')) {
+                enter_insert_mode();
+                return true;
+            }
         }
         if (pending_edit_turn_.has_value() && key->key == tuinator::Key::Escape && !key->ctrl && !key->alt) {
             const bool overlay_open =
@@ -1193,7 +1216,7 @@ void ChatApp::apply_runtime_ready() {
 
     runtime_ready_applied_ = true;
     runtime_ready_at_ = std::chrono::steady_clock::now();
-    footer_text_ = ui_default_footer_shortcuts();
+    footer_text_ = ui_footer_shortcuts_for_state(vim_modal_enabled_, input_mode_);
     refresh_context_sidebar();
     refresh_mcp_sidebar();
     refresh_skills_sidebar();
@@ -1349,6 +1372,11 @@ void ChatApp::focus_input() {
         app_.refresh_focus();
         question_composer_->mark_dirty();
         return;
+    }
+    if (vim_modal_enabled_) {
+        input_mode_ = UiInputMode::Insert;
+        focus_pane_ = UiFocusPane::Prompt;
+        sync_navigation_chrome();
     }
     if (input_ != nullptr) {
         app_.focus_widget(input_);
@@ -1693,6 +1721,8 @@ void ChatApp::refresh_appearance_prefs() {
         theme_picker_key = ui_keybinding_default_open_theme_picker();
     }
     key_open_theme_picker_ = std::move(theme_picker_key);
+    apply_navigation_prefs(json_extract_string(json, "keybinding_style"), json_extract_string(json, "vim_escape_sequence"),
+                           json_extract_string(json, "leader_key"));
     refresh_user_time_labels_on_screen();
     refresh_user_message_chrome();
 }
@@ -2194,6 +2224,143 @@ void ChatApp::open_settings_modal() {
     app_.repaint_all();
 }
 
+void ChatApp::toggle_settings_modal() {
+    if (settings_modal_ == nullptr) {
+        return;
+    }
+    if (settings_modal_->is_open()) {
+        settings_modal_->close(false);
+        return;
+    }
+    open_settings_modal();
+}
+
+void ChatApp::apply_navigation_prefs(const std::string& keybinding_style, const std::string& vim_escape_sequence,
+                                     const std::string& leader_key) {
+    const bool was_vim = vim_modal_enabled_;
+    vim_modal_enabled_ = ui_parse_keybinding_style(keybinding_style) == UiKeybindingStyle::VimModal;
+    vim_escape_sequence_ = vim_escape_sequence.empty() ? "jk" : vim_escape_sequence;
+    leader_key_ = leader_key.empty() ? "Space" : leader_key;
+    if (!vim_modal_enabled_) {
+        input_mode_ = UiInputMode::Insert;
+        focus_pane_ = UiFocusPane::Prompt;
+    } else if (!was_vim && vim_modal_enabled_) {
+        input_mode_ = UiInputMode::Insert;
+        focus_pane_ = UiFocusPane::Prompt;
+    }
+    sync_navigation_chrome();
+}
+
+void ChatApp::sync_navigation_chrome() {
+    ui_set_navigation_chrome(vim_modal_enabled_, focus_pane_, input_mode_);
+    if (status_footer_ != nullptr) {
+        status_footer_->set_vim_mode_badge(vim_modal_enabled_, input_mode_);
+    }
+    if (session_nav_ != nullptr) {
+        session_nav_->mark_dirty();
+    }
+    if (context_panel_ != nullptr) {
+        context_panel_->mark_dirty();
+    }
+    if (middle_pane_ != nullptr) {
+        middle_pane_->mark_dirty();
+    }
+}
+
+void ChatApp::focus_pane(UiFocusPane pane) {
+    focus_pane_ = pane;
+    if (vim_modal_enabled_ && pane != UiFocusPane::Prompt) {
+        input_mode_ = UiInputMode::Normal;
+    }
+    switch (pane) {
+    case UiFocusPane::Prompt:
+        focus_input();
+        return;
+    case UiFocusPane::Chat:
+        if (chat_scroll_ != nullptr) {
+            app_.focus_widget(chat_scroll_);
+            chat_scroll_->mark_dirty();
+        }
+        break;
+    case UiFocusPane::Projects:
+        if (session_nav_ != nullptr) {
+            app_.focus_widget(session_nav_);
+            session_nav_->mark_dirty();
+        }
+        break;
+    case UiFocusPane::Context:
+        if (context_panel_ != nullptr) {
+            app_.focus_widget(context_panel_);
+            context_panel_->mark_dirty();
+        }
+        break;
+    }
+    sync_navigation_chrome();
+    app_.repaint_all();
+}
+
+void ChatApp::enter_insert_mode() {
+    if (!vim_modal_enabled_) {
+        focus_input();
+        return;
+    }
+    input_mode_ = UiInputMode::Insert;
+    focus_pane_ = UiFocusPane::Prompt;
+    focus_input();
+    sync_navigation_chrome();
+}
+
+void ChatApp::enter_normal_mode() {
+    if (!vim_modal_enabled_) {
+        return;
+    }
+    input_mode_ = UiInputMode::Normal;
+    if (focus_pane_ == UiFocusPane::Prompt) {
+        focus_pane_ = UiFocusPane::Chat;
+    }
+    if (chat_scroll_ != nullptr) {
+        app_.focus_widget(chat_scroll_);
+        chat_scroll_->mark_dirty();
+    }
+    sync_navigation_chrome();
+    app_.repaint_all();
+}
+
+bool ChatApp::prompt_allows_quick_actions() const {
+    if (empty_state_ == nullptr || !empty_state_->is_visible()) {
+        return false;
+    }
+    const bool prompt_empty = input_ == nullptr || input_->value().empty();
+    if (prompt_empty) {
+        return true;
+    }
+    return vim_modal_enabled_ && input_mode_ == UiInputMode::Normal;
+}
+
+bool ChatApp::handle_global_keypress(const tuinator::KeyPress& key) {
+    if (ui_key_ctrl_char(key, 'r')) {
+        toggle_speech_input();
+        return true;
+    }
+    if (ui_key_ctrl_char(key, 'h')) {
+        focus_pane(UiFocusPane::Projects);
+        return true;
+    }
+    if (ui_key_ctrl_char(key, 'l')) {
+        focus_pane(UiFocusPane::Context);
+        return true;
+    }
+    if (ui_key_ctrl_char(key, 'j')) {
+        focus_pane(UiFocusPane::Prompt);
+        return true;
+    }
+    if (ui_key_ctrl_char(key, 'k')) {
+        focus_pane(UiFocusPane::Chat);
+        return true;
+    }
+    return false;
+}
+
 void ChatApp::refresh_status_footer() {
     if (status_footer_ == nullptr) {
         return;
@@ -2265,7 +2432,7 @@ void ChatApp::refresh_queue_ui(bool force) {
     } else if (waiting > 0) {
         set_footer_status(ui_shell("status.enter_queues_message"));
     } else {
-        set_footer_status(ui_default_footer_shortcuts());
+        set_footer_status(ui_footer_shortcuts_for_state(vim_modal_enabled_, input_mode_));
     }
 }
 

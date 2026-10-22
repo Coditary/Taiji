@@ -441,6 +441,18 @@ bool settings_parse_draft(const std::string& json, SettingsModal::Draft& out) {
     if (out.key_open_theme_picker.empty()) {
         out.key_open_theme_picker = "Ctrl+T";
     }
+    out.keybinding_style = json_extract_string(json, "keybinding_style");
+    if (out.keybinding_style.empty()) {
+        out.keybinding_style = "standard";
+    }
+    out.vim_escape_sequence = json_extract_string(json, "vim_escape_sequence");
+    if (out.vim_escape_sequence.empty()) {
+        out.vim_escape_sequence = "jk";
+    }
+    out.leader_key = json_extract_string(json, "leader_key");
+    if (out.leader_key.empty()) {
+        out.leader_key = "Space";
+    }
     out.stt_enabled = json_extract_bool(json, "stt_enabled");
     if (json.find("\"stt_enabled\":") == std::string::npos) {
         out.stt_enabled = true;
@@ -580,6 +592,12 @@ std::string SettingsModal::build_apply_json() const {
     body += ",\"auto_compact_context_pct\":" + std::to_string(draft_.auto_compact_context_pct);
     body += ",\"key_open_theme_picker\":";
     json_escape_append(body, draft_.key_open_theme_picker);
+    body += ",\"keybinding_style\":";
+    json_escape_append(body, draft_.keybinding_style);
+    body += ",\"vim_escape_sequence\":";
+    json_escape_append(body, draft_.vim_escape_sequence);
+    body += ",\"leader_key\":";
+    json_escape_append(body, draft_.leader_key);
     body += std::string(",\"decisions_enabled\":") + (draft_.decisions_enabled ? "true" : "false");
     body += std::string(",\"memory_enabled\":") + (draft_.memory_enabled ? "true" : "false");
     body += ",\"project_default_provider\":";

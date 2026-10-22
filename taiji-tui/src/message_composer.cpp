@@ -1,5 +1,7 @@
 #include "message_composer.hpp"
 
+#include "ui_keybindings.hpp"
+
 #include "skim_fuzzy.hpp"
 #include "ui_chat_column.hpp"
 #include "ui_locale.hpp"
@@ -321,11 +323,11 @@ bool MessageComposer::route_theme_picker_key(const tuinator::KeyPress& key) {
         close_theme_picker(false);
         return true;
     }
-    if (key.key == tuinator::Key::Up) {
+    if (ui_key_theme_picker_list_prev(key)) {
         theme_picker_.move_selection(-1);
         return true;
     }
-    if (key.key == tuinator::Key::Down) {
+    if (ui_key_theme_picker_list_next(key)) {
         theme_picker_.move_selection(1);
         return true;
     }

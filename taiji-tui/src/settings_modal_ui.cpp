@@ -1,5 +1,7 @@
 #include "settings_modal.hpp"
 
+#include "ui_navigation.hpp"
+
 #include "ui_locale.hpp"
 #include "ui_theme.hpp"
 
@@ -931,6 +933,30 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             break;
         }
         case Category::Shortcuts: {
+            Row nav_sec;
+            nav_sec.kind = Row::Kind::Section;
+            nav_sec.label = "Navigation";
+            rows.push_back(nav_sec);
+            Row binding_style;
+            binding_style.label = "Keybinding style";
+            binding_style.kind = Row::Kind::EnumCycle;
+            binding_style.enum_key = "keybinding_style";
+            binding_style.enum_values = {"standard", "vim"};
+            rows.push_back(binding_style);
+            Row escape_seq;
+            escape_seq.label = "Vim escape sequence";
+            escape_seq.kind = Row::Kind::Text;
+            escape_seq.enum_key = "vim_escape_sequence";
+            rows.push_back(escape_seq);
+            Row leader;
+            leader.label = "Leader key";
+            leader.kind = Row::Kind::Text;
+            leader.enum_key = "leader_key";
+            rows.push_back(leader);
+
+            Row gap;
+            gap.kind = Row::Kind::Gap;
+            rows.push_back(gap);
             Row sec;
             sec.kind = Row::Kind::Section;
             sec.label = settings_section_label("global", "Global");
@@ -1045,6 +1071,12 @@ std::string SettingsModal::row_value_text(const Row& row) const {
             }
             if (row.enum_key == "key_open_theme_picker") {
                 return draft_.key_open_theme_picker.empty() ? "Ctrl+T" : draft_.key_open_theme_picker;
+            }
+            if (row.enum_key == "vim_escape_sequence") {
+                return draft_.vim_escape_sequence.empty() ? "jk" : draft_.vim_escape_sequence;
+            }
+            if (row.enum_key == "leader_key") {
+                return draft_.leader_key.empty() ? "Space" : draft_.leader_key;
             }
             if (row.enum_key == "system_prompt_extra") {
                 if (draft_.system_prompt_extra.empty()) {
@@ -1187,6 +1219,9 @@ std::string SettingsModal::row_value_text(const Row& row) const {
             }
             if (row.enum_key == "chat_width") {
                 return ui_settings_option("chat_width", draft_.chat_width, draft_.chat_width);
+            }
+            if (row.enum_key == "keybinding_style") {
+                return ui_keybinding_style_label(ui_parse_keybinding_style(draft_.keybinding_style));
             }
             if (row.enum_key == "message_time_clock") {
                 const std::string clock = draft_.message_time_clock == "12h" ? "12h" : "24h";
@@ -1388,6 +1423,16 @@ void SettingsModal::commit_text_edit() {
         note_dirty();
         return;
     }
+    if (target == "vim_escape_sequence") {
+        draft_.vim_escape_sequence = buf.empty() ? "jk" : buf;
+        note_dirty();
+        return;
+    }
+    if (target == "leader_key") {
+        draft_.leader_key = buf.empty() ? "Space" : buf;
+        note_dirty();
+        return;
+    }
 
     const Row* r = nullptr;
     if (row >= 0 && row < static_cast<int>(rows_.size())) {
@@ -1504,6 +1549,10 @@ void SettingsModal::activate_row(int row, int direction) {
                 text_edit_buffer_ = draft_.stt_capture_device;
             } else if (text_edit_target_ == "key_open_theme_picker") {
                 text_edit_buffer_ = draft_.key_open_theme_picker;
+            } else if (text_edit_target_ == "vim_escape_sequence") {
+                text_edit_buffer_ = draft_.vim_escape_sequence;
+            } else if (text_edit_target_ == "leader_key") {
+                text_edit_buffer_ = draft_.leader_key;
             } else {
                 text_edit_buffer_.clear();
             }
@@ -1600,6 +1649,9 @@ void SettingsModal::activate_row(int row, int direction) {
             } else if (r.enum_key == "chat_width") {
                 field = &draft_.chat_width;
                 current = draft_.chat_width;
+            } else if (r.enum_key == "keybinding_style") {
+                field = &draft_.keybinding_style;
+                current = draft_.keybinding_style.empty() ? "standard" : draft_.keybinding_style;
             } else if (r.enum_key == "message_time_clock") {
                 field = &draft_.message_time_clock;
                 current = draft_.message_time_clock == "12h" ? "12h" : "24h";
@@ -1633,7 +1685,7 @@ void SettingsModal::activate_row(int row, int direction) {
                     refresh_translated_content();
                 }
                 if ((r.enum_key == "ui_locale" || r.enum_key == "tool_labels_locale" || r.enum_key == "chat_width" ||
-                     r.enum_key == "message_time_clock" ||
+                     r.enum_key == "keybinding_style" || r.enum_key == "message_time_clock" ||
                      r.enum_key == "ui_corners" || r.enum_key == "ui_theme" || r.enum_key == "user_message_style" ||
                      r.enum_key == "assistant_message_style" || r.enum_key == "user_message_align" ||
                      r.enum_key == "assistant_message_align") &&

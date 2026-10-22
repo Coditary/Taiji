@@ -96,6 +96,9 @@ class SettingsModal : public tuinator::Widget {
         int assistant_message_max_width_pct = 80;
         int auto_compact_context_pct = 0;
         std::string key_open_theme_picker = "Ctrl+T";
+        std::string keybinding_style = "standard";
+        std::string vim_escape_sequence = "jk";
+        std::string leader_key = "Space";
         bool stt_enabled = true;
         std::string stt_driver;
         std::vector<std::string> stt_driver_options;

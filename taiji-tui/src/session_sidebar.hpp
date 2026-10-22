@@ -42,6 +42,7 @@ class SessionSidebar : public tuinator::Widget {
     void layout(tuinator::Rect bounds) override;
     void paint(tuinator::PaintContext& ctx) const override;
     bool handle_event(const tuinator::Event& event) override;
+    void collect_focusable(std::vector<tuinator::Widget*>& out) override;
     bool wants_hover() const override { return true; }
 
   private:

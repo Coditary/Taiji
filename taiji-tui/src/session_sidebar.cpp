@@ -2,6 +2,7 @@
 
 #include "ui_layout.hpp"
 #include "ui_locale.hpp"
+#include "ui_navigation.hpp"
 #include "ui_theme.hpp"
 
 #include <libtaiji.h>
@@ -407,6 +408,7 @@ void SessionSidebar::paint(tuinator::PaintContext& ctx) const {
     }
 
     paint_bounds_background(ctx, ui_sidebar_panel_style());
+    ui_paint_vim_focus_accent(ctx, UiFocusPane::Projects, bounds_.height);
 
     const int pad = kUiPadX;
     ctx.canvas.fill_rect({0, 0, bounds_.width, 1}, ' ', ui_sidebar_panel_style());
@@ -603,4 +605,8 @@ bool SessionSidebar::handle_event(const tuinator::Event& event) {
     }
 
     return false;
+}
+
+void SessionSidebar::collect_focusable(std::vector<tuinator::Widget*>& out) {
+    out.push_back(this);
 }

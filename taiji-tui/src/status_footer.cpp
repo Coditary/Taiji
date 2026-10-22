@@ -1,6 +1,7 @@
 #include "status_footer.hpp"
 
 #include "ui_layout.hpp"
+#include "ui_navigation.hpp"
 #include "ui_theme.hpp"
 
 #include <tuinator/render/text.hpp>
@@ -109,6 +110,15 @@ void StatusFooter::set_status(std::string text) {
     mark_dirty();
 }
 
+void StatusFooter::set_vim_mode_badge(bool show, UiInputMode mode) {
+    if (show_mode_badge_ == show && mode_badge_ == mode) {
+        return;
+    }
+    show_mode_badge_ = show;
+    mode_badge_ = mode;
+    mark_dirty();
+}
+
 tuinator::Size StatusFooter::preferred_size() const {
     return {1, 1};
 }
@@ -135,13 +145,26 @@ void StatusFooter::paint(tuinator::PaintContext& ctx) const {
     badge_label.foreground_rgb = ui_secondary_text();
 
     const int pad = kUiPadX;
-    const std::string display_path = path_.empty() ? "" : shorten_display_path(path_);
+    int left_cursor = pad;
+    if (show_mode_badge_) {
+        const char* label = mode_badge_ == UiInputMode::Normal ? " NORMAL " : " INSERT ";
+        tuinator::Rgb accent = mode_badge_ == UiInputMode::Normal ? ui_quick_action_test() : ui_quick_action_code();
+        tuinator::Style badge;
+        badge.bold = true;
+        badge.foreground_rgb = ui_text();
+        badge.background_rgb = accent;
+        const int badge_w = tuinator::text_display_width(label);
+        ctx.canvas.fill_rect({left_cursor, 0, badge_w, 1}, ' ', badge);
+        ctx.canvas.draw_text({left_cursor, 0}, label, badge);
+        left_cursor += badge_w + 1;
+    }
 
+    const std::string display_path = path_.empty() ? "" : shorten_display_path(path_);
     if (!display_path.empty()) {
-        const int max_width = std::max(0, bounds_.width / 2 - pad);
+        const int max_width = std::max(0, bounds_.width / 2 - left_cursor);
         const std::size_t bytes = tuinator::text_byte_length_for_width(display_path, max_width);
         if (bytes > 0) {
-            ctx.canvas.draw_text({pad, 0}, display_path.substr(0, bytes), path);
+            ctx.canvas.draw_text({left_cursor, 0}, display_path.substr(0, bytes), path);
         }
     }
 

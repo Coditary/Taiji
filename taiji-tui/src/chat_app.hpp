@@ -25,6 +25,7 @@
 #include "turn_metrics_note.hpp"
 #include "user_turn_actions_note.hpp"
 #include "ui_message_time.hpp"
+#include "ui_navigation.hpp"
 
 #include <tuinator/tuinator.hpp>
 
@@ -196,6 +197,15 @@ class ChatApp {
     void sync_activity_handles();
     void open_settings_modal();
     void refresh_appearance_prefs();
+    void apply_navigation_prefs(const std::string& keybinding_style, const std::string& vim_escape_sequence,
+                                const std::string& leader_key);
+    void sync_navigation_chrome();
+    void focus_pane(UiFocusPane pane);
+    void enter_insert_mode();
+    void enter_normal_mode();
+    bool prompt_allows_quick_actions() const;
+    bool handle_global_keypress(const tuinator::KeyPress& key);
+    void toggle_settings_modal();
     void refresh_shell_strings();
     void apply_message_time_prefs(bool enabled, const std::string& clock_pref);
     void apply_sticky_user_message_pref(bool enabled);
@@ -229,6 +239,11 @@ class ChatApp {
     bool message_timestamps_enabled_ = true;
     bool sticky_user_message_enabled_ = true;
     std::string key_open_theme_picker_ = "Ctrl+T";
+    bool vim_modal_enabled_ = false;
+    UiInputMode input_mode_ = UiInputMode::Insert;
+    UiFocusPane focus_pane_ = UiFocusPane::Prompt;
+    std::string vim_escape_sequence_ = "jk";
+    std::string leader_key_ = "Space";
     std::string current_ui_theme_ = "dark";
     int last_chat_scroll_y_ = -1;
     MessageTimeClock message_time_clock_ = MessageTimeClock::Hour24;
