@@ -1,7 +1,7 @@
 .PHONY: build proto tidy test
 
 build:
-	go build -o bin/taiji ./cmd/taiji
+	GOTOOLCHAIN=$${GOTOOLCHAIN:-auto} go build -o bin/taiji ./cmd/taiji
 
 proto:
 	buf generate

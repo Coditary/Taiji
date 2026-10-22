@@ -98,6 +98,20 @@ require_build_tools() {
     fi
 }
 
+ensure_go_toolchain() {
+    # Distro packages (e.g. Fedora) often lag go.mod; download the required toolchain.
+    export GOTOOLCHAIN="${GOTOOLCHAIN:-auto}"
+    local mod_go=""
+    if [[ -f "${1}/taiji-ai/go.mod" ]]; then
+        mod_go="$(sed -n 's/^go //p' "${1}/taiji-ai/go.mod" | head -1 | tr -d '[:space:]')"
+    fi
+    if [[ -n "${mod_go}" ]]; then
+        log "Ensuring Go ${mod_go}+ (GOTOOLCHAIN=${GOTOOLCHAIN})…"
+        (cd "${1}/taiji-ai" && go version >/dev/null) || die "could not prepare Go toolchain (need ${mod_go}+)"
+    fi
+    log "Using $(go version)"
+}
+
 install_os_deps_fedora() {
     log "Installing build dependencies (dnf)…"
     sudo dnf install -y git golang gcc-c++ cmake ncurses-devel cargo python3
@@ -153,7 +167,11 @@ clone_or_update() {
     else
         log "Cloning ${REPO_URL} (${REPO_REF}) into ${dir}"
         mkdir -p "$(dirname "${dir}")"
-        git clone --depth 1 --branch "${REPO_REF}" "${REPO_URL}" "${dir}"
+        git clone --depth 1 --recurse-submodules --shallow-submodules --branch "${REPO_REF}" "${REPO_URL}" "${dir}"
+    fi
+    if [[ -f "${dir}/.gitmodules" ]]; then
+        log "Syncing git submodules (wuji-core)…"
+        git -C "${dir}" submodule update --init --depth 1 --recursive
     fi
 }
 
@@ -188,8 +206,11 @@ fi
 [[ -f "${SRC}/Makefile" ]] || die "no Taiji source at ${SRC}"
 
 export CGO_ENABLED=1
+export GOTOOLCHAIN="${GOTOOLCHAIN:-auto}"
 export TAIJI_OPT_DIR="${OPT_DIR}"
 export PREFIX
+
+ensure_go_toolchain "${SRC}"
 
 if [[ "${SKIP_BUILD}" -eq 0 ]]; then
     log "Building Taiji in ${SRC}"

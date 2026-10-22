@@ -18,7 +18,7 @@ library dependency is `github.com/coditary/wuji-core` (fetched from GitHub via
 
 ## Requirements
 
-- Go 1.23+ with CGO enabled
+- Go 1.26+ with CGO enabled (`GOTOOLCHAIN=auto` is set by `make` and `scripts/install.sh` if your distro Go is older)
 - Rust (`cargo`) for the TUI fuzzy matcher
 - C++17 compiler, CMake 3.16+, Python 3
 - ncursesw dev headers (Fedora: `ncurses-devel`)

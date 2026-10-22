@@ -56,7 +56,7 @@ build: build-taiji ensure-wuji-driver build-tui
 rebuild: clean build
 
 build-taiji:
-	$(MAKE) -C $(TAIJI_DIR) build
+	cd $(TAIJI_DIR) && GOTOOLCHAIN=$${GOTOOLCHAIN:-auto} $(MAKE) build
 
 build-tui: build-taiji
 	rm -f $(EMBED_ARCHIVE)
