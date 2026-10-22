@@ -18,8 +18,12 @@ EMBED_ARCHIVE := $(TUI_DIR)/build/libtaiji.a
 LLAMA_DRIVER_SRC := $(HOME)/Dev/Coditary/plugins/wuji/llama
 LLAMA_DRIVER_BIN := $(LLAMA_DRIVER_SRC)/bin/wuji-driver-llama
 
-INSTALL_DIR := $(HOME)/.local/opt/beta-bin
-INSTALL_BIN_DIR := $(HOME)/.local/bin
+INSTALL_PREFIX ?= $(HOME)/.local
+INSTALL_DIR ?= $(INSTALL_PREFIX)/opt/taiji
+ifeq ($(origin TAIJI_OPT_DIR), environment)
+INSTALL_DIR := $(TAIJI_OPT_DIR)
+endif
+INSTALL_BIN_DIR := $(INSTALL_PREFIX)/bin
 INSTALL_CLI := $(INSTALL_DIR)/taiji
 INSTALL_TUI := $(INSTALL_DIR)/taiji-tui
 INSTALL_CLI_BIN := $(INSTALL_BIN_DIR)/taiji
@@ -33,8 +37,8 @@ help:
 	@echo "Taiji"
 	@echo ""
 	@echo "  make run      Build and start taiji-tui"
-	@echo "  make install    Install taiji + taiji-tui to ~/.local/opt/beta-bin and ~/.local/bin"
-	@echo "  make uninstall  Remove beta install from ~/.local/opt/beta-bin"
+	@echo "  make install    Install taiji + taiji-tui to ~/.local/opt/taiji and ~/.local/bin"
+	@echo "  make uninstall  Remove install from ~/.local/opt/taiji"
 	@echo "  make build    Build Taiji CLI + TUI"
 	@echo "  make rebuild  clean + build"
 	@echo "  make clean    Remove build artifacts"
@@ -76,5 +80,7 @@ install: build-tui
 
 uninstall:
 	rm -f "$(INSTALL_CLI)" "$(INSTALL_TUI)" "$(INSTALL_CLI_BIN)" "$(INSTALL_TUI_BIN)"
+	rm -f "$(HOME)/.local/opt/beta-bin/taiji" "$(HOME)/.local/opt/beta-bin/taiji-tui"
 	@rmdir "$(INSTALL_DIR)" 2>/dev/null || true
+	@rmdir "$(HOME)/.local/opt/beta-bin" 2>/dev/null || true
 	@echo "Removed install from $(INSTALL_DIR) and $(INSTALL_BIN_DIR)"

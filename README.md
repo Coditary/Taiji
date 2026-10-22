@@ -19,8 +19,34 @@ library dependency is `github.com/coditary/wuji-core` (fetched from GitHub via
 ## Requirements
 
 - Go 1.23+ with CGO enabled
-- C++17 compiler, CMake 3.16+
+- Rust (`cargo`) for the TUI fuzzy matcher
+- C++17 compiler, CMake 3.16+, Python 3
 - ncursesw dev headers (Fedora: `ncurses-devel`)
+- Git (CMake may fetch [Tuinator](https://github.com/Coditary/Tuinator) on first build)
+
+## Install
+
+From anywhere (clone, build, install to `~/.local/bin`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Coditary/Taiji/main/scripts/install.sh | bash
+```
+
+Install OS build dependencies first (Fedora or Debian/Ubuntu; uses `sudo`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Coditary/Taiji/main/scripts/install.sh | bash -s -- --deps
+```
+
+From a git checkout:
+
+```bash
+./scripts/install.sh
+```
+
+Options: `./scripts/install.sh --help` (custom `--prefix`, `--ref`, `--uninstall`).
+
+Ensure `~/.local/bin` is on your `PATH`. Wuji remains a [separate install](#layout).
 
 ## Build & run
 
