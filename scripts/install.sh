@@ -157,6 +157,29 @@ resolve_source_dir() {
     printf '%s' "${INSTALL_SRC}"
 }
 
+sync_submodules() {
+    local dir="$1"
+    if [[ ! -f "${dir}/.gitmodules" ]]; then
+        return 0
+    fi
+    log "Syncing git submodules (wuji-core)…"
+    git -C "${dir}" submodule sync --recursive
+    git -C "${dir}" submodule update --init --depth 1 --recursive
+}
+
+ensure_wuji_core() {
+    local dir="$1"
+    if [[ -f "${dir}/wuji-core/go.mod" ]]; then
+        return 0
+    fi
+    if [[ -d "${dir}/.git" ]]; then
+        sync_submodules "${dir}"
+    fi
+    if [[ ! -f "${dir}/wuji-core/go.mod" ]]; then
+        die "wuji-core submodule is missing at ${dir}/wuji-core. Remove the checkout and re-run install, e.g.: rm -rf \"${dir}\""
+    fi
+}
+
 clone_or_update() {
     local dir="$1"
     if [[ -d "${dir}/.git" ]]; then
@@ -164,14 +187,12 @@ clone_or_update() {
         git -C "${dir}" fetch origin --tags
         git -C "${dir}" checkout "${REPO_REF}"
         git -C "${dir}" pull --ff-only origin "${REPO_REF}" 2>/dev/null || true
+        sync_submodules "${dir}"
     else
         log "Cloning ${REPO_URL} (${REPO_REF}) into ${dir}"
         mkdir -p "$(dirname "${dir}")"
         git clone --depth 1 --recurse-submodules --shallow-submodules --branch "${REPO_REF}" "${REPO_URL}" "${dir}"
-    fi
-    if [[ -f "${dir}/.gitmodules" ]]; then
-        log "Syncing git submodules (wuji-core)…"
-        git -C "${dir}" submodule update --init --depth 1 --recursive
+        sync_submodules "${dir}"
     fi
 }
 
@@ -200,10 +221,13 @@ fi
 require_build_tools
 
 SRC="$(resolve_source_dir)"
-if [[ ! -f "${SRC}/Makefile" ]]; then
+if [[ -d "${SRC}/.git" ]]; then
+    clone_or_update "${SRC}"
+elif [[ ! -f "${SRC}/Makefile" ]]; then
     clone_or_update "${SRC}"
 fi
 [[ -f "${SRC}/Makefile" ]] || die "no Taiji source at ${SRC}"
+ensure_wuji_core "${SRC}"
 
 export CGO_ENABLED=1
 export GOTOOLCHAIN="${GOTOOLCHAIN:-auto}"
