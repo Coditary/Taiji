@@ -2,7 +2,9 @@
 
 #include "chat_input.hpp"
 #include "composer_attachments.hpp"
+#include "composer_image_clipboard.hpp"
 #include "composer_palette.hpp"
+#include "composer_actor_picker.hpp"
 #include "composer_theme_picker.hpp"
 #include "composer_workspace.hpp"
 #include "ui_theme.hpp"
@@ -20,6 +22,8 @@ struct MessageComposerHostContext {
     std::string work_dir;
     GitWorkspaceStatus git{};
     std::vector<std::string> skills;
+    std::vector<std::string> pack_mentions;
+    std::vector<std::string> template_mentions;
     std::vector<std::string> mcp_servers;
     std::vector<std::string> mcp_enabled;
     std::string model;
@@ -36,6 +40,7 @@ class MessageComposer : public tuinator::Widget {
 
     ChatTextInput* text_input() { return input_.get(); }
     const std::vector<ComposerChip>& chips() const { return chips_; }
+    const std::vector<ComposerImageAttachment>& image_attachments() const { return image_attachments_; }
     const std::string& pending_chain_of_thought() const { return pending_cot_; }
     const std::vector<std::string>& pending_mcp_enabled() const { return pending_mcp_enabled_; }
 
@@ -44,13 +49,20 @@ class MessageComposer : public tuinator::Widget {
     void set_on_palette_open_changed(std::function<void(bool)> handler);
     void set_on_theme_preview(std::function<void(const std::string& theme_id)> handler);
     void set_on_theme_picked(std::function<void(const std::string& theme_id)> handler);
+    void set_on_image_preview(std::function<void(const tuinator::TerminalImage&, const std::string& caption)> handler);
 
     void open_theme_picker(const std::string& active_theme_id);
     void close_theme_picker(bool commit);
     bool is_theme_picker_open() const { return theme_picker_.is_open(); }
-    bool is_composer_overlay_open() const { return palette_.is_open() || theme_picker_.is_open(); }
+    bool is_actor_picker_open() const { return actor_picker_.is_open(); }
+    bool is_palette_open() const { return palette_.is_open(); }
+    bool is_composer_overlay_open() const {
+        return palette_.is_open() || theme_picker_.is_open() || actor_picker_.is_open();
+    }
+    bool route_palette_key(const tuinator::KeyPress& key);
     /// Theme-picker list navigation (also used from global key preprocess while the overlay is open).
     bool route_theme_picker_key(const tuinator::KeyPress& key);
+    bool route_actor_picker_key(const tuinator::KeyPress& key);
     static bool theme_picker_navigation_key(const tuinator::KeyPress& key);
 
     void tick(int dt_ms);
@@ -59,6 +71,12 @@ class MessageComposer : public tuinator::Widget {
     void notify_input_changed(const std::string& value);
     /// Updates default input placeholder from the active UI locale (skips theme-picker filter mode).
     void refresh_locale_strings();
+
+    /// Ctrl+V: clipboard image first, otherwise OS text paste (Tuinator swallows bare Ctrl+V).
+    bool try_paste_shortcut(const tuinator::KeyPress& key);
+
+    using VimKeyIntercept = std::function<bool(const tuinator::KeyPress&)>;
+    void set_vim_key_intercept(VimKeyIntercept handler);
 
     std::string_view widget_type_name() const override { return "MessageComposer"; }
 
@@ -71,7 +89,9 @@ class MessageComposer : public tuinator::Widget {
     void collect_focusable(std::vector<tuinator::Widget*>& out) override;
     bool has_focused_descendant() const override;
     bool wants_initial_focus() const override { return true; }
-    bool captures_keyboard() const override { return palette_.is_open(); }
+    bool captures_keyboard() const override {
+        return palette_.is_open() || theme_picker_.is_open() || actor_picker_.is_open();
+    }
 
   private:
     void open_palette_with_trigger(const std::string& filter);
@@ -81,10 +101,23 @@ class MessageComposer : public tuinator::Widget {
     void add_chip(ComposerChip chip);
     void remove_chip_at(std::size_t index);
     void paint_chips(tuinator::PaintContext& ctx, tuinator::Rect area) const;
+    void paint_image_attachments(tuinator::PaintContext& ctx, tuinator::Rect area) const;
+    void add_image_attachment(tuinator::TerminalImage image, std::string label, std::string source_path = {});
+    bool try_import_clipboard_image();
+    bool try_consume_pasted_text(const std::string& pasted);
+    bool try_consume_paste_event(const std::string& pasted);
+    bool image_attachment_hit(tuinator::Point global, std::size_t* index, bool* remove_button) const;
+    tuinator::Rect image_attachment_chip_bounds(std::size_t index) const;
+    int image_attachment_bar_height() const;
     void paint_plus_button(tuinator::PaintContext& ctx, tuinator::Rect area) const;
     bool plus_hit(tuinator::Point local) const;
     tuinator::Rect plus_bounds() const;
     void sync_trigger_from_input();
+    void sync_actor_mention_from_input();
+    void sync_palette_key_intercept();
+    void rebuild_actor_picker_entries();
+    void close_actor_picker();
+    void confirm_actor_picker_selection();
     void confirm_theme_picker_selection();
     void restore_stashed_input();
     std::string read_file_snippet(const std::string& rel_path) const;
@@ -93,15 +126,21 @@ class MessageComposer : public tuinator::Widget {
     std::unique_ptr<ChatTextInput> input_;
     ComposerPalette palette_;
     ComposerThemePicker theme_picker_;
+    ComposerActorPicker actor_picker_;
     std::vector<ComposerChip> chips_;
+    std::vector<ComposerImageAttachment> image_attachments_;
+    int next_image_id_ = 1;
     HostContextProvider host_context_;
     SubmitHandler on_submit_;
     std::function<void(bool)> on_palette_open_changed_;
     std::function<void(const std::string&)> on_theme_preview_;
     std::function<void(const std::string&)> on_theme_picked_;
+    std::function<void(const tuinator::TerminalImage&, const std::string&)> on_image_preview_;
     std::string stashed_input_;
+    std::string actor_stash_prefix_;
     std::string theme_revert_id_;
     std::string default_input_placeholder_;
+    VimKeyIntercept vim_key_intercept_;
     MessageComposerHostContext ctx_cache_;
     std::vector<WorkspaceFileEntry> file_index_;
     bool file_index_built_ = false;
@@ -110,7 +149,10 @@ class MessageComposer : public tuinator::Widget {
     std::vector<std::string> pending_mcp_enabled_;
     tuinator::Rect input_bounds_{};
     tuinator::Rect chips_bounds_{};
+    tuinator::Rect image_attachments_bounds_{};
     tuinator::Rect theme_picker_bounds_{};
+    tuinator::Rect actor_picker_bounds_{};
+    std::size_t actor_mention_at_ = std::string::npos;
     int layout_input_height_ = 3;
 
     tuinator::Theme theme_;

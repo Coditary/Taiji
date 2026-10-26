@@ -16,7 +16,9 @@
 #include "chat_middle_pane.hpp"
 #include "chat_session_header.hpp"
 #include "context_panel.hpp"
+#include "graph_panel.hpp"
 #include "mcp_server_list.hpp"
+#include "session_todo_panel.hpp"
 #include "settings_modal.hpp"
 #include "sidebar_footer.hpp"
 #include "sidebar_kv_row.hpp"
@@ -42,6 +44,7 @@
 #include <vector>
 
 class SpeechMicButton;
+class ComposerImageModal;
 
 class LeftLabel;
 
@@ -82,6 +85,7 @@ class ChatApp {
         std::string user_time_label;
         std::string assistant_preamble;
         std::string assistant;
+        std::string assistant_author_label;
         std::vector<std::string> versions;
         std::size_t active_version = 0;
         TurnStatus status = TurnStatus::Queued;
@@ -172,18 +176,35 @@ class ChatApp {
     void reject_question_prompt(const std::string& request_id);
     void sync_workspace_layout();
     bool apply_pending_updates();
+    bool tick_natural_stream_pacing(int interval_ms);
+    void flush_stream_typing_backlog();
     void on_job_finished(std::size_t turn_index, bool ok, const std::string& error, const std::string& answer);
     void refresh_session_sidebar();
+    void refresh_template_chrome_from_settings(const std::string& settings_json);
+    void refresh_actor_state_sidebar(const std::string& settings_json);
     void refresh_session_nav();
     void switch_to_session(const std::string& project_root, const std::string& session_id);
+    std::string current_session_id() const;
+    bool is_worker_session_visible() const;
+    void detach_worker_from_view(const std::string& project_root);
+    bool try_reattach_worker_for_session(const std::string& session_id);
+    void apply_turns_to_chat_ui();
     void delete_session(const std::string& project_root, const std::string& session_id);
     void show_session_context_menu(const tuinator::Point& position, const std::string& project_root,
                                    const std::string& session_id);
     void create_new_session(const std::string& project_root = "");
+    bool session_is_draft() const;
+    std::string normalize_project_root(const std::string& project_root) const;
+    void stash_new_session_composer_draft();
+    void apply_composer_after_session_nav(const std::string& project_root);
+    void prompt_add_workspace_folder();
+    void open_workspace_folder(const std::string& path);
     void reload_turns_from_backend();
     void clear_turn_view(std::size_t index);
     void refresh_context_sidebar();
-    void toggle_context_usage_panel();
+    void refresh_graph_sidebar();
+    void graph_goto_successor(std::size_t index);
+    bool try_graph_hotkey(const tuinator::KeyPress& key);
     void apply_composer_session_prefs(const MessageComposer& composer);
     MessageComposerHostContext build_message_composer_context() const;
     void refresh_chat_header();
@@ -194,17 +215,22 @@ class ChatApp {
     void refresh_mcp_sidebar();
     void refresh_skills_sidebar();
     void refresh_decisions_sidebar();
+    void refresh_todos_sidebar();
     void sync_activity_handles();
     void open_settings_modal();
     void refresh_appearance_prefs();
+    void apply_chat_spacing_prefs();
     void apply_navigation_prefs(const std::string& keybinding_style, const std::string& vim_escape_sequence,
                                 const std::string& leader_key);
     void sync_navigation_chrome();
+    void sync_vim_composer_intercept();
     void focus_pane(UiFocusPane pane);
     void enter_insert_mode();
     void enter_normal_mode();
     bool prompt_allows_quick_actions() const;
     bool handle_global_keypress(const tuinator::KeyPress& key);
+    bool handle_vim_escape_sequence(const tuinator::KeyPress& key);
+    bool composer_blocks_vim_escape() const;
     void toggle_settings_modal();
     void refresh_shell_strings();
     void apply_message_time_prefs(bool enabled, const std::string& clock_pref);
@@ -212,9 +238,15 @@ class ChatApp {
     const ChatMessage* resolve_sticky_user_message() const;
     const ChatMessage* sticky_user_message_candidate() const;
     int user_message_content_y(const ChatMessage& user) const;
+    int widget_content_y(const tuinator::Widget& widget) const;
     std::string user_time_label_for_turn(const ChatTurn& turn) const;
+    std::string template_avatar_;
+    std::string template_display_name_;
+    std::string template_theme_color_;
+
     std::string assistant_author_label() const;
-    void apply_assistant_author_labels(TurnView& view) const;
+    std::string assistant_author_label_for_turn(const ChatTurn& turn) const;
+    void apply_assistant_author_labels(TurnView& view, const ChatTurn& turn) const;
     void refresh_user_time_labels_on_screen();
     void refresh_user_message_chrome();
     void refresh_speech_input_prefs();
@@ -243,6 +275,7 @@ class ChatApp {
     UiInputMode input_mode_ = UiInputMode::Insert;
     UiFocusPane focus_pane_ = UiFocusPane::Prompt;
     std::string vim_escape_sequence_ = "jk";
+    std::string vim_escape_prefix_;
     std::string leader_key_ = "Space";
     std::string current_ui_theme_ = "dark";
     int last_chat_scroll_y_ = -1;
@@ -258,6 +291,7 @@ class ChatApp {
     SessionSidebar* session_nav_ = nullptr;
     SessionContextMenu* session_context_menu_ = nullptr;
     SettingsModal* settings_modal_ = nullptr;
+    ComposerImageModal* image_preview_modal_ = nullptr;
     int last_terminal_width_ = 0;
     int last_terminal_height_ = 0;
     ChatTextInput* input_ = nullptr;
@@ -269,9 +303,12 @@ class ChatApp {
     ChatEmptyState* empty_state_ = nullptr;
     ChatMiddlePane* middle_pane_ = nullptr;
     ContextPanel* context_panel_ = nullptr;
+    GraphPanel* graph_panel_ = nullptr;
     McpServerList* mcp_list_ = nullptr;
     SidebarKvRow* skills_row_ = nullptr;
+    SidebarKvRow* actor_state_row_ = nullptr;
     SidebarKvRow* decisions_row_ = nullptr;
+    SessionTodoPanel* todos_panel_ = nullptr;
     SidebarKvRow* lsp_row_ = nullptr;
     SidebarFooter* sidebar_footer_ = nullptr;
     LeftLabel* sidebar_agent_heading_ = nullptr;
@@ -289,6 +326,8 @@ class ChatApp {
     uint64_t init_handle_ = 0;
     std::string init_error_;
     std::mutex init_mu_;
+    bool startup_new_session_ = false;
+    std::string startup_project_root_;
     bool runtime_ready_applied_ = false;
     std::chrono::steady_clock::time_point runtime_ready_at_{};
     std::thread worker_;
@@ -299,12 +338,29 @@ class ChatApp {
     std::atomic<bool> worker_busy_{false};
     std::atomic<std::size_t> active_turn_index_{0};
     std::atomic<bool> has_active_turn_{false};
+    std::string worker_session_id_;
+    std::string worker_session_label_;
+    std::size_t worker_turn_index_ = 0;
+
+    struct DetachedWorkerState {
+        std::string session_id;
+        std::string project_root;
+        std::vector<ChatTurn> turns;
+        std::deque<std::size_t> job_queue;
+    };
+    std::optional<DetachedWorkerState> detached_worker_;
 
     std::mutex state_mu_;
     std::vector<ChatTurn> turns_;
     std::deque<std::size_t> job_queue_;
     std::string pending_stream_delta_;
     std::size_t pending_stream_turn_ = 0;
+    std::string stream_typing_backlog_;
+    std::size_t stream_typing_turn_ = 0;
+    double stream_typing_carry_ = 0.0;
+    bool stream_natural_typing_ = false;
+    bool reduce_motion_pref_ = false;
+    bool pending_actor_chrome_refresh_ = false;
     bool has_pending_stream_reset_ = false;
     std::size_t pending_stream_reset_turn_ = 0;
     std::string pending_stream_reset_text_;
@@ -315,6 +371,7 @@ class ChatApp {
     QuestionPromptUpdate pending_question_prompt_{};
     bool question_prompt_active_ = false;
     std::unordered_map<std::size_t, std::string> pending_ask_user_args_;
+    std::unordered_map<std::string, std::string> new_session_composer_drafts_;
 
     std::string session_label_;
     std::string footer_text_;

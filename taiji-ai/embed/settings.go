@@ -9,14 +9,18 @@ import (
 
 	taijicfg "github.com/coditary/taiji/internal/config"
 	"github.com/coditary/taiji/internal/modelref"
+	"github.com/coditary/taiji/internal/packs"
 	"github.com/coditary/taiji/internal/provider"
 	"github.com/coditary/taiji/internal/session"
+	"github.com/coditary/taiji/internal/tools"
 )
 
 type mcpToolPayload struct {
-	Server      string `json:"server"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Server         string `json:"server"`
+	Name           string `json:"name"`
+	RegisteredName string `json:"registered_name"`
+	Namespace      string `json:"namespace"`
+	Description    string `json:"description"`
 }
 
 type settingsPayload struct {
@@ -53,6 +57,14 @@ type settingsPayload struct {
 	UILocale                string `json:"ui_locale"`
 	UICorners               string `json:"ui_corners"`
 	ToolCallDensity         string `json:"tool_call_density"`
+	FileDiffLayout          string `json:"file_diff_layout"`
+	ActivitySpacingLines    int    `json:"activity_spacing_lines"`
+	MessageSpacingLines        int  `json:"message_spacing_lines"`
+	ActivityShowPipelineTitle  bool   `json:"activity_show_pipeline_title"`
+	ToolExpandShowParameters bool   `json:"tool_expand_show_parameters"`
+	ToolExpandShowResult     bool   `json:"tool_expand_show_result"`
+	ToolExpandArgsFormat     string `json:"tool_expand_args_format"`
+	ToolExpandResultFormat   string `json:"tool_expand_result_format"`
 	TurnMetricsShowActions  bool   `json:"turn_metrics_show_actions"`
 	CodeBlockWrap           bool   `json:"code_block_wrap"`
 	ChatWidth               string `json:"chat_width"`
@@ -71,6 +83,9 @@ type settingsPayload struct {
 	AssistantMessageMaxWidthPct int  `json:"assistant_message_max_width_pct"`
 	AutoCompactContextPct   int    `json:"auto_compact_context_pct"`
 	KeyOpenThemePicker      string `json:"key_open_theme_picker"`
+	KeybindingStyle         string `json:"keybinding_style"`
+	VimEscapeSequence       string `json:"vim_escape_sequence"`
+	LeaderKey               string `json:"leader_key"`
 
 	MCPAvailable []string         `json:"mcp_available"`
 	MCPEnabled   []string         `json:"mcp_enabled"`
@@ -79,6 +94,9 @@ type settingsPayload struct {
 	SkillsAvail  []string `json:"skills_available"`
 	SkillsAllow  []string `json:"skills_allow"`
 	SkillsDeny   []string `json:"skills_deny"`
+	PacksAvail       []string `json:"packs_available"`
+	PacksNodeCounts  []int    `json:"packs_node_counts"`
+	PacksAllow       []string `json:"packs_allow"`
 
 	DecisionsEnabled bool `json:"decisions_enabled"`
 	MemoryEnabled    bool `json:"memory_enabled"`
@@ -90,6 +108,19 @@ type settingsPayload struct {
 
 	Templates         []session.TemplateSummary `json:"templates"`
 	ApplyTemplateID   string                    `json:"apply_template_id,omitempty"`
+
+	Avatar              string            `json:"avatar,omitempty"`
+	ThemeColor          string            `json:"theme_color,omitempty"`
+	TemplateDisplayName string            `json:"template_display_name,omitempty"`
+	ActorState          map[string]string `json:"actor_state,omitempty"`
+	ActorStateSummary   string            `json:"actor_state_summary,omitempty"`
+	StreamPacing        string            `json:"stream_pacing,omitempty"`
+	CouncilEnabled      bool              `json:"council_enabled,omitempty"`
+	CouncilActors       []string          `json:"council_actors,omitempty"`
+
+	BuiltinToolsAvailable []string `json:"builtin_tools_available,omitempty"`
+	BuiltinToolsAllow     []string `json:"builtin_tools_allow,omitempty"`
+	BuiltinToolsDeny      []string `json:"builtin_tools_deny,omitempty"`
 
 	// models.dev capability hints for the selected provider model (settings UI visibility).
 	ModelCatalogKnown       bool `json:"model_catalog_known"`
@@ -144,9 +175,11 @@ func buildSettingsPayload(h *runtimeHandle, scope string) settingsPayload {
 		if catalog, err := svc.MCP.ToolCatalog(context.Background()); err == nil {
 			for _, entry := range catalog {
 				out.MCPTools = append(out.MCPTools, mcpToolPayload{
-					Server:      entry.Server,
-					Name:        entry.Name,
-					Description: entry.Description,
+					Server:         entry.Server,
+					Name:           entry.Name,
+					RegisteredName: tools.Namespaced(entry.Server, entry.Name),
+					Namespace:      entry.Server,
+					Description:    entry.Description,
 				})
 			}
 		}
@@ -157,6 +190,14 @@ func buildSettingsPayload(h *runtimeHandle, scope string) settingsPayload {
 				out.SkillsAvail = append(out.SkillsAvail, sk.Name)
 			}
 			sort.Strings(out.SkillsAvail)
+		}
+	}
+	if svc != nil && svc.PackIndex != nil && svc.PackIndex.Enabled() {
+		summaries := packs.Summarize(svc.PackIndex.Nodes())
+		sort.Slice(summaries, func(i, j int) bool { return summaries[i].Name < summaries[j].Name })
+		for _, summary := range summaries {
+			out.PacksAvail = append(out.PacksAvail, summary.Name)
+			out.PacksNodeCounts = append(out.PacksNodeCounts, summary.NodeCount)
 		}
 	}
 
@@ -175,8 +216,24 @@ func buildSettingsPayload(h *runtimeHandle, scope string) settingsPayload {
 		out.ToolLabelsLocale = strings.TrimSpace(st.ToolLabelsLocale)
 		out.SkillsAllow = append([]string(nil), st.SkillsAllow...)
 		out.SkillsDeny = append([]string(nil), st.SkillsDeny...)
+		out.PacksAllow = append([]string(nil), st.PacksAllow...)
 		out.MCPEnabled = append([]string(nil), st.MCPServers...)
 		out.MCPToolsDeny = append([]string(nil), st.MCPToolsDeny...)
+		out.Avatar = strings.TrimSpace(st.Avatar)
+		out.ThemeColor = strings.TrimSpace(st.ThemeColor)
+		out.TemplateDisplayName = strings.TrimSpace(st.TemplateDisplayName)
+		if len(st.ActorState) > 0 {
+			out.ActorState = map[string]string{}
+			for k, v := range st.ActorState {
+				out.ActorState[k] = v
+			}
+			out.ActorStateSummary = session.FormatActorState(st.ActorState)
+		}
+		out.StreamPacing = strings.TrimSpace(st.StreamPacing)
+		out.CouncilEnabled = st.CouncilEnabled
+		out.CouncilActors = append([]string(nil), st.CouncilActors...)
+		out.BuiltinToolsAllow = append([]string(nil), st.BuiltinToolsAllow...)
+		out.BuiltinToolsDeny = append([]string(nil), st.BuiltinToolsDeny...)
 		if st.Temperature != nil {
 			out.Temperature = *st.Temperature
 			out.TemperatureSet = true
@@ -273,6 +330,9 @@ func buildSettingsPayload(h *runtimeHandle, scope string) settingsPayload {
 	fillAppearancePrefs(h, &out)
 	fillSTTSettings(h, &out)
 	out.STTRecording = sttRecording(h)
+	if svc != nil && svc.Tools != nil {
+		out.BuiltinToolsAvailable = listBuiltinToolNames(svc.Tools, out.MCPTools)
+	}
 	return out
 }
 
@@ -293,11 +353,15 @@ func fillAppearancePrefs(h *runtimeHandle, out *settingsPayload) {
 	}
 	out.UICorners = corners
 	out.TurnMetricsShowActions = ui.TurnMetrics.ShowActionsOrDefault()
-	if ui.TurnMetrics.CompactOrDefault() {
-		out.ToolCallDensity = "compact"
-	} else {
-		out.ToolCallDensity = "detailed"
-	}
+	out.ToolCallDensity = ui.ToolCallDensityOrDefault()
+	out.FileDiffLayout = ui.FileDiffLayoutOrDefault()
+	out.ActivitySpacingLines = ui.ActivitySpacingLinesOrDefault()
+	out.MessageSpacingLines = ui.MessageSpacingLinesOrDefault()
+	out.ActivityShowPipelineTitle = ui.ActivityShowPipelineTitleOrDefault()
+	out.ToolExpandShowParameters = ui.ToolExpandShowParametersOrDefault()
+	out.ToolExpandShowResult = ui.ToolExpandShowResultOrDefault()
+	out.ToolExpandArgsFormat = ui.ToolExpandArgsFormatOrDefault()
+	out.ToolExpandResultFormat = ui.ToolExpandResultFormatOrDefault()
 	if ui.CodeBlockWrap != nil {
 		out.CodeBlockWrap = *ui.CodeBlockWrap
 	} else {
@@ -335,6 +399,9 @@ func fillAppearancePrefs(h *runtimeHandle, out *settingsPayload) {
 	out.AutoCompactContextPct = ui.AutoCompactContextPct
 	kb := ui.KeybindingsOrDefault()
 	out.KeyOpenThemePicker = kb.OpenThemePicker
+	out.KeybindingStyle = ui.KeybindingStyleOrDefault()
+	out.VimEscapeSequence = ui.VimEscapeSequenceOrDefault()
+	out.LeaderKey = ui.LeaderKeyOrDefault()
 }
 
 func applyAppearancePrefs(cfg *taijicfg.Config, payload settingsPayload) {
@@ -363,8 +430,18 @@ func applyAppearancePrefs(cfg *taijicfg.Config, payload settingsPayload) {
 	cfg.UI.CornerStyle = corners
 	show := payload.TurnMetricsShowActions
 	cfg.UI.TurnMetrics.ShowActions = &show
-	compact := strings.EqualFold(strings.TrimSpace(payload.ToolCallDensity), "compact")
-	cfg.UI.TurnMetrics.Compact = &compact
+	cfg.UI.ToolCallDensity = taijicfg.NormalizeToolCallDensity(payload.ToolCallDensity)
+	cfg.UI.FileDiffLayout = taijicfg.NormalizeFileDiffLayout(payload.FileDiffLayout)
+	cfg.UI.ActivitySpacingLines = taijicfg.ClampSpacingLines(payload.ActivitySpacingLines)
+	cfg.UI.MessageSpacingLines = taijicfg.ClampSpacingLines(payload.MessageSpacingLines)
+	showPipeline := payload.ActivityShowPipelineTitle
+	cfg.UI.ActivityShowPipelineTitle = &showPipeline
+	showToolParams := payload.ToolExpandShowParameters
+	cfg.UI.ToolExpandShowParameters = &showToolParams
+	showToolResult := payload.ToolExpandShowResult
+	cfg.UI.ToolExpandShowResult = &showToolResult
+	cfg.UI.ToolExpandArgsFormat = taijicfg.NormalizeToolExpandArgsFormat(payload.ToolExpandArgsFormat)
+	cfg.UI.ToolExpandResultFormat = taijicfg.NormalizeToolExpandResultFormat(payload.ToolExpandResultFormat)
 	wrap := payload.CodeBlockWrap
 	cfg.UI.CodeBlockWrap = &wrap
 	switch strings.TrimSpace(payload.ChatWidth) {
@@ -409,6 +486,9 @@ func applyAppearancePrefs(cfg *taijicfg.Config, payload settingsPayload) {
 		kb = "Ctrl+T"
 	}
 	cfg.UI.Keybindings.OpenThemePicker = kb
+	cfg.UI.KeybindingStyle = taijicfg.NormalizeKeybindingStyle(payload.KeybindingStyle)
+	cfg.UI.VimEscapeSequence = taijicfg.NormalizeVimEscapeSequence(payload.VimEscapeSequence)
+	cfg.UI.LeaderKey = taijicfg.NormalizeLeaderKey(payload.LeaderKey)
 }
 
 func fillModelCatalogHints(h *runtimeHandle, providerID, model, modelDefault string, out *settingsPayload) {
@@ -551,8 +631,14 @@ func applySettingsPayload(h *runtimeHandle, payload settingsPayload) error {
 
 	st.SkillsAllow = normalizeList(payload.SkillsAllow)
 	st.SkillsDeny = normalizeList(payload.SkillsDeny)
+	st.PacksAllow = normalizeList(payload.PacksAllow)
 	st.MCPServers = normalizeList(payload.MCPEnabled)
 	st.MCPToolsDeny = normalizeMCPToolsDeny(payload.MCPToolsDeny)
+	st.BuiltinToolsAllow = normalizeList(payload.BuiltinToolsAllow)
+	st.BuiltinToolsDeny = normalizeList(payload.BuiltinToolsDeny)
+	st.StreamPacing = strings.TrimSpace(payload.StreamPacing)
+	st.CouncilEnabled = payload.CouncilEnabled
+	st.CouncilActors = normalizeList(payload.CouncilActors)
 
 	dec := payload.DecisionsEnabled
 	st.DecisionsEnabled = &dec

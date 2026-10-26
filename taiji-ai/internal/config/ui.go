@@ -12,6 +12,24 @@ type UIConfig struct {
 	Locale string `yaml:"locale,omitempty"`
 	// CornerStyle is "square", "rounded", or "flat" (fill only, no outline) for composer and user bubbles.
 	CornerStyle string `yaml:"corner_style,omitempty"`
+	// ToolCallDensity controls the TUI activity log: inline, subtree, clustered, or ignore.
+	ToolCallDensity string `yaml:"tool_call_density,omitempty"`
+	// FileDiffLayout is stacked (unified) or side_by_side for file change cards in the TUI.
+	FileDiffLayout string `yaml:"file_diff_layout,omitempty"`
+	// ActivitySpacingLines is blank lines between tool/diff rows in the activity log (0–4).
+	ActivitySpacingLines int `yaml:"activity_spacing_lines,omitempty"`
+	// MessageSpacingLines is blank lines between user prompts and replies / turns (0–4).
+	MessageSpacingLines int `yaml:"message_spacing_lines,omitempty"`
+	// ActivityShowPipelineTitle shows the "Taiji (model)" row above tool activity in the TUI.
+	ActivityShowPipelineTitle *bool `yaml:"activity_show_pipeline_title,omitempty"`
+	// ToolExpandShowParameters shows tool arguments when a tool row is expanded in the TUI.
+	ToolExpandShowParameters *bool `yaml:"tool_expand_show_parameters,omitempty"`
+	// ToolExpandShowResult shows tool output when a tool row is expanded in the TUI.
+	ToolExpandShowResult *bool `yaml:"tool_expand_show_result,omitempty"`
+	// ToolExpandArgsFormat is pretty (key: value) or json (raw) for expanded parameters.
+	ToolExpandArgsFormat string `yaml:"tool_expand_args_format,omitempty"`
+	// ToolExpandResultFormat is text (wrapped) or json (pretty when valid JSON) for expanded results.
+	ToolExpandResultFormat string `yaml:"tool_expand_result_format,omitempty"`
 	// CodeBlockWrap enables soft-wrapping inside fenced code blocks.
 	CodeBlockWrap *bool `yaml:"code_block_wrap,omitempty"`
 	// ChatMaxWidth limits message column width in cells (0 = use full pane).
@@ -46,6 +64,12 @@ type UIConfig struct {
 	AutoCompactContextPct int `yaml:"auto_compact_context_pct,omitempty"`
 	// Keybindings configures global TUI shortcuts (e.g. Ctrl+T).
 	Keybindings UIKeyBindings `yaml:"keybindings,omitempty"`
+	// KeybindingStyle is "standard" or "vim" (modal navigation).
+	KeybindingStyle string `yaml:"keybinding_style,omitempty"`
+	// VimEscapeSequence leaves insert mode in vim style (default jk).
+	VimEscapeSequence string `yaml:"vim_escape_sequence,omitempty"`
+	// LeaderKey is the modal leader key name (default Space).
+	LeaderKey string `yaml:"leader_key,omitempty"`
 }
 
 // UIKeyBindings holds configurable keyboard shortcuts for the TUI.
@@ -75,6 +99,9 @@ func DefaultUIConfig() UIConfig {
 	messageFillBackground := true
 	userMessageFillBackground := true
 	assistantMessageFillBackground := true
+	activityShowPipelineTitle := true
+	toolExpandShowParameters := true
+	toolExpandShowResult := true
 	return UIConfig{
 		Theme:             "dark",
 		Locale:            "en",
@@ -93,6 +120,15 @@ func DefaultUIConfig() UIConfig {
 		Keybindings: UIKeyBindings{
 			OpenThemePicker: "Ctrl+T",
 		},
+		ToolCallDensity:   "subtree",
+		FileDiffLayout:        "stacked",
+		ActivitySpacingLines:  1,
+		MessageSpacingLines:        1,
+		ActivityShowPipelineTitle:  &activityShowPipelineTitle,
+		ToolExpandShowParameters:   &toolExpandShowParameters,
+		ToolExpandShowResult:       &toolExpandShowResult,
+		ToolExpandArgsFormat:       "pretty",
+		ToolExpandResultFormat:     "text",
 		TurnMetrics: TurnMetricsUIConfig{
 			Enabled:          &enabled,
 			ShowActions:      &showActions,
@@ -156,6 +192,46 @@ func (c UIConfig) KeybindingsOrDefault() UIKeyBindings {
 		kb.OpenThemePicker = "Ctrl+T"
 	}
 	return kb
+}
+
+func (c UIConfig) KeybindingStyleOrDefault() string {
+	return NormalizeKeybindingStyle(c.KeybindingStyle)
+}
+
+func (c UIConfig) VimEscapeSequenceOrDefault() string {
+	return NormalizeVimEscapeSequence(c.VimEscapeSequence)
+}
+
+func (c UIConfig) LeaderKeyOrDefault() string {
+	return NormalizeLeaderKey(c.LeaderKey)
+}
+
+// NormalizeKeybindingStyle returns "standard" or "vim".
+func NormalizeKeybindingStyle(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "vim", "modal", "vim_modal":
+		return "vim"
+	default:
+		return "standard"
+	}
+}
+
+// NormalizeVimEscapeSequence returns a non-empty escape chord (default jk).
+func NormalizeVimEscapeSequence(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "jk"
+	}
+	return raw
+}
+
+// NormalizeLeaderKey returns a non-empty leader key label (default Space).
+func NormalizeLeaderKey(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "Space"
+	}
+	return raw
 }
 
 // NormalizeUIShortcut canonicalizes a shortcut like "ctrl+t" to "Ctrl+T".
@@ -370,6 +446,137 @@ func (c TurnMetricsUIConfig) CompactOrDefault() bool {
 		return false
 	}
 	return *c.Compact
+}
+
+// NormalizeToolCallDensity maps stored / legacy values to inline, subtree, clustered, or ignore.
+func NormalizeToolCallDensity(v string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "inline", "subtree", "clustered", "ignore":
+		return strings.ToLower(strings.TrimSpace(v))
+	case "compact":
+		return "clustered"
+	case "detailed":
+		return "subtree"
+	default:
+		return "subtree"
+	}
+}
+
+// NormalizeFileDiffLayout maps stored values to stacked or side_by_side.
+func NormalizeFileDiffLayout(v string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "side_by_side", "side-by-side", "split", "horizontal":
+		return "side_by_side"
+	default:
+		return "stacked"
+	}
+}
+
+// ClampSpacingLines limits chat spacing prefs to 0–4 terminal rows.
+func ClampSpacingLines(n int) int {
+	if n < 0 {
+		return 0
+	}
+	if n > 4 {
+		return 4
+	}
+	return n
+}
+
+// ActivityShowPipelineTitleOrDefault reports whether the model row is shown above tool activity.
+func (c UIConfig) ActivityShowPipelineTitleOrDefault() bool {
+	if c.ActivityShowPipelineTitle == nil {
+		return true
+	}
+	return *c.ActivityShowPipelineTitle
+}
+
+// NormalizeToolExpandArgsFormat maps stored values to pretty or json.
+func NormalizeToolExpandArgsFormat(v string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "json", "raw":
+		return "json"
+	default:
+		return "pretty"
+	}
+}
+
+// NormalizeToolExpandResultFormat maps stored values to text or json.
+func NormalizeToolExpandResultFormat(v string) string {
+	if strings.ToLower(strings.TrimSpace(v)) == "json" {
+		return "json"
+	}
+	return "text"
+}
+
+// ToolExpandShowParametersOrDefault reports whether expanded tool rows show arguments.
+func (c UIConfig) ToolExpandShowParametersOrDefault() bool {
+	if c.ToolExpandShowParameters == nil {
+		return true
+	}
+	return *c.ToolExpandShowParameters
+}
+
+// ToolExpandShowResultOrDefault reports whether expanded tool rows show output.
+func (c UIConfig) ToolExpandShowResultOrDefault() bool {
+	if c.ToolExpandShowResult == nil {
+		return true
+	}
+	return *c.ToolExpandShowResult
+}
+
+// ToolExpandArgsFormatOrDefault returns how tool parameters render when expanded.
+func (c UIConfig) ToolExpandArgsFormatOrDefault() string {
+	if strings.TrimSpace(c.ToolExpandArgsFormat) != "" {
+		return NormalizeToolExpandArgsFormat(c.ToolExpandArgsFormat)
+	}
+	return "pretty"
+}
+
+// ToolExpandResultFormatOrDefault returns how tool results render when expanded.
+func (c UIConfig) ToolExpandResultFormatOrDefault() string {
+	if strings.TrimSpace(c.ToolExpandResultFormat) != "" {
+		return NormalizeToolExpandResultFormat(c.ToolExpandResultFormat)
+	}
+	return "text"
+}
+
+// ActivitySpacingLinesOrDefault returns gaps between activity-log rows.
+func (c UIConfig) ActivitySpacingLinesOrDefault() int {
+	if c.ActivitySpacingLines >= 0 && c.ActivitySpacingLines <= 4 {
+		return c.ActivitySpacingLines
+	}
+	return 1
+}
+
+// MessageSpacingLinesOrDefault returns gaps between chat turns and user/assistant blocks.
+func (c UIConfig) MessageSpacingLinesOrDefault() int {
+	if c.MessageSpacingLines >= 0 && c.MessageSpacingLines <= 4 {
+		return c.MessageSpacingLines
+	}
+	return 1
+}
+
+// FileDiffLayoutOrDefault returns how file diffs render in the TUI activity log.
+func (c UIConfig) FileDiffLayoutOrDefault() string {
+	if strings.TrimSpace(c.FileDiffLayout) != "" {
+		return NormalizeFileDiffLayout(c.FileDiffLayout)
+	}
+	return "stacked"
+}
+
+// ToolCallDensityOrDefault returns the activity-log display mode for the TUI.
+func (c UIConfig) ToolCallDensityOrDefault() string {
+	if strings.TrimSpace(c.ToolCallDensity) != "" {
+		return NormalizeToolCallDensity(c.ToolCallDensity)
+	}
+	if c.TurnMetrics.Compact != nil {
+		if *c.TurnMetrics.Compact {
+			return "clustered"
+		}
+		return "subtree"
+	}
+	return "subtree"
 }
 
 // SeparatorOrDefault returns the field separator.
