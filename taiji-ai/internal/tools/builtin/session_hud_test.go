@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -51,5 +52,10 @@ func TestSessionHUDTodoAndCheckpoint(t *testing.T) {
 	line := FormatSessionHUDLine(hud)
 	if line == "" {
 		t.Fatal("expected footer line")
+	}
+
+	sidebar := FormatTodosSidebar(sid)
+	if sidebar == "" || !strings.Contains(sidebar, "[>] Tests schreiben") || !strings.Contains(sidebar, "[ ] Docs") {
+		t.Fatalf("sidebar todos: %q", sidebar)
 	}
 }

@@ -1,5 +1,6 @@
 #include "context_panel.hpp"
 
+#include "ui_test_ids.hpp"
 #include "ui_anim.hpp"
 #include "ui_layout.hpp"
 #include "ui_locale.hpp"
@@ -8,34 +9,12 @@
 
 #include <tuinator/render/text.hpp>
 
-#include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <vector>
 
-namespace {
-
-struct UsageSegment {
-    int tokens = 0;
-    tuinator::Rgb color;
-};
-
-std::vector<UsageSegment> usage_segments(const ContextPanel::UsageBreakdown& usage, int context_window, int total_tokens) {
-    const int window = std::max({context_window, total_tokens, 1});
-    int free_tokens = std::max(0, window - total_tokens);
-    std::vector<UsageSegment> segments = {
-        {usage.system_tokens, ui_secondary_text()},
-        {usage.tools_tokens, ui_accent()},
-        {usage.skills_tokens, ui_status_warn()},
-        {usage.conversation_tokens, ui_session_active_bar()},
-        {free_tokens, ui_badge_bg()},
-    };
-    return segments;
+ContextPanel::ContextPanel(tuinator::Theme theme) : theme_(std::move(theme)) {
+    set_test_id(taiji::ui::test_id::kContextPanel);
 }
-
-} // namespace
-
-ContextPanel::ContextPanel(tuinator::Theme theme) : theme_(std::move(theme)) {}
 
 void ContextPanel::set_stats(int tokens, int context_window, double used_pct, double cost_usd) {
     if (tokens_ == tokens && context_window_ == context_window && used_pct_ == used_pct && cost_usd_ == cost_usd) {
@@ -48,50 +27,12 @@ void ContextPanel::set_stats(int tokens, int context_window, double used_pct, do
     mark_dirty();
 }
 
-void ContextPanel::set_usage_breakdown(UsageBreakdown breakdown) {
-    if (usage_.system_tokens == breakdown.system_tokens && usage_.tools_tokens == breakdown.tools_tokens &&
-        usage_.skills_tokens == breakdown.skills_tokens &&
-        usage_.conversation_tokens == breakdown.conversation_tokens) {
-        return;
-    }
-    usage_ = breakdown;
-    mark_dirty();
-}
-
-void ContextPanel::set_skills_summary(std::string summary) {
-    if (skills_summary_ == summary) {
-        return;
-    }
-    skills_summary_ = std::move(summary);
-    mark_dirty();
-}
-
 void ContextPanel::set_model_label(std::string model) {
     if (model_label_ == model) {
         return;
     }
     model_label_ = std::move(model);
     mark_dirty();
-}
-
-void ContextPanel::set_usage_expanded(bool expanded) {
-    if (usage_expanded_ == expanded) {
-        return;
-    }
-    usage_expanded_ = expanded;
-    mark_dirty();
-    mark_layout_dirty();
-    if (on_layout_changed_) {
-        on_layout_changed_();
-    }
-}
-
-void ContextPanel::toggle_usage_expanded() {
-    set_usage_expanded(!usage_expanded_);
-}
-
-void ContextPanel::set_on_layout_changed(std::function<void()> callback) {
-    on_layout_changed_ = std::move(callback);
 }
 
 void ContextPanel::tick(int dt_ms) {
@@ -140,67 +81,12 @@ void ContextPanel::set_show_cost(bool show) {
     mark_dirty();
 }
 
-int ContextPanel::line_count() const {
-    if (!usage_expanded_) {
-        return 3;
-    }
-    return 9;
-}
-
 tuinator::Size ContextPanel::preferred_size() const {
-    return {18, line_count()};
+    return {18, 2};
 }
 
 void ContextPanel::layout(tuinator::Rect bounds) {
     bounds_ = bounds;
-}
-
-void ContextPanel::paint_segmented_bar(tuinator::PaintContext& ctx, int x, int y, int width,
-                                      tuinator::Style track) const {
-    if (width <= 0) {
-        return;
-    }
-    const auto segments = usage_segments(usage_, context_window_, tokens_);
-    const int window = std::max({context_window_, tokens_, 1});
-    int painted = 0;
-    for (const UsageSegment& segment : segments) {
-        if (segment.tokens <= 0) {
-            continue;
-        }
-        const double share = static_cast<double>(segment.tokens) / static_cast<double>(window);
-        int cells = std::clamp(static_cast<int>(std::lround(share * width)), 0, width - painted);
-        if (cells <= 0 && segment.tokens > 0 && painted < width) {
-            cells = 1;
-        }
-        tuinator::Style fill = track;
-        fill.foreground_rgb = segment.color;
-        for (int i = 0; i < cells && painted < width; ++i) {
-            ctx.canvas.draw_text({x + painted, y}, "━", fill);
-            ++painted;
-        }
-    }
-    for (; painted < width; ++painted) {
-        ctx.canvas.draw_text({x + painted, y}, "─", track);
-    }
-}
-
-void ContextPanel::paint_category_row(tuinator::PaintContext& ctx, int y, tuinator::Rgb dot, const std::string& label,
-                                      int tokens, const tuinator::Style& text_style) const {
-    const int pad = kUiPadX;
-    tuinator::Style bullet = text_style;
-    bullet.foreground_rgb = dot;
-    ctx.canvas.draw_text({pad, y}, "▪ ", bullet);
-    const int label_x = pad + tuinator::text_display_width("▪ ");
-    const int inner_w = std::max(0, bounds_.width - pad * 2);
-    const int value_w = 6;
-    const int label_max = std::max(0, inner_w - value_w - (label_x - pad));
-    const std::size_t label_bytes = tuinator::text_byte_length_for_width(label, label_max);
-    ctx.canvas.draw_text({label_x, y}, label.substr(0, label_bytes), text_style);
-    const std::string value = format_token_count_short(tokens);
-    const int value_x = std::max(label_x, bounds_.width - pad - tuinator::text_display_width(value));
-    tuinator::Style value_style = text_style;
-    value_style.dim = true;
-    ctx.canvas.draw_text({value_x, y}, value, value_style);
 }
 
 void ContextPanel::paint(tuinator::PaintContext& ctx) const {
@@ -212,149 +98,56 @@ void ContextPanel::paint(tuinator::PaintContext& ctx) const {
     ui_paint_vim_focus_accent(ctx, UiFocusPane::Context, bounds_.height);
 
     const int pad = kUiPadX;
-    const int inner_w = std::max(0, bounds_.width - pad * 2);
 
     tuinator::Style heading;
     heading.bold = true;
     heading.foreground_rgb = ui_section_heading();
-    if (title_hover_) {
-        heading.foreground_rgb = ui_accent();
-    }
     const tuinator::Style muted = ui_resolve_sidebar_text(ctx, *this, ui_secondary_style(theme_));
-    const tuinator::Style label = ui_resolve_sidebar_text(ctx, *this, theme_.label);
-    tuinator::Style track = label;
-    track.foreground_rgb = ui_badge_bg();
 
     int y = 0;
-    const std::string chevron = usage_expanded_ ? "▾ " : "▸ ";
     const std::string context_title = ui_shell("context.title");
-    const std::string title = chevron + (context_title.empty() ? "CONTEXT" : context_title);
+    const std::string title = context_title.empty() ? "CONTEXT" : context_title;
     ctx.canvas.draw_text({pad, y}, title, ui_resolve_sidebar_text(ctx, *this, heading));
 
+    std::string title_suffix;
     char pct_buf[16];
     std::snprintf(pct_buf, sizeof(pct_buf), "%3.0f%%", display_used_pct_);
-    const int pct_x = std::max(pad, bounds_.width - pad - tuinator::text_display_width(pct_buf));
-    ctx.canvas.draw_text({pct_x, y}, pct_buf, muted);
+    title_suffix = pct_buf;
+    if (context_window_ > 0) {
+        title_suffix += "  " + format_token_count_short(tokens_) + " / " + format_token_count_short(context_window_);
+    }
+    const int suffix_x = std::max(pad, bounds_.width - pad - tuinator::text_display_width(title_suffix));
+    ctx.canvas.draw_text({suffix_x, y}, title_suffix, muted);
     ++y;
 
     if (y < bounds_.height) {
-        const int bar_w = std::max(4, inner_w - 14);
-        paint_segmented_bar(ctx, pad, y, bar_w, track);
-        if (context_window_ > 0) {
-            const std::string totals =
-                format_token_count_short(tokens_) + " / " + format_token_count_short(context_window_);
-            const int totals_x = std::max(pad + bar_w + 1, bounds_.width - pad - tuinator::text_display_width(totals));
-            ctx.canvas.draw_text({totals_x, y}, totals, muted);
-        }
-        ++y;
-    }
-
-    if (!usage_expanded_) {
-        if (y < bounds_.height) {
-            std::string line = format_token_compact(tokens_);
-            line += "  ·  ";
-            if (use_speed_metric_) {
-                char value_buf[24];
-                std::snprintf(value_buf, sizeof(value_buf), "%.1f", speed_tok_per_sec_);
-                const std::string pattern = ui_shell("metrics.tok_per_sec");
-                line += ui_format(pattern.empty() ? "{value} tok/s" : pattern, "value", value_buf);
-                const std::string spark = ui_sparkline_glyph(speed_samples_, speed_tok_per_sec_);
-                if (!spark.empty()) {
-                    line += " ";
-                    line += spark;
-                }
-            } else if (show_cost_) {
-                line += format_cost_compact(cost_usd_);
-            }
-            ctx.canvas.draw_text({pad, y}, line, muted);
-        }
-        return;
-    }
-
-    if (y < bounds_.height) {
-        const std::string skills_base = ui_shell("context.skills");
-        std::string skills_label = skills_base.empty() ? "Skills" : skills_base;
-        if (!skills_summary_.empty()) {
-            skills_label += " (" + skills_summary_ + ")";
-        }
-        const std::string system_prompt = ui_shell("context.system_prompt");
-        paint_category_row(ctx, y++, ui_secondary_text(), system_prompt.empty() ? "System prompt" : system_prompt,
-                           usage_.system_tokens, label);
-        if (y < bounds_.height) {
-            const std::string tools_mcp = ui_shell("context.tools_mcp");
-            paint_category_row(ctx, y++, ui_accent(), tools_mcp.empty() ? "Tool definitions & MCP" : tools_mcp,
-                               usage_.tools_tokens, label);
-        }
-        if (y < bounds_.height) {
-            paint_category_row(ctx, y++, ui_status_warn(), skills_label, usage_.skills_tokens, label);
-        }
-        if (y < bounds_.height) {
-            const std::string conversation = ui_shell("context.conversation");
-            paint_category_row(ctx, y++, ui_session_active_bar(), conversation.empty() ? "Conversation" : conversation,
-                               usage_.conversation_tokens, label);
-        }
-    }
-
-    if (y < bounds_.height) {
-        tuinator::Style rule = muted;
-        rule.foreground_rgb = ui_border_chrome();
-        std::string rule_text;
-        const int rule_w = inner_w;
-        for (int i = 0; i < rule_w; ++i) {
-            rule_text += "─";
-        }
-        ctx.canvas.draw_text({pad, y}, rule_text, rule);
-        ++y;
-    }
-
-    if (y < bounds_.height) {
-        std::string footer;
+        std::string line = format_token_compact(tokens_);
+        line += "  ·  ";
         if (use_speed_metric_) {
             char value_buf[24];
             std::snprintf(value_buf, sizeof(value_buf), "%.1f", speed_tok_per_sec_);
             const std::string pattern = ui_shell("metrics.tok_per_sec");
-            footer = ui_format(pattern.empty() ? "{value} tok/s" : pattern, "value", value_buf);
+            line += ui_format(pattern.empty() ? "{value} tok/s" : pattern, "value", value_buf);
+            const std::string spark = ui_sparkline_glyph(speed_samples_, speed_tok_per_sec_);
+            if (!spark.empty()) {
+                line += " ";
+                line += spark;
+            }
         } else if (show_cost_) {
-            footer = format_cost_compact(cost_usd_);
+            line += format_cost_compact(cost_usd_);
         }
         if (!model_label_.empty()) {
-            if (!footer.empty()) {
-                footer += " · ";
-            }
-            footer += model_label_;
+            line += "  ·  ";
+            line += model_label_;
         }
-        if (!footer.empty()) {
-            ctx.canvas.draw_text({pad, y}, footer, muted);
-        }
+        ctx.canvas.draw_text({pad, y}, line, muted);
     }
 }
 
 bool ContextPanel::handle_event(const tuinator::Event& event) {
-    if (const auto* key = std::get_if<tuinator::KeyPress>(&event)) {
-        if (key->alt && !key->ctrl && (key->character == 'c' || key->character == 'C')) {
-            toggle_usage_expanded();
-            return true;
-        }
-    }
-
     const auto* mouse = std::get_if<tuinator::MouseEvent>(&event);
     if (mouse == nullptr) {
         return false;
-    }
-    const tuinator::Point local{mouse->position.x - bounds_.x, mouse->position.y - bounds_.y};
-    const bool in_title = local.y == 0 && local.x >= kUiPadX && bounds_.contains(mouse->position);
-    if (mouse->action == tuinator::MouseAction::Move) {
-        if (in_title != title_hover_) {
-            title_hover_ = in_title;
-            mark_dirty();
-        }
-        return bounds_.contains(mouse->position);
-    }
-    if (mouse->button == tuinator::MouseButton::Left &&
-        (mouse->action == tuinator::MouseAction::Click || mouse->action == tuinator::MouseAction::Release) &&
-        in_title && mouse->action == tuinator::MouseAction::Release) {
-        toggle_usage_expanded();
-        return true;
     }
     return bounds_.contains(mouse->position);
 }

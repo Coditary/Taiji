@@ -6,6 +6,8 @@
 taiji-ai/bin/
 taiji-ai/*.test
 taiji-ai/agent.test
+taiji-ai/internal/agent/state.json
+taiji-ai/internal/session/state.json
 
 # Eval / bench binaries (if built with go build -o outside bin/)
 /decision-eval
@@ -15,9 +17,14 @@ taiji-ai/agent.test
 
 # Frontend (taiji-tui) — TUI binary + embedded Go archive
 taiji-tui/build/
+taiji-tui/build-test/
 taiji-tui/build/taiji-tui
 taiji-tui/fuzzy/target/
 taiji-tui/highlight/target/
+taiji-ai/globwalk/target/
+taiji-ai/taiji-tools/target/
+taiji-ai/bin/taiji-globwalk
+taiji-ai/bin/taiji-tools
 **/libtaiji.a
 **/libtaiji.h
 
@@ -34,6 +41,7 @@ taiji-tui/highlight/target/
 *.out
 coverage.*
 *.coverprofile
+mutation-results.json
 profile.cov
 .cache/
 go.work

@@ -84,3 +84,16 @@ func SaveDirBinding(root, workDir, sessionID string) error {
 	}
 	return os.WriteFile(path, raw, 0o644)
 }
+
+// ClearDirBinding removes the workDir session binding, if any.
+func ClearDirBinding(root, workDir string) error {
+	path, err := bindingPath(root, workDir)
+	if err != nil {
+		return err
+	}
+	err = os.Remove(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
+}

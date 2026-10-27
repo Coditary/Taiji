@@ -1,16 +1,15 @@
 #pragma once
 
-#include <tuinator/tuinator.hpp>
+#include "composer_fuzzy_picker.hpp"
 
 #include <functional>
 #include <string>
-#include <vector>
 
 class ComposerThemePicker {
   public:
     explicit ComposerThemePicker(tuinator::Theme theme);
 
-    bool is_open() const { return open_; }
+    bool is_open() const { return picker_.is_open(); }
     void open(const std::string& active_theme_id, bool draft_message_saved = false);
     void close();
 
@@ -28,40 +27,20 @@ class ComposerThemePicker {
     bool select_visible_row(int visible_index);
     bool hit_test_row(tuinator::Point local, int& visible_index) const;
 
-    tuinator::Rect bounds() const { return bounds_; }
+    tuinator::Rect bounds() const { return picker_.bounds(); }
+
+    void set_on_preview(std::function<void(const std::string& theme_id)> handler);
+    void set_on_commit(std::function<void(const std::string& theme_id)> handler);
+    void commit_selection();
 
   private:
-    struct Entry {
-        std::string id;
-        std::string subtitle;
-        std::string line;
-        std::string meta;
-    };
-
-    tuinator::Rect panel_rect() const;
-    int panel_height(int max_rows = 10) const;
-    int visible_list_rows(int panel_h) const;
-    int list_start_y(const tuinator::Rect& panel) const;
-
     void rebuild_entries();
-    void rebuild_filter(bool preview = true);
-    void sync_scroll(int max_visible);
-    void preview_selection();
+    void sync_view();
 
     tuinator::Theme theme_;
-    bool open_ = false;
-    std::vector<Entry> entries_;
-    std::vector<int> filtered_;
-    std::string filter_;
-    int selected_ = 0;
-    int list_scroll_ = 0;
+    ComposerFuzzyPicker picker_;
     bool draft_message_saved_ = false;
-    tuinator::Rect bounds_{};
-    std::function<void(const std::string& theme_id)> on_preview_;
-    std::function<void(const std::string& theme_id)> on_commit_;
-
-  public:
-    void set_on_preview(std::function<void(const std::string& theme_id)> handler) { on_preview_ = std::move(handler); }
-    void set_on_commit(std::function<void(const std::string& theme_id)> handler) { on_commit_ = std::move(handler); }
-    void commit_selection();
+    std::vector<ComposerFuzzyPickerItem> catalog_;
+    std::function<void(const std::string&)> on_preview_;
+    std::function<void(const std::string&)> on_commit_;
 };

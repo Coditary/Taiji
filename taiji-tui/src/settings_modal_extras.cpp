@@ -314,6 +314,51 @@ std::string SettingsModal::mcp_tool_description(const std::string& server, const
     return {};
 }
 
+bool SettingsModal::builtin_tool_denied(const std::string& tool) const {
+    return std::find(draft_.builtin_tools_deny.begin(), draft_.builtin_tools_deny.end(), tool) !=
+           draft_.builtin_tools_deny.end();
+}
+
+void SettingsModal::toggle_builtin_tool_denied(const std::string& tool) {
+    auto it = std::find(draft_.builtin_tools_deny.begin(), draft_.builtin_tools_deny.end(), tool);
+    if (it == draft_.builtin_tools_deny.end()) {
+        draft_.builtin_tools_deny.push_back(tool);
+        std::sort(draft_.builtin_tools_deny.begin(), draft_.builtin_tools_deny.end());
+    } else {
+        draft_.builtin_tools_deny.erase(it);
+    }
+}
+
+bool SettingsModal::pack_enabled(const std::string& name) const {
+    if (draft_.packs_allow.empty()) {
+        return true;
+    }
+    return std::find(draft_.packs_allow.begin(), draft_.packs_allow.end(), name) != draft_.packs_allow.end();
+}
+
+void SettingsModal::toggle_pack_enabled(const std::string& name) {
+    const bool enabled = pack_enabled(name);
+    if (enabled) {
+        if (draft_.packs_allow.empty()) {
+            for (const std::string& pack : draft_.packs_available) {
+                if (pack != name) {
+                    draft_.packs_allow.push_back(pack);
+                }
+            }
+            std::sort(draft_.packs_allow.begin(), draft_.packs_allow.end());
+            return;
+        }
+        draft_.packs_allow.erase(std::remove(draft_.packs_allow.begin(), draft_.packs_allow.end(), name),
+                                  draft_.packs_allow.end());
+        return;
+    }
+    draft_.packs_allow.push_back(name);
+    std::sort(draft_.packs_allow.begin(), draft_.packs_allow.end());
+    if (draft_.packs_allow.size() == draft_.packs_available.size()) {
+        draft_.packs_allow.clear();
+    }
+}
+
 void SettingsModal::cycle_skill_state(const std::string& name) {
     const std::string state = skill_state(name);
     auto erase_name = [&](std::vector<std::string>& list) {

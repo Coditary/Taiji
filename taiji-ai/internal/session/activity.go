@@ -32,8 +32,28 @@ func TurnsWithActivity(messages []provider.Message, all []events.Event) []ChatTu
 				turns[i].Assistant = text
 			}
 		}
+		if strings.TrimSpace(turns[i].AssistantAuthorLabel) == "" {
+			if chrome := actorChromeFromEvents(groups[i]); chrome.AuthorLabel() != "" {
+				turns[i].AssistantAuthorLabel = chrome.AuthorLabel()
+			}
+		}
 	}
 	return turns
+}
+
+func actorChromeFromEvents(evts []events.Event) ActorChrome {
+	for _, ev := range evts {
+		if ev.Type == events.TypeActorSwitch {
+			if chrome := ActorChromeFromEventData(ev.Data); chrome.AuthorLabel() != "" {
+				return chrome
+			}
+			id := strings.TrimSpace(ev.Text)
+			if id != "" {
+				return ActorChrome{TemplateID: id, DisplayName: id}
+			}
+		}
+	}
+	return ActorChrome{}
 }
 
 func assistantTextFromEvents(evts []events.Event) string {

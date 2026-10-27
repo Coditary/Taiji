@@ -66,6 +66,14 @@ class SettingsModal : public tuinator::Widget {
         std::vector<std::string> skills_available;
         std::vector<std::string> skills_allow;
         std::vector<std::string> skills_deny;
+        std::vector<std::string> builtin_tools_available;
+        std::vector<std::string> builtin_tools_deny;
+        std::string stream_pacing;
+        bool council_enabled = false;
+        std::vector<std::string> council_actors;
+        std::vector<std::string> packs_available;
+        std::vector<int> packs_node_counts;
+        std::vector<std::string> packs_allow;
         bool decisions_enabled = true;
         bool memory_enabled = true;
         std::string project_default_provider;
@@ -78,7 +86,15 @@ class SettingsModal : public tuinator::Widget {
         std::string ui_theme = "dark";
         std::string ui_locale = "en";
         std::string ui_corners = "square";
-        std::string tool_call_density = "detailed";
+        std::string tool_call_density = "subtree";
+        std::string file_diff_layout = "stacked";
+        int activity_spacing_lines = 1;
+        int message_spacing_lines = 1;
+        bool activity_show_pipeline_title = true;
+        bool tool_expand_show_parameters = true;
+        bool tool_expand_show_result = true;
+        std::string tool_expand_args_format = "pretty";
+        std::string tool_expand_result_format = "text";
         bool turn_metrics_show_actions = true;
         bool code_block_wrap = true;
         std::string chat_width = "auto";
@@ -181,7 +197,9 @@ class SettingsModal : public tuinator::Widget {
             BoolToggle,
             MCPToggle,
             MCPToolToggle,
+            BuiltinToolToggle,
             SkillAllowToggle,
+            PackAllowToggle,
             PresetCombo,
             FixedValue,
             PercentBar,
@@ -194,7 +212,9 @@ class SettingsModal : public tuinator::Widget {
         int mcp_index = -1;
         std::string mcp_tool_server;
         std::string mcp_tool_name;
+        std::string builtin_tool_name;
         int skill_index = -1;
+        int pack_index = -1;
     };
 
     void reload_from_backend();
@@ -250,12 +270,16 @@ class SettingsModal : public tuinator::Widget {
     bool handle_fuzzy_event(const tuinator::Event& event);
     std::string skill_state(const std::string& name) const;
     void cycle_skill_state(const std::string& name);
+    bool pack_enabled(const std::string& name) const;
+    void toggle_pack_enabled(const std::string& name);
     bool mcp_server_expanded(const std::string& server) const;
     bool mcp_server_has_tools(const std::string& server) const;
     void toggle_mcp_server_expanded(const std::string& server);
     bool mcp_tool_denied(const std::string& server, const std::string& tool) const;
     void toggle_mcp_tool_denied(const std::string& server, const std::string& tool);
     std::string mcp_tool_description(const std::string& server, const std::string& tool) const;
+    bool builtin_tool_denied(const std::string& tool) const;
+    void toggle_builtin_tool_denied(const std::string& tool);
     void paint_content_row(tuinator::Canvas& clipped, const Row& row, int y, int content_x, int value_x, int value_w,
                            bool selected) const;
     void paint_frame(tuinator::Canvas& clipped, const PanelRect& panel) const;

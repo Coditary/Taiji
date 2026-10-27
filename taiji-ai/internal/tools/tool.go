@@ -1,6 +1,9 @@
 package tools
 
-import "context"
+import (
+	"context"
+	"strings"
+)
 
 // Tool is a callable agent tool.
 type Tool interface {
@@ -18,15 +21,24 @@ type CatalogHidden interface {
 // Definition describes a tool for LLM providers.
 type Definition struct {
 	Name        string
+	Namespace   string
 	Description string
 	Parameters  map[string]any
 }
 
 // ToDefinition converts a Tool to a provider definition.
 func ToDefinition(t Tool) Definition {
-	return Definition{
+	def := Definition{
 		Name:        t.Name(),
+		Namespace:   NamespaceBuiltin,
 		Description: t.Description(),
 		Parameters:  t.Parameters(),
 	}
+	if p, ok := t.(NamespaceProvider); ok {
+		if ns := strings.TrimSpace(p.ToolNamespace()); ns != "" {
+			def.Namespace = ns
+		}
+	}
+	return def
 }
+

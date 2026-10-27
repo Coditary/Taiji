@@ -37,7 +37,7 @@ func (ListDir) Parameters() map[string]any {
 	}
 }
 
-func (ListDir) Run(_ context.Context, args map[string]any) (string, error) {
+func (ListDir) Run(ctx context.Context, args map[string]any) (string, error) {
 	path, _ := args["path"].(string)
 	recursive, _ := args["recursive"].(bool)
 	maxDepth := 2
@@ -60,7 +60,7 @@ func (ListDir) Run(_ context.Context, args map[string]any) (string, error) {
 	if !recursive {
 		return formatDirListing(abs, abs, false)
 	}
-	return formatRecursiveListing(abs, maxDepth)
+	return formatRecursiveListingIgnore(ctx, abs, maxDepth)
 }
 
 func formatDirListing(root, dir string, prefixRel bool) (string, error) {
@@ -98,6 +98,17 @@ func formatDirListing(root, dir string, prefixRel bool) (string, error) {
 	}
 	if len(lines) == 0 {
 		return fmt.Sprintf("%s\n(empty)", dir), nil
+	}
+	return strings.Join(lines, "\n"), nil
+}
+
+func formatRecursiveListingIgnore(ctx context.Context, root string, maxDepth int) (string, error) {
+	lines, err := runTaijiToolsLines(ctx, "list", "--root", root, "--max-depth", fmt.Sprintf("%d", maxDepth), "--max", "500")
+	if err != nil {
+		return "", err
+	}
+	if len(lines) == 0 {
+		return fmt.Sprintf("%s\n(empty)", root), nil
 	}
 	return strings.Join(lines, "\n"), nil
 }

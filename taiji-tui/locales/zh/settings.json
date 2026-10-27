@@ -278,8 +278,10 @@
       "flat": "扁平"
     },
     "tool_call_density": {
-      "compact": "简洁",
-      "detailed": "详细"
+      "inline": "Inline",
+      "subtree": "Subtree",
+      "clustered": "Clustered",
+      "ignore": "Ignore"
     },
     "presentation": {
       "markdown": "将此软件界面标签翻译成目标语言：\"Markdown\"",

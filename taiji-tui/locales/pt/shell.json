@@ -58,7 +58,10 @@
     "skill": "Competência",
     "decision": "Decisão",
     "question": "Pergunta",
-    "generating_response": "A gerar resposta..."
+    "generating_response": "A gerar resposta...",
+    "trace": {
+      "explored_prefix": "Explored "
+    }
   },
   "metrics": {
     "tok_per_sec": "..."
@@ -93,6 +96,7 @@
     "wait_before_branch": "...",
     "branch_failed": "...",
     "branch_failed_prefix": "...",
-    "branched": "..."
+    "branched": "...",
+    "response_ready_in_session": "Resposta pronta em {name}"
   }
 }

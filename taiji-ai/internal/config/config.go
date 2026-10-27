@@ -23,11 +23,14 @@ type Config struct {
 	Memory          MemoryConfig              `yaml:"memory"`
 	MCP             MCPConfig                 `yaml:"mcp"`
 	Skills          SkillsConfig              `yaml:"skills"`
+	Packs           PacksConfig               `yaml:"packs"`
 	Hooks           HooksConfig               `yaml:"hooks"`
 	UI              UIConfig                  `yaml:"ui"`
 	STT             STTConfig                 `yaml:"stt"`
 	Tools           ToolsConfig               `yaml:"tools"`
 	Root            string                    `yaml:"-"`
+	// StorageLocal is true when runtime data lives in <root>/.taiji (e.g. --local).
+	StorageLocal bool `yaml:"-"`
 }
 
 // WujiConfig controls provider refresh from a Wuji core daemon.
@@ -118,16 +121,25 @@ type LoadOptions struct {
 	Local bool
 }
 
-// LoadAt reads .taiji/config.yaml from an explicit project root.
-func LoadAt(root string) (*Config, error) {
+// LoadAt reads project config from the managed store or <root>/.taiji when local.
+func LoadAt(root string, opts LoadOptions) (*Config, error) {
+	return loadAtRoot(root, opts)
+}
+
+func loadAtRoot(root string, opts LoadOptions) (*Config, error) {
 	root = strings.TrimSpace(root)
 	if root == "" {
 		return nil, fmt.Errorf("config root is not set")
 	}
-	path := filepath.Join(root, dirName, configFile)
+	storageLocal := ResolveStorageLocal(root, opts)
+	path := resolveProjectConfigPath(root, storageLocal)
 	cfg := defaultConfig(root)
+	cfg.StorageLocal = storageLocal
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		applyGlobalMCPDefaults(cfg)
+		if !storageLocal {
+			applyGlobalUserPrefs(cfg)
+		}
 		ensureDecisionProfileDirs(cfg)
 		ensureMemoryDirs(cfg)
 		normalizeConfig(cfg)
@@ -141,9 +153,14 @@ func LoadAt(root string) (*Config, error) {
 		return nil, fmt.Errorf("parse config: %w", err)
 	}
 	cfg.Root = root
+	cfg.StorageLocal = storageLocal
 	sanitizeLegacyWujiPaths(cfg)
 	applyGlobalMCPDefaults(cfg)
+	if !storageLocal {
+		applyGlobalUserPrefs(cfg)
+	}
 	ensureSkillsDirs(cfg)
+	ensurePacksDirs(cfg)
 	ensureDecisionProfileDirs(cfg)
 	ensureMemoryDirs(cfg)
 	normalizeConfig(cfg)
@@ -156,30 +173,7 @@ func Load(opts LoadOptions) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	path := filepath.Join(root, dirName, configFile)
-	cfg := defaultConfig(root)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		applyGlobalMCPDefaults(cfg)
-		ensureDecisionProfileDirs(cfg)
-		ensureMemoryDirs(cfg)
-		normalizeConfig(cfg)
-		return cfg, nil
-	}
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("read config: %w", err)
-	}
-	if err := yaml.Unmarshal(raw, cfg); err != nil {
-		return nil, fmt.Errorf("parse config: %w", err)
-	}
-	cfg.Root = root
-	sanitizeLegacyWujiPaths(cfg)
-	applyGlobalMCPDefaults(cfg)
-	ensureSkillsDirs(cfg)
-	ensureDecisionProfileDirs(cfg)
-	ensureMemoryDirs(cfg)
-	normalizeConfig(cfg)
-	return cfg, nil
+	return loadAtRoot(root, opts)
 }
 
 func defaultConfig(root string) *Config {
@@ -210,6 +204,7 @@ func defaultConfig(root string) *Config {
 		Skills: SkillsConfig{
 			Dirs: DefaultSkillsDirs(root),
 		},
+		Packs: defaultPacksConfig(),
 		UI:  DefaultUIConfig(),
 		STT: DefaultSTTConfig(),
 	}
@@ -237,10 +232,11 @@ func Root(opts LoadOptions) (string, error) {
 		return "", err
 	}
 	if opts.Local {
-		if root, ok := findTaijiConfigRoot(wd); ok {
-			return root, nil
+		abs, err := filepath.Abs(wd)
+		if err != nil {
+			return wd, nil
 		}
-		return wd, nil
+		return abs, nil
 	}
 	if root, ok := findProjectRoot(wd); ok {
 		return root, nil
@@ -291,12 +287,12 @@ func hasGoMod(dir string) bool {
 	return err == nil
 }
 
-// RuntimeDir returns .taiji under the project root.
+// RuntimeDir returns the Taiji runtime directory for a project (managed or local).
 func RuntimeDir(root string) string {
-	return filepath.Join(root, dirName)
+	return RuntimeDirForRoot(root, ProjectStorageLocal(root))
 }
 
-// SessionsDir returns .taiji/sessions.
+// SessionsDir returns the sessions directory for a project.
 func SessionsDir(root string) string {
 	return filepath.Join(RuntimeDir(root), "sessions")
 }
@@ -311,17 +307,24 @@ type fileConfig struct {
 	Memory          MemoryConfig              `yaml:"memory,omitempty"`
 	MCP             MCPConfig                 `yaml:"mcp,omitempty"`
 	Skills          SkillsConfig              `yaml:"skills,omitempty"`
+	Packs           PacksConfig               `yaml:"packs,omitempty"`
+	Hooks           HooksConfig               `yaml:"hooks,omitempty"`
 	UI              UIConfig                  `yaml:"ui,omitempty"`
 	STT             STTConfig                 `yaml:"stt,omitempty"`
 	Tools           ToolsConfig               `yaml:"tools,omitempty"`
 }
 
-// Save writes .taiji/config.yaml.
+// Save writes project config to the managed store or <root>/.taiji when local.
 func (c *Config) Save() error {
 	if c == nil || c.Root == "" {
 		return fmt.Errorf("config root is not set")
 	}
-	dir := RuntimeDir(c.Root)
+	dir := RuntimeDirForRoot(c.Root, c.StorageLocal)
+	if !c.StorageLocal {
+		if err := ensureManagedProjectRootMarker(c.Root); err != nil {
+			return fmt.Errorf("project marker: %w", err)
+		}
+	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("create config dir: %w", err)
 	}
@@ -335,9 +338,16 @@ func (c *Config) Save() error {
 		Memory:          c.Memory,
 		MCP:             c.MCP,
 		Skills:          c.Skills,
-		UI:              c.UI,
-		STT:             c.STT,
+		Packs:           c.Packs,
+		Hooks:           c.Hooks,
 		Tools:           c.Tools,
+	}
+	if c.StorageLocal {
+		fc.UI = c.UI
+		fc.STT = c.STT
+	}
+	if err := SaveGlobalUserPrefs(c.UI, c.STT); err != nil {
+		return err
 	}
 	raw, err := yaml.Marshal(fc)
 	if err != nil {

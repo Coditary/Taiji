@@ -14,6 +14,7 @@
 #include "ui_layout.hpp"
 #include "ui_chat_column.hpp"
 #include "ui_panel_box.hpp"
+#include "ui_test_ids.hpp"
 #include "ui_theme.hpp"
 #include "ui_keybindings.hpp"
 #include "ui_navigation.hpp"
@@ -871,11 +872,13 @@ ChatApp::~ChatApp() {
 void ChatApp::set_root() {
     startup_project_root_ = getenv_string("TAIJI_START_PROJECT");
     startup_new_session_ = getenv_truthy("TAIJI_START_NEW_SESSION");
+    startup_local_mode_ = getenv_truthy("TAIJI_LOCAL");
     unsetenv_if_set("TAIJI_START_PROJECT");
     unsetenv_if_set("TAIJI_START_NEW_SESSION");
 
     auto shell = std::make_unique<AppShell>(theme_);
     shell->set_widget_id("taiji-shell");
+    shell->set_test_id(taiji::ui::test_id::kAppShell);
     session_context_menu_ = shell->context_menu();
     settings_modal_ = shell->settings_modal();
     image_preview_modal_ = shell->image_modal();
@@ -1019,18 +1022,13 @@ void ChatApp::set_root() {
     });
     message_composer_->set_host_context([this]() { return build_message_composer_context(); });
     message_composer_->set_on_palette_open_changed([this](bool) {
-        if (message_composer_ != nullptr) {
-            message_composer_->mark_layout_dirty();
-        }
-        if (main_column_ != nullptr) {
-            main_column_->mark_layout_dirty();
-        }
-        request_chat_layout_refresh();
+        sync_prompt_and_chat_layout();
         app_.repaint_all();
         focus_input();
     });
     message_composer_->set_on_theme_preview([this](const std::string& theme_id) {
         apply_ui_theme(theme_id);
+        sync_prompt_and_chat_layout();
         app_.repaint_all();
     });
     message_composer_->set_on_theme_picked([this](const std::string& theme_id) {
@@ -1040,6 +1038,7 @@ void ChatApp::set_root() {
             settings_modal_->persist_chat_ui_theme(theme_id);
         }
         refresh_status_footer();
+        sync_prompt_and_chat_layout();
         app_.repaint_all();
     });
     message_composer_->set_on_image_preview([this](const tuinator::TerminalImage& image, const std::string& caption) {
@@ -1188,6 +1187,8 @@ void ChatApp::set_root() {
                     return true;
                 }
             }
+            // Tuinator quits the app when Escape is not handled; keep the composer/session open.
+            return true;
         }
         if (vim_modal_enabled_ && input_mode_ == UiInputMode::Insert && handle_vim_escape_sequence(*key)) {
             return true;
@@ -1315,8 +1316,9 @@ void ChatApp::start_background_init() {
                 std::free(buf);
             }
         }
+        const int local_mode = startup_local_mode_ ? 1 : 0;
         const uint64_t handle =
-            taiji_init(work_dir.empty() ? nullptr : const_cast<char*>(work_dir.c_str()), 1, &init_error);
+            taiji_init(work_dir.empty() ? nullptr : const_cast<char*>(work_dir.c_str()), local_mode, &init_error);
         std::string err;
         if (init_error != nullptr) {
             err = init_error;
@@ -1623,6 +1625,20 @@ void ChatApp::reject_question_prompt(const std::string& request_id) {
 
 void ChatApp::request_chat_layout_refresh() {
     chat_layout_dirty_ = true;
+}
+
+void ChatApp::sync_prompt_and_chat_layout() {
+    request_chat_layout_refresh();
+    app_.repaint_all();
+    flush_chat_layout(false);
+    if (message_composer_ != nullptr) {
+        message_composer_->mark_layout_dirty();
+        message_composer_->sync_field_styles(input_style_, input_focused_style_);
+    }
+    if (main_column_ != nullptr) {
+        main_column_->mark_layout_dirty();
+    }
+    app_.repaint_all();
 }
 
 void ChatApp::apply_ui_theme(const std::string& theme_id) {
@@ -4232,13 +4248,27 @@ void ChatApp::switch_to_session(const std::string& project_root, const std::stri
 
 void ChatApp::show_session_context_menu(const tuinator::Point& position, const std::string& project_root,
                                         const std::string& session_id) {
-    if (session_context_menu_ == nullptr || session_id.empty()) {
+    if (session_context_menu_ == nullptr || project_root.empty()) {
         return;
     }
 
     SessionContextMenu* menu = session_context_menu_;
 
     const std::string project = project_root;
+    if (session_id.empty()) {
+        const std::string open_label = ui_shell("folder_menu.open");
+        const std::string new_label = ui_shell("folder_menu.new_chat");
+        menu->set_items({
+            SessionContextMenu::Item{open_label.empty() ? "Open folder" : open_label,
+                                     [this, project]() { open_workspace_folder(project); }},
+            SessionContextMenu::Item{new_label.empty() ? "New chat" : new_label,
+                                     [this, project]() { create_new_session(project); }},
+        });
+        menu->show(position);
+        app_.repaint_all();
+        return;
+    }
+
     const std::string id = session_id;
     menu->set_items({
         SessionContextMenu::Item{ui_shell("session_menu.open").empty() ? "Open" : ui_shell("session_menu.open"), [this, project, id]() { switch_to_session(project, id); }},

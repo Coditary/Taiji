@@ -23,7 +23,7 @@ func New() (*App, error) {
 		Short: "Agent orchestrator for tool-using AI loops",
 		Long: `Taiji runs agent loops with YAML-defined providers, built-in tools, MCP, and skills.
 
-Providers are configured in .taiji/config.yaml — no code changes required to add backends.`,
+Project settings live under XDG data dirs by default; use --local for a portable .taiji folder in the project.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return launchTUI(args)
 		},
@@ -38,6 +38,11 @@ Providers are configured in .taiji/config.yaml — no code changes required to a
 			}
 			if localOnly {
 				local = true
+			}
+			if local {
+				_ = os.Setenv("TAIJI_LOCAL", "1")
+			} else {
+				_ = os.Unsetenv("TAIJI_LOCAL")
 			}
 			cfg, err := taijicfg.Load(taijicfg.LoadOptions{Local: local})
 			if err != nil {
@@ -66,6 +71,7 @@ Providers are configured in .taiji/config.yaml — no code changes required to a
 		newProvidersCmd(app),
 		newSessionsCmd(app),
 		newRagCmd(app),
+		newImportCardCmd(app),
 	)
 	app.Root = root
 	return app, nil
@@ -73,6 +79,14 @@ Providers are configured in .taiji/config.yaml — no code changes required to a
 
 // Execute runs the CLI.
 func (a *App) Execute() {
+	launched, err := tryLaunchTUIProjectShortcut(os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	if launched {
+		return
+	}
 	if err := a.Root.Execute(); err != nil {
 		fmt.Fprintln(a.Root.ErrOrStderr(), err)
 		os.Exit(1)

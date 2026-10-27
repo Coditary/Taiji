@@ -1,5 +1,6 @@
 #include "speech_mic_button.hpp"
 
+#include "ui_test_ids.hpp"
 #include "ui_theme.hpp"
 
 #include <tuinator/render/text.hpp>
@@ -7,7 +8,9 @@
 SpeechMicButton::SpeechMicButton(tuinator::Style normal_style, tuinator::Style recording_style,
                                  tuinator::Style hover_style, std::function<void()> on_click)
     : normal_style_(std::move(normal_style)), recording_style_(std::move(recording_style)),
-      hover_style_(std::move(hover_style)), on_click_(std::move(on_click)) {}
+      hover_style_(std::move(hover_style)), on_click_(std::move(on_click)) {
+    set_test_id(taiji::ui::test_id::kSpeechMic);
+}
 
 void SpeechMicButton::set_recording(bool recording) {
     if (recording_ == recording) {

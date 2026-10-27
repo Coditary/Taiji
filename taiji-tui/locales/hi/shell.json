@@ -58,7 +58,10 @@
     "skill": "कौशल",
     "decision": "निर्णय",
     "question": "प्रश्न",
-    "generating_response": "प्रतिक्रिया उत्पन्न हो रही है..."
+    "generating_response": "प्रतिक्रिया उत्पन्न हो रही है...",
+    "trace": {
+      "explored_prefix": "Explored "
+    }
   },
   "metrics": {
     "tok_per_sec": "{value} टोक/एस"
@@ -93,6 +96,7 @@
     "wait_before_branch": "...",
     "branch_failed": "...",
     "branch_failed_prefix": "...",
-    "branched": "..."
+    "branched": "...",
+    "response_ready_in_session": "{name} में उत्तर तैयार है"
   }
 }

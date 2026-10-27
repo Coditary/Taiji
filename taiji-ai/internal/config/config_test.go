@@ -3,10 +3,13 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
 func TestConfigSaveAndLoad(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -39,16 +42,13 @@ func TestConfigSaveAndLoad(t *testing.T) {
 	}
 }
 
-func TestRootLocalFindsParentTaijiConfig(t *testing.T) {
+func TestRootLocalUsesCWDEvenWithParentTaijiConfig(t *testing.T) {
 	project := t.TempDir()
 	runtimeDir := filepath.Join(project, dirName)
 	if err := os.MkdirAll(runtimeDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(runtimeDir, configFile), []byte("default_provider: parent\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(project, "go.mod"), []byte("module parent\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	nested := filepath.Join(project, "sub", "dir")
@@ -61,13 +61,17 @@ func TestRootLocalFindsParentTaijiConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if root != project {
-		t.Fatalf("root = %q, want %q", root, project)
+	absNested, err := filepath.Abs(nested)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if root != absNested {
+		t.Fatalf("local root = %q, want cwd %q", root, absNested)
 	}
 
-	root, ok := findProjectRoot(nested)
-	if !ok || root != project {
-		t.Fatalf("non-local walk-up = %q, want %q", root, project)
+	parentRoot, ok := findProjectRoot(nested)
+	if !ok || parentRoot != project {
+		t.Fatalf("non-local walk-up = %q, want %q", parentRoot, project)
 	}
 }
 
@@ -120,7 +124,7 @@ func TestApplyGlobalMCPDefaultsAppliesProvider(t *testing.T) {
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", "")
 
-	globalDir := filepath.Join(home, dirName)
+	globalDir := filepath.Join(home, ".config", "taiji")
 	if err := os.MkdirAll(globalDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +154,7 @@ func TestApplyGlobalMCPDefaultsMergesWithProject(t *testing.T) {
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", "")
 
-	globalDir := filepath.Join(home, dirName)
+	globalDir := filepath.Join(home, ".config", "taiji")
 	if err := os.MkdirAll(globalDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +179,7 @@ func TestApplyGlobalMCPDefaults(t *testing.T) {
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", "")
 
-	globalDir := filepath.Join(home, dirName)
+	globalDir := filepath.Join(home, ".config", "taiji")
 	if err := os.MkdirAll(globalDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -202,6 +206,10 @@ func TestApplyGlobalMCPDefaults(t *testing.T) {
 }
 
 func TestConfigSavePersistsUI(t *testing.T) {
+	configHome := t.TempDir()
+	dataHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+	t.Setenv("XDG_DATA_HOME", dataHome)
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -225,6 +233,23 @@ func TestConfigSavePersistsUI(t *testing.T) {
 	if loaded.UI.Theme != "high_contrast" {
 		t.Fatalf("theme: %q", loaded.UI.Theme)
 	}
+	globalPath := filepath.Join(configHome, "taiji", configFile)
+	raw, err := os.ReadFile(globalPath)
+	if err != nil {
+		t.Fatalf("global config: %v", err)
+	}
+	if !containsAll(string(raw), "high_contrast", "rounded") {
+		t.Fatalf("global ui not saved: %s", string(raw))
+	}
+}
+
+func containsAll(s string, parts ...string) bool {
+	for _, p := range parts {
+		if !strings.Contains(s, p) {
+			return false
+		}
+	}
+	return true
 }
 
 func TestAutoNameSessionsEnabledDefault(t *testing.T) {

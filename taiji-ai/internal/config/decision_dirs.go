@@ -20,13 +20,9 @@ func GlobalDecisionsDir() string {
 	return filepath.Join(home, ".config", "taiji", decisionsSubdir)
 }
 
-// ProjectDecisionsDir returns .taiji/decisions under the Taiji project root.
+// ProjectDecisionsDir returns the project decisions directory (managed or local runtime).
 func ProjectDecisionsDir(root string) string {
-	root = filepath.Clean(root)
-	if root == "" || root == "." {
-		return filepath.Join(dirName, decisionsSubdir)
-	}
-	return filepath.Join(root, dirName, decisionsSubdir)
+	return filepath.Join(RuntimeDir(root), decisionsSubdir)
 }
 
 // DefaultDecisionProfileDirs returns profile search paths: project, global, bundled.

@@ -35,42 +35,53 @@ type TurnMetrics struct {
 
 // ChatTurn is a user/assistant pair for TUI history replay.
 type ChatTurn struct {
-	User       string         `json:"user"`
-	Assistant  string         `json:"assistant"`
-	UserKind   string         `json:"user_kind,omitempty"`
-	UserSentAt time.Time      `json:"user_sent_at,omitempty"`
-	Activity   []events.Event `json:"activity,omitempty"`
-	Metrics    *TurnMetrics   `json:"metrics,omitempty"`
+	User                  string         `json:"user"`
+	Assistant             string         `json:"assistant"`
+	UserKind              string         `json:"user_kind,omitempty"`
+	UserSentAt            time.Time      `json:"user_sent_at,omitempty"`
+	AssistantAuthorLabel  string         `json:"assistant_author_label,omitempty"`
+	Activity              []events.Event `json:"activity,omitempty"`
+	Metrics               *TurnMetrics   `json:"metrics,omitempty"`
 }
 
 // BuildSidebar assembles the project/session tree for the TUI left sidebar.
-func BuildSidebar(currentRoot string, currentLocal bool, currentSessionID string) (config.ProjectsSidebar, error) {
+func BuildSidebar(currentRoot string, currentSessionID string) (config.ProjectsSidebar, error) {
 	currentRoot = cleanAbs(currentRoot)
-	projects, err := config.VisibleProjects(currentRoot, currentLocal)
-	if err != nil {
-		return config.ProjectsSidebar{}, err
-	}
-
 	out := config.ProjectsSidebar{
 		CurrentProject: currentRoot,
 		CurrentSession: strings.TrimSpace(currentSessionID),
 	}
 
-	for _, project := range projects {
-		sessions, err := listSessionsForRoot(project.Root)
-		if err != nil {
-			continue
+	appendGroup := func(dst *[]config.ProjectSessions, entries []config.ProjectEntry, allowEmpty bool) {
+		for _, project := range entries {
+			sessions, err := listSessionsForRoot(project.Root)
+			if err != nil {
+				continue
+			}
+			if len(sessions) == 0 && !allowEmpty {
+				continue
+			}
+			*dst = append(*dst, config.ProjectSessions{
+				Root:     project.Root,
+				Name:     project.Name,
+				Local:    project.Local,
+				Sessions: sessions,
+			})
 		}
-		if len(sessions) == 0 {
-			continue
-		}
-		out.Projects = append(out.Projects, config.ProjectSessions{
-			Root:     project.Root,
-			Name:     project.Name,
-			Local:    project.Local,
-			Sessions: sessions,
-		})
 	}
+
+	folders, err := config.VisibleFolders(currentRoot)
+	if err != nil {
+		return config.ProjectsSidebar{}, err
+	}
+	appendGroup(&out.Folders, folders, true)
+
+	projects, err := config.VisibleProjects(currentRoot)
+	if err != nil {
+		return config.ProjectsSidebar{}, err
+	}
+	appendGroup(&out.Projects, projects, false)
+
 	return out, nil
 }
 
@@ -107,7 +118,11 @@ func TurnsFromMessages(messages []provider.Message) []ChatTurn {
 			if pendingUser == "" || content == "" {
 				continue
 			}
-			turns = append(turns, ChatTurn{User: pendingUser, Assistant: content})
+			turn := ChatTurn{User: pendingUser, Assistant: content}
+			if chrome, ok := DecodeActorChromeName(msg.Name); ok {
+				turn.AssistantAuthorLabel = chrome.AuthorLabel()
+			}
+			turns = append(turns, turn)
 			pendingUser = ""
 		}
 	}
@@ -134,6 +149,9 @@ func listSessionsForRoot(root string) ([]config.SessionEntry, error) {
 		}
 		summary, err := loadSummary(filepath.Join(dir, entry.Name()))
 		if err != nil {
+			continue
+		}
+		if summary.Messages == 0 {
 			continue
 		}
 		out = append(out, config.SessionEntry{

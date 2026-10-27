@@ -7,8 +7,9 @@ import (
 )
 
 func TestMemoryKindsSearchPaths(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	root := t.TempDir()
-	projectFile := filepath.Join(root, ".taiji", "memory-kinds.yaml")
+	projectFile := filepath.Join(RuntimeDir(root), memoryKindsFile)
 	if err := os.MkdirAll(filepath.Dir(projectFile), 0o755); err != nil {
 		t.Fatal(err)
 	}

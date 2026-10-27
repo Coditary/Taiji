@@ -174,6 +174,7 @@ type mcpToolDef struct {
 type ServerTool interface {
 	tools.Tool
 	MCPServerName() string
+	MCPLocalToolName() string
 }
 
 type mcpTool struct {
@@ -182,8 +183,13 @@ type mcpTool struct {
 	def    mcpToolDef
 }
 
-func (t *mcpTool) Name() string          { return t.def.Name }
+func (t *mcpTool) Name() string { return tools.Namespaced(t.server, t.def.Name) }
+
 func (t *mcpTool) MCPServerName() string { return t.server }
+
+func (t *mcpTool) MCPLocalToolName() string { return t.def.Name }
+
+func (t *mcpTool) ToolNamespace() string { return t.server }
 func (t *mcpTool) Description() string   { return t.def.Description }
 func (t *mcpTool) Parameters() map[string]any {
 	if t.def.InputSchema != nil {

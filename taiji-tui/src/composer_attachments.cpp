@@ -1,5 +1,9 @@
 #include "composer_attachments.hpp"
 
+#include <tuinator/render/graphics_encode.hpp>
+
+#include <filesystem>
+#include <fstream>
 #include <sstream>
 
 namespace {
@@ -16,7 +20,34 @@ void append_block(std::ostringstream& out, const std::string& title, const std::
 
 } // namespace
 
-std::string composer_build_outgoing_message(const std::string& user_text, const std::vector<ComposerChip>& chips) {
+std::string composer_persist_image_attachment(const ComposerImageAttachment& image, const std::string& work_dir) {
+    if (image.image.empty() || work_dir.empty()) {
+        return {};
+    }
+
+    const std::filesystem::path dir = std::filesystem::path(work_dir) / ".taiji" / "composer-images";
+    std::error_code ec;
+    std::filesystem::create_directories(dir, ec);
+    const std::filesystem::path file = dir / (image.id + ".png");
+    const std::vector<std::uint8_t> png = tuinator::rgba_to_png(image.image);
+    if (png.empty()) {
+        return {};
+    }
+
+    std::ofstream out(file, std::ios::binary);
+    if (!out) {
+        return {};
+    }
+    out.write(reinterpret_cast<const char*>(png.data()), static_cast<std::streamsize>(png.size()));
+    if (!out.good()) {
+        return {};
+    }
+    return file.string();
+}
+
+std::string composer_build_outgoing_message(const std::string& user_text, const std::vector<ComposerChip>& chips,
+                                            const std::vector<ComposerImageAttachment>& images,
+                                            const std::string& work_dir) {
     std::ostringstream prefix;
     for (const ComposerChip& chip : chips) {
         switch (chip.kind) {
@@ -32,6 +63,9 @@ std::string composer_build_outgoing_message(const std::string& user_text, const 
             break;
         case ComposerChipKind::Skill:
             prefix << "[Skill: " << chip.label << "]\n";
+            break;
+        case ComposerChipKind::Context:
+            prefix << "[Context: " << chip.label << "]\n";
             break;
         case ComposerChipKind::File:
             prefix << "[File: " << chip.label << "]\n";
@@ -71,12 +105,41 @@ std::string composer_build_outgoing_message(const std::string& user_text, const 
         }
     }
 
+    std::ostringstream image_blocks;
+    for (const ComposerImageAttachment& attachment : images) {
+        if (attachment.image.empty()) {
+            continue;
+        }
+        if (!image_blocks.str().empty()) {
+            image_blocks << "\n\n";
+        }
+        const std::string saved =
+            attachment.source_path.empty() ? composer_persist_image_attachment(attachment, work_dir)
+                                           : attachment.source_path;
+        image_blocks << "### Image: " << attachment.label << " (" << attachment.image.width() << "×"
+                     << attachment.image.height() << ")\n\n";
+        if (!saved.empty()) {
+            image_blocks << "![[" << attachment.label << "]](" << saved << ")";
+        }
+    }
+
     const std::string pre = prefix.str();
-    if (pre.empty()) {
-        return user_text;
+    const std::string images_text = image_blocks.str();
+    std::string body;
+    if (!pre.empty()) {
+        body = pre;
     }
-    if (user_text.empty()) {
-        return pre;
+    if (!images_text.empty()) {
+        if (!body.empty()) {
+            body += "\n\n";
+        }
+        body += images_text;
     }
-    return pre + "\n\n" + user_text;
+    if (!user_text.empty()) {
+        if (!body.empty()) {
+            body += "\n\n";
+        }
+        body += user_text;
+    }
+    return body;
 }

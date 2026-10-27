@@ -25,6 +25,12 @@ type fakeMCPTool struct {
 
 func (t fakeMCPTool) MCPServerName() string { return t.server }
 
+func (t fakeMCPTool) MCPLocalToolName() string { return t.fakeTool.name }
+
+func (t fakeMCPTool) ToolNamespace() string { return t.server }
+
+func (t fakeMCPTool) Name() string { return tools.Namespaced(t.server, t.fakeTool.name) }
+
 func TestMCPServerOf(t *testing.T) {
 	reg := tools.NewRegistry()
 	reg.Register(fakeTool{name: "list_dir"})
@@ -33,7 +39,7 @@ func TestMCPServerOf(t *testing.T) {
 	if server, ok := mcpServerOf(reg, "list_dir"); ok || server != "" {
 		t.Fatalf("builtin tool: expected no MCP, got server=%q ok=%v", server, ok)
 	}
-	if server, ok := mcpServerOf(reg, "query_docs"); !ok || server != "context7" {
+	if server, ok := mcpServerOf(reg, "context7__query_docs"); !ok || server != "context7" {
 		t.Fatalf("mcp tool: expected context7, got server=%q ok=%v", server, ok)
 	}
 	if server, ok := mcpServerOf(reg, "missing"); ok || server != "" {

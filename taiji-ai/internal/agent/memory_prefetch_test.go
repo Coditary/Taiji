@@ -109,3 +109,27 @@ func TestMemoryPrefetchRecallUserName(t *testing.T) {
 		t.Fatalf("prefetch goal missing recalled name: %q", goal)
 	}
 }
+
+func TestRunMemoryStoreFallbackDirect(t *testing.T) {
+	root := t.TempDir()
+	cfg := &taijicfg.Config{Root: root, Memory: taijicfg.DefaultMemoryConfig()}
+	cfg.Memory.GlobalDir = filepath.Join(root, "global-memory")
+	rt, err := runtime.New(context.Background(), cfg, runtime.Options{Local: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rt.Close()
+
+	tracker := newMemoryRunTracker()
+	var remembered bool
+	runMemoryStoreFallback(context.Background(), RunRequest{
+		Memory: rt.Memory,
+	}, "My name is Alice", tracker, func(ev events.Event) {
+		if ev.ToolName == "memory_remember" && ev.Type == events.TypeObservation {
+			remembered = true
+		}
+	})
+	if !tracker.storedMemory() || !remembered {
+		t.Fatalf("stored=%v remembered=%v", tracker.storedMemory(), remembered)
+	}
+}

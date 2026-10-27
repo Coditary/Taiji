@@ -41,6 +41,8 @@ class ComposerPalette : public tuinator::Widget {
     void layout(tuinator::Rect bounds) override;
     void paint(tuinator::PaintContext& ctx) const override;
     bool handle_event(const tuinator::Event& event) override;
+    /// Key handling while the composer input stays focused (arrow keys, Enter, filter typing).
+    bool handle_keypress(const tuinator::KeyPress& key);
     tuinator::Widget* hit_test(tuinator::Point point) override;
     bool captures_keyboard() const override { return open_; }
 
@@ -55,6 +57,7 @@ class ComposerPalette : public tuinator::Widget {
     std::vector<int> visible_;
     std::string filter_;
     int selected_ = 0;
+    int list_scroll_ = 0;
     int flyout_parent_ = -1;
     bool open_ = false;
     int open_anim_ms_ = 0;

@@ -1,0 +1,19 @@
+---
+description: When the user reports or criticizes a bug — reproduce, failing test first, then fix
+alwaysApply: true
+---
+
+# User-reported issues: reproduce → red test → fix
+
+When the user **criticizes behavior**, reports a **bug**, or says something **looks wrong** (UI, logic, i18n, etc.):
+
+1. **Reproduce first** — try to replicate in code/tests/tools (e.g. Tuinator `AppDriver`, component scene, `check_locale_usage`, manual steps). Do not jump to a fix before you can show the issue exists.
+2. **If you can reproduce** — add an automated test that encodes the **correct** expectation (what should be true after the fix). Name and comment the test so the criticized behavior is obvious.
+3. **Test must be red first** — run the test before changing production code.
+   - **Red** → bug reproduced; proceed to fix until green.
+   - **Green without a fix** → test is wrong (wrong scene, selector, assertion, or environment); fix the test setup, not the product.
+4. **Then fix** the minimal production change so the test turns **green**. Re-run the relevant suite.
+
+Prefer existing Taiji patterns: `taiji-tui/tests/` (components, integration, i18n), `test_id` + `analyze_selector` for paint/layout, `scripts/check_locale_usage.py` for strings.
+
+If reproduction is impossible (needs hardware, external service, flaky PTY), say what you tried and what blocked you; only then ask the user or suggest a narrower repro.

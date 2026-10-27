@@ -58,7 +58,10 @@
     "skill": "技能",
     "decision": "决定",
     "question": "问题",
-    "generating_response": "正在生成响应......"
+    "generating_response": "正在生成响应......",
+    "trace": {
+      "explored_prefix": "Explored "
+    }
   },
   "metrics": {
     "tok_per_sec": "{value} 托克/秒"
@@ -93,6 +96,7 @@
     "wait_before_branch": "...",
     "branch_failed": "...",
     "branch_failed_prefix": "...",
-    "branched": "..."
+    "branched": "...",
+    "response_ready_in_session": "{name} 中的回复已就绪"
   }
 }

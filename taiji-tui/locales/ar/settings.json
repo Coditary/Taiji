@@ -278,8 +278,10 @@
       "flat": "شقة"
     },
     "tool_call_density": {
-      "compact": "مضغوط",
-      "detailed": "مفصل"
+      "inline": "Inline",
+      "subtree": "Subtree",
+      "clustered": "Clustered",
+      "ignore": "Ignore"
     },
     "presentation": {
       "markdown": "تخفيض السعر",

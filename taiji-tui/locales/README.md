@@ -27,7 +27,10 @@ Before embed, CMake runs:
 
 ```bash
 python3 scripts/check_locales.py locales/
+python3 scripts/check_locale_usage.py locales/
 ```
+
+`check_locale_usage.py` scans `src/` for `ui_tr` / `ui_shell` string literals and fails if any key is missing from the English master. Use `--warn-fallbacks` to list `ui_shell(...).empty() ? "English"` patterns that bypass the catalog when a key is missing.
 
 - **Fails the build** (`--require-complete`) only for `unknown_key` or **empty** required strings (`""`). Use `...` for “not translated yet” (does not fail the build; runtime falls back to English). Do not use `""` for pending work — that blocks the build and shows blank text in the TUI.
 - Writes `key-catalog.json` and `i18n-status.json`.

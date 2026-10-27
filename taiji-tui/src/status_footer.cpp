@@ -1,5 +1,6 @@
 #include "status_footer.hpp"
 
+#include "ui_test_ids.hpp"
 #include "ui_layout.hpp"
 #include "ui_navigation.hpp"
 #include "ui_theme.hpp"
@@ -92,7 +93,9 @@ int draw_footer_segments(tuinator::PaintContext& ctx, const tuinator::Widget& wi
 } // namespace
 
 StatusFooter::StatusFooter(tuinator::Style path_style, tuinator::Style status_style)
-    : path_style_(path_style), status_style_(status_style) {}
+    : path_style_(path_style), status_style_(status_style) {
+    set_test_id(taiji::ui::test_id::kStatusFooter);
+}
 
 void StatusFooter::set_path(std::string text) {
     if (path_ == text) {

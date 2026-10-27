@@ -73,6 +73,7 @@ func newRunCmd(app *App) *cobra.Command {
 				Memory:     rt.Memory,
 				MCP:              rt.MCP,
 				DecisionProfiles: rt.DecisionProfiles,
+				PackIndex:        rt.PackIndex,
 				Hooks:            rt.Hooks,
 				Questions:        rt.Questions,
 				WorkDir:    workDir,

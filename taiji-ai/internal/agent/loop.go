@@ -12,6 +12,7 @@ import (
 	"github.com/coditary/taiji/internal/events"
 	"github.com/coditary/taiji/internal/hooks"
 	"github.com/coditary/taiji/internal/memory"
+	"github.com/coditary/taiji/internal/packs"
 	"github.com/coditary/taiji/internal/question"
 	"github.com/coditary/taiji/internal/provider"
 	"github.com/coditary/taiji/internal/rag"
@@ -20,12 +21,15 @@ import (
 	"github.com/coditary/taiji/internal/skills"
 	"github.com/coditary/taiji/internal/tools"
 	"github.com/coditary/taiji/internal/tools/builtin"
+	"github.com/coditary/taiji/internal/tools/dynamic"
 	"github.com/coditary/taiji/internal/tools/mcp"
 )
 
 // RunRequest configures a single agent run.
 type RunRequest struct {
 	Goal               string
+	// DisplayGoal is the raw composer text (may include @-mentions); persisted for the TUI.
+	DisplayGoal        string
 	ProviderID         string
 	SkillNames         []string
 	Session            *session.Session
@@ -38,6 +42,7 @@ type RunRequest struct {
 	Memory             *memory.Service
 	MCP                *mcp.Bridge
 	DecisionProfiles   *decisions.Loader
+	PackIndex          *packs.Index
 	Hooks              *hooks.Runner
 	Questions          *question.Service
 	WorkDir            string
@@ -121,7 +126,7 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 		if shouldUseThoughtChain(req.Goal, cotMode) {
 			systemPrompt += "\n\n" + chainOnePerMessageAppendix()
 		}
-		if appendix, err := loadAgentsAppendix(req.WorkDir); err != nil {
+		if appendix, err := loadAgentsAppendix(projectWorkspaceRoot(req)); err != nil {
 			return nil, err
 		} else if appendix != "" {
 			systemPrompt += "\n\n" + appendix
@@ -171,7 +176,8 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 		messages = append(messages, req.Session.State.Messages...)
 	}
 
-	toolDefs := filterProviderTools(req.Tools, agentRT)
+	toolReg := dynamic.ExtendRegistry(req.Tools, req.Session, req.WorkDir)
+	toolDefs := filterProviderTools(toolReg, agentRT)
 	memTracker := newMemoryRunTracker()
 	continueCfg := resolveContinueConfig(req.Config)
 	tagCoT := usesTaggedCoT(cotMode)
@@ -193,6 +199,9 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 		sessionID = req.Session.State.ID
 	}
 	ctx = session.WithRunContext(ctx, agentRT)
+	if req.Session != nil {
+		ctx = session.WithActiveSession(ctx, req.Session)
+	}
 	ctx = builtin.WithToolSessionID(ctx, sessionID)
 
 	if req.Questions != nil {
@@ -230,6 +239,10 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 	} else {
 		routed = runTurnRouter(ctx, req, goal, emit)
 	}
+	packResult := runPackAssembly(ctx, req, goal, emit)
+	if packResult.systemAppendix != "" {
+		systemPrompt += "\n\n" + packResult.systemAppendix
+	}
 	if routed.plan.Action == router.ActionStop {
 		answer := routed.stopAnswer
 		emit(events.Event{Type: events.TypeDone, Step: 1, Text: answer})
@@ -238,6 +251,7 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 				provider.Message{Role: provider.RoleUser, Content: goal},
 				provider.Message{Role: provider.RoleAssistant, Content: answer},
 			)
+			session.StampLastAssistantActor(messages, req.Session.State.Settings)
 			req.Session.State.Messages = messages
 			req.Session.State.Provider = providerID
 			_ = req.Session.Save()
@@ -261,13 +275,30 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 		}
 	}
 	messages[0].Content = systemPrompt
+	messages = injectFewShotExamples(messages, req.Session)
 	if routed.prefetch.stored {
 		memTracker.rememberCalls++
 	}
 	if routed.prefetch.recalled {
 		memTracker.autoRecalls++
 	}
-	messages = append(messages, provider.Message{Role: provider.RoleUser, Content: routed.goal})
+	userContent := routed.goal
+	if pre := strings.TrimSpace(packResult.userPreface); pre != "" {
+		if userContent == "" {
+			userContent = pre
+		} else {
+			userContent = pre + "\n\n" + userContent
+		}
+	}
+	messages = append(messages, provider.Message{Role: provider.RoleUser, Content: userContent})
+	if req.Session != nil && !req.SubRun.Enabled {
+		if focus := session.BuildTurnSceneReminder(req.WorkDir, req.Goal, req.Session.State.Settings); focus != "" {
+			messages = append(messages, provider.Message{Role: provider.RoleSystem, Content: focus})
+		}
+		if graphCtx := req.Session.BuildGraphContextAppendix(req.WorkDir); graphCtx != "" {
+			messages = append(messages, provider.Message{Role: provider.RoleSystem, Content: graphCtx})
+		}
+	}
 
 	if shouldRunPlanPass(req.Goal, cotMode) {
 		plan, err := runPlanPass(ctx, p, messages, req, 1, emit, metrics)
@@ -320,7 +351,12 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 			stepMessages = appendHookContext(messages, ctxData.AdditionalSystem)
 		}
 
-		messages, resp, err = completeWithContinues(ctx, p, stepMessages, toolDefs, req, step, continueCfg, completeOptions{
+		interactionMode := sessionInteractionMode(req.Session, agentRT)
+		stepToolDefs := applyInteractionModeTools(toolDefs, interactionMode)
+		if strings.EqualFold(interactionMode, "plan") {
+			stepMessages = appendHookContext(stepMessages, "Plan mode: write a structured plan only. Do not call tools except switch_agent_mode to return to agent mode.")
+		}
+		messages, resp, err = completeWithContinues(ctx, p, stepMessages, stepToolDefs, req, step, continueCfg, completeOptions{
 			useTaggedCoT:  tagCoT,
 			allowContinue: shouldUseThoughtChain(req.Goal, cotMode),
 		}, emit, metrics)
@@ -340,11 +376,11 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 		}
 
 		var skillObservations []string
-		outcomes := executeToolCalls(ctx, req.Hooks, req.Tools, hookEnvFor(req, step, goal), resp.ToolCalls, messages)
+		outcomes := executeToolCalls(ctx, req.Hooks, toolReg, hookEnvFor(req, step, goal), resp.ToolCalls, messages)
 		for i, tc := range resp.ToolCalls {
 			outcome := outcomes[i]
 			metrics.AddToolExecution(outcome.durationMs)
-			mcpServer, isMCP := mcpServerOf(req.Tools, tc.Name)
+			mcpServer, isMCP := mcpServerOf(toolReg, tc.Name)
 			isSkill := tc.Name == skills.InvokeSkillToolName
 			out := outcome.text
 			if !outcome.duplicate {
@@ -390,6 +426,16 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 			} else if isAskUserTool(tc.Name) {
 				emitAskUserToolActivity(emit, step, sessionID, tc, outcome)
 			} else {
+				var obsData map[string]any
+				var obsDiff string
+				if !outcome.duplicate {
+					obsData = outcome.result.Data
+					if obsData != nil {
+						if d, ok := obsData["diff"].(string); ok {
+							obsDiff = d
+						}
+					}
+				}
 				emit(events.Event{
 					Type:      events.TypeToolCall,
 					Step:      step,
@@ -408,6 +454,8 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 					DurationMs: outcome.durationMs,
 					IsMCP:      isMCP,
 					MCPServer:  mcpServer,
+					Data:       obsData,
+					Diff:       obsDiff,
 				})
 			}
 			messages = append(messages, provider.Message{
@@ -433,7 +481,14 @@ func Run(ctx context.Context, req RunRequest) (*RunResult, error) {
 	}
 
 	if req.Session != nil {
-		req.Session.State.Messages = messages
+		persisted := session.SanitizeStoredMessages(messages, req.Session.State.Settings)
+		displayGoal := strings.TrimSpace(req.DisplayGoal)
+		if displayGoal == "" {
+			displayGoal = strings.TrimSpace(req.Goal)
+		}
+		session.ApplyDisplayGoalToLastUser(persisted, displayGoal, strings.TrimSpace(userContent))
+		session.StampLastAssistantActor(persisted, req.Session.State.Settings)
+		req.Session.State.Messages = persisted
 		req.Session.State.Provider = providerID
 		if err := req.Session.Save(); err != nil {
 			return nil, err
@@ -478,9 +533,31 @@ func mcpServerOf(reg *tools.Registry, name string) (string, bool) {
 		return "", false
 	}
 	if st, ok := t.(mcp.ServerTool); ok {
-		return st.MCPServerName(), true
+		server := strings.TrimSpace(st.MCPServerName())
+		if server == "" {
+			return "", false
+		}
+		return server, true
 	}
 	return "", false
+}
+
+func mcpLocalToolName(reg *tools.Registry, registered string) string {
+	if reg == nil {
+		return registered
+	}
+	t, ok := reg.Get(registered)
+	if !ok {
+		return registered
+	}
+	st, ok := t.(mcp.ServerTool)
+	if !ok {
+		return registered
+	}
+	if local := strings.TrimSpace(st.MCPLocalToolName()); local != "" {
+		return local
+	}
+	return registered
 }
 
 func toProviderTools(defs []tools.Definition) []provider.ToolDef {
@@ -488,6 +565,7 @@ func toProviderTools(defs []tools.Definition) []provider.ToolDef {
 	for _, d := range defs {
 		out = append(out, provider.ToolDef{
 			Name:        d.Name,
+			Namespace:   d.Namespace,
 			Description: d.Description,
 			Parameters:  d.Parameters,
 		})
@@ -495,8 +573,20 @@ func toProviderTools(defs []tools.Definition) []provider.ToolDef {
 	return out
 }
 
-func loadAgentsAppendix(workDir string) (string, error) {
-	dir := strings.TrimSpace(workDir)
+func projectWorkspaceRoot(req RunRequest) string {
+	if wd := strings.TrimSpace(req.WorkDir); wd != "" {
+		return wd
+	}
+	if req.Config != nil {
+		if root := strings.TrimSpace(req.Config.Root); root != "" {
+			return root
+		}
+	}
+	return ""
+}
+
+func loadAgentsAppendix(projectRoot string) (string, error) {
+	dir := strings.TrimSpace(projectRoot)
 	if dir == "" {
 		wd, err := os.Getwd()
 		if err != nil {

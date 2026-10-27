@@ -1,5 +1,7 @@
 #include "settings_modal.hpp"
 
+#include "ui_test_ids.hpp"
+#include "ui_chat_spacing.hpp"
 #include "ui_locale.hpp"
 
 #include <libtaiji.h>
@@ -189,6 +191,42 @@ std::vector<std::string> json_extract_object_strings(const std::string& json, co
     return out;
 }
 
+std::vector<int> json_extract_int_array(const std::string& json, const std::string& key) {
+    const std::string needle = "\"" + key + "\":";
+    const std::size_t pos = json.find(needle);
+    if (pos == std::string::npos) {
+        return {};
+    }
+    std::size_t i = pos + needle.size();
+    while (i < json.size() && std::isspace(static_cast<unsigned char>(json[i]))) {
+        ++i;
+    }
+    if (i >= json.size() || json[i] != '[') {
+        return {};
+    }
+    ++i;
+    std::vector<int> out;
+    while (i < json.size()) {
+        while (i < json.size() && (std::isspace(static_cast<unsigned char>(json[i])) || json[i] == ',')) {
+            ++i;
+        }
+        if (i >= json.size() || json[i] == ']') {
+            break;
+        }
+        const std::size_t start = i;
+        while (i < json.size() && json[i] != ',' && json[i] != ']') {
+            ++i;
+        }
+        const std::string token = json.substr(start, i - start);
+        try {
+            out.push_back(std::stoi(token));
+        } catch (...) {
+            out.push_back(0);
+        }
+    }
+    return out;
+}
+
 std::vector<std::string> json_extract_string_array(const std::string& json, const std::string& key) {
     const std::string needle = "\"" + key + "\":";
     const std::size_t pos = json.find(needle);
@@ -340,7 +378,15 @@ bool settings_parse_draft(const std::string& json, SettingsModal::Draft& out) {
     }
     out.skills_available = json_extract_string_array(json, "skills_available");
     out.skills_allow = json_extract_string_array(json, "skills_allow");
+    out.packs_available = json_extract_string_array(json, "packs_available");
+    out.packs_node_counts = json_extract_int_array(json, "packs_node_counts");
+    out.packs_allow = json_extract_string_array(json, "packs_allow");
     out.skills_deny = json_extract_string_array(json, "skills_deny");
+    out.builtin_tools_available = json_extract_string_array(json, "builtin_tools_available");
+    out.builtin_tools_deny = json_extract_string_array(json, "builtin_tools_deny");
+    out.stream_pacing = json_extract_string(json, "stream_pacing");
+    out.council_enabled = json_extract_bool(json, "council_enabled");
+    out.council_actors = json_extract_string_array(json, "council_actors");
     out.decisions_enabled = json_extract_bool(json, "decisions_enabled");
     out.memory_enabled = json_extract_bool(json, "memory_enabled");
     out.project_default_provider = json_extract_string(json, "project_default_provider");
@@ -375,7 +421,41 @@ bool settings_parse_draft(const std::string& json, SettingsModal::Draft& out) {
     }
     out.tool_call_density = json_extract_string(json, "tool_call_density");
     if (out.tool_call_density.empty()) {
-        out.tool_call_density = "detailed";
+        out.tool_call_density = "subtree";
+    }
+    if (out.tool_call_density == "detailed") {
+        out.tool_call_density = "subtree";
+    }
+    if (out.tool_call_density == "compact") {
+        out.tool_call_density = "clustered";
+    }
+    out.file_diff_layout = json_extract_string(json, "file_diff_layout");
+    if (out.file_diff_layout.empty()) {
+        out.file_diff_layout = "stacked";
+    }
+    out.activity_spacing_lines =
+        ui_clamp_spacing_lines(static_cast<int>(json_extract_int(json, "activity_spacing_lines", 1)));
+    out.message_spacing_lines =
+        ui_clamp_spacing_lines(static_cast<int>(json_extract_int(json, "message_spacing_lines", 1)));
+    out.activity_show_pipeline_title = json_extract_bool(json, "activity_show_pipeline_title");
+    if (json.find("\"activity_show_pipeline_title\":") == std::string::npos) {
+        out.activity_show_pipeline_title = true;
+    }
+    out.tool_expand_show_parameters = json_extract_bool(json, "tool_expand_show_parameters");
+    if (json.find("\"tool_expand_show_parameters\":") == std::string::npos) {
+        out.tool_expand_show_parameters = true;
+    }
+    out.tool_expand_show_result = json_extract_bool(json, "tool_expand_show_result");
+    if (json.find("\"tool_expand_show_result\":") == std::string::npos) {
+        out.tool_expand_show_result = true;
+    }
+    out.tool_expand_args_format = json_extract_string(json, "tool_expand_args_format");
+    if (out.tool_expand_args_format.empty()) {
+        out.tool_expand_args_format = "pretty";
+    }
+    out.tool_expand_result_format = json_extract_string(json, "tool_expand_result_format");
+    if (out.tool_expand_result_format.empty()) {
+        out.tool_expand_result_format = "text";
     }
     out.turn_metrics_show_actions = json_extract_bool(json, "turn_metrics_show_actions");
     if (json.find("\"turn_metrics_show_actions\":") == std::string::npos) {
@@ -488,7 +568,9 @@ bool settings_json_has_error(const std::string& json) {
     return !json_extract_string(json, "error").empty();
 }
 
-SettingsModal::SettingsModal(tuinator::Theme theme) : theme_(std::move(theme)) {}
+SettingsModal::SettingsModal(tuinator::Theme theme) : theme_(std::move(theme)) {
+    set_test_id(taiji::ui::test_id::kSettingsModal);
+}
 
 void SettingsModal::set_handle(uint64_t handle) { handle_ = handle; }
 
@@ -567,6 +649,19 @@ std::string SettingsModal::build_apply_json() const {
     json_escape_append(body, draft_.ui_corners);
     body += ",\"tool_call_density\":";
     json_escape_append(body, draft_.tool_call_density);
+    body += ",\"file_diff_layout\":";
+    json_escape_append(body, draft_.file_diff_layout);
+    body += ",\"activity_spacing_lines\":";
+    body += std::to_string(ui_clamp_spacing_lines(draft_.activity_spacing_lines));
+    body += ",\"message_spacing_lines\":";
+    body += std::to_string(ui_clamp_spacing_lines(draft_.message_spacing_lines));
+    body += std::string(",\"activity_show_pipeline_title\":") + (draft_.activity_show_pipeline_title ? "true" : "false");
+    body += std::string(",\"tool_expand_show_parameters\":") + (draft_.tool_expand_show_parameters ? "true" : "false");
+    body += std::string(",\"tool_expand_show_result\":") + (draft_.tool_expand_show_result ? "true" : "false");
+    body += ",\"tool_expand_args_format\":";
+    json_escape_append(body, draft_.tool_expand_args_format.empty() ? "pretty" : draft_.tool_expand_args_format);
+    body += ",\"tool_expand_result_format\":";
+    json_escape_append(body, draft_.tool_expand_result_format.empty() ? "text" : draft_.tool_expand_result_format);
     body += std::string(",\"turn_metrics_show_actions\":") + (draft_.turn_metrics_show_actions ? "true" : "false");
     body += std::string(",\"code_block_wrap\":") + (draft_.code_block_wrap ? "true" : "false");
     body += ",\"chat_width\":";
@@ -632,6 +727,30 @@ std::string SettingsModal::build_apply_json() const {
             body += ",";
         }
         json_escape_append(body, draft_.skills_deny[i]);
+    }
+    body += "],\"packs_allow\":[";
+    for (std::size_t i = 0; i < draft_.packs_allow.size(); ++i) {
+        if (i > 0) {
+            body += ",";
+        }
+        json_escape_append(body, draft_.packs_allow[i]);
+    }
+    body += "],\"builtin_tools_deny\":[";
+    for (std::size_t i = 0; i < draft_.builtin_tools_deny.size(); ++i) {
+        if (i > 0) {
+            body += ",";
+        }
+        json_escape_append(body, draft_.builtin_tools_deny[i]);
+    }
+    body += "],\"stream_pacing\":";
+    json_escape_append(body, draft_.stream_pacing);
+    body += std::string(",\"council_enabled\":") + (draft_.council_enabled ? "true" : "false");
+    body += ",\"council_actors\":[";
+    for (std::size_t i = 0; i < draft_.council_actors.size(); ++i) {
+        if (i > 0) {
+            body += ",";
+        }
+        json_escape_append(body, draft_.council_actors[i]);
     }
     body += "],\"stt_enabled\":";
     body += draft_.stt_enabled ? "true" : "false";

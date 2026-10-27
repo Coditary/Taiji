@@ -9,6 +9,11 @@
     "settings_footer_help": " Esc: schließen   Tab: Bereich   Leertaste/Enter: ändern   <-/->: durchblättern",
     "settings_footer_apply": " Strg+S: übernehmen "
   },
+  "actor_picker": {
+    "title": "Actors",
+    "filter_placeholder": "Actors filtern…",
+    "no_matches": "(keine Actors — Templates fehlen?)"
+  },
   "theme_picker": {
     "title": "Farbthemen",
     "filter_placeholder": "Farbthemen filtern...",

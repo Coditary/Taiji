@@ -1,5 +1,6 @@
 #include "chat_input_bar.hpp"
 
+#include "ui_test_ids.hpp"
 #include "speech_mic_button.hpp"
 #include "ui_theme.hpp"
 
@@ -21,6 +22,7 @@ tuinator::Rect chat_stream_inner_abs(const tuinator::Rect& host_bounds) {
 } // namespace
 
 void ChatInputBar::set_composer(std::unique_ptr<tuinator::Widget> composer) {
+    set_test_id(taiji::ui::test_id::kChatInputBar);
     auto column = std::make_unique<CenteredChatColumn>(std::move(composer));
     column->set_apply_top_pad(false);
     column_ = std::move(column);
@@ -38,14 +40,18 @@ void ChatInputBar::set_on_layout(std::function<void()> callback) {
 
 void ChatInputBar::set_mic(std::unique_ptr<SpeechMicButton> mic) {
     mic_ = std::move(mic);
+    if (mic_ != nullptr) {
+        mic_->set_test_id(taiji::ui::test_id::kSpeechMic);
+    }
 }
 
 tuinator::Size ChatInputBar::preferred_size() const {
+    const int width = bounds_.width > 0 ? bounds_.width : kChatStreamMaxCols;
     int height = 3;
     if (column_ != nullptr) {
         height = std::max(height, column_->preferred_size().height);
     }
-    return {0, height};
+    return {width, height};
 }
 
 void ChatInputBar::layout(tuinator::Rect bounds) {
@@ -107,4 +113,16 @@ tuinator::Widget* ChatInputBar::hit_test_focusable(tuinator::Point point) {
         return column_->hit_test_focusable(point);
     }
     return nullptr;
+}
+
+void ChatInputBar::for_each_descendant(const std::function<void(tuinator::Widget*)>& visitor) {
+    if (column_ != nullptr) {
+        visitor(column_.get());
+        column_->for_each_descendant(visitor);
+    }
+    if (mic_ != nullptr) {
+        visitor(mic_.get());
+        mic_->for_each_descendant(visitor);
+    }
+    Widget::for_each_descendant(visitor);
 }

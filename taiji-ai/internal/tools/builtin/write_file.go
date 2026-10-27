@@ -11,7 +11,8 @@ import (
 	"github.com/coditary/taiji/internal/tools"
 )
 
-const writeFileDiffMaxLines = 20
+// UI shows the unified diff for new/updated files; keep a generous cap for whole-file writes.
+const writeFileDiffMaxLines = 200
 
 type WriteFile struct{}
 

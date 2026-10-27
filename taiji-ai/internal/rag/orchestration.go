@@ -54,6 +54,9 @@ func ShouldAutoIndexPath(path string) bool {
 	if path == "" {
 		return false
 	}
+	if isPackMarkdownPath(path) {
+		return true
+	}
 	clean := filepath.ToSlash(filepath.Clean(path))
 	for _, part := range autoIndexSkipDirParts {
 		if strings.Contains(clean, "/"+part+"/") || strings.HasPrefix(clean, part+"/") {
@@ -76,7 +79,21 @@ func AutoIndexFile(ctx context.Context, s *Service, path string) (*IndexResult, 
 	if !ShouldAutoIndexPath(path) {
 		return nil, nil
 	}
-	return s.Index(ctx, IndexRequest{SourcePaths: []string{path}})
+	req := IndexRequest{SourcePaths: []string{path}}
+	if isPackMarkdownPath(path) {
+		req.Collection = "context-packs"
+	}
+	return s.Index(ctx, req)
+}
+
+func isPackMarkdownPath(path string) bool {
+	path = filepath.ToSlash(filepath.Clean(strings.TrimSpace(path)))
+	if !strings.HasSuffix(strings.ToLower(path), ".md") {
+		return false
+	}
+	return strings.Contains(path, "/.taiji/packs/") ||
+		strings.Contains(path, "/.config/taiji/packs/") ||
+		strings.HasPrefix(path, ".taiji/packs/")
 }
 
 // FormatAutoIndexNote returns a short observation suffix for tool output.

@@ -278,8 +278,10 @@
       "flat": "フラット"
     },
     "tool_call_density": {
-      "compact": "簡潔",
-      "detailed": "詳細"
+      "inline": "Inline",
+      "subtree": "Subtree",
+      "clustered": "Clustered",
+      "ignore": "Ignore"
     },
     "presentation": {
       "markdown": "マークダウン",

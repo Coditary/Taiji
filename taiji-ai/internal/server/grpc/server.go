@@ -94,6 +94,7 @@ func (s *Server) Run(req *taijiv1.RunRequest, stream taijiv1.TaijiAgent_RunServe
 		Memory:     s.rt.Memory,
 		MCP:              s.rt.MCP,
 		DecisionProfiles: s.rt.DecisionProfiles,
+		PackIndex:        s.rt.PackIndex,
 		Hooks:            s.rt.Hooks,
 		Questions:        s.rt.Questions,
 		EventHandler: func(ev events.Event) {

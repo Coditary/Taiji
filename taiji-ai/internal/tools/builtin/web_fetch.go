@@ -73,11 +73,15 @@ func (WebFetch) Run(ctx context.Context, args map[string]any) (string, error) {
 	ct := strings.ToLower(resp.Header.Get("Content-Type"))
 	text := string(body)
 	if strings.Contains(ct, "html") || looksLikeHTML(text) {
-		md, err := htmlToMarkdown(text)
-		if err != nil {
-			text = stripHTMLTagsRough(text)
+		if plain, err := htmlToTextViaTaijiTools(ctx, text); err == nil && strings.TrimSpace(plain) != "" {
+			text = plain
 		} else {
-			text = md
+			md, err := htmlToMarkdown(text)
+			if err != nil {
+				text = stripHTMLTagsRough(text)
+			} else {
+				text = md
+			}
 		}
 	}
 	text = strings.TrimSpace(text)

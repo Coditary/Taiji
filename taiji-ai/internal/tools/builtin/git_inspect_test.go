@@ -57,6 +57,13 @@ func TestGitInspectStatusAndLog(t *testing.T) {
 	}
 }
 
+func TestGitInspectInvalidAction(t *testing.T) {
+	_, err := (GitInspect{}).Run(context.Background(), map[string]any{"action": "push"})
+	if err == nil || !strings.Contains(err.Error(), "action must") {
+		t.Fatalf("err=%v", err)
+	}
+}
+
 func runGit(t *testing.T, dir string, args ...string) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir

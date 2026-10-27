@@ -9,6 +9,11 @@
     "settings_footer_help": " Esc: close   Tab: pane   Space/Enter: change   <-/->: cycle",
     "settings_footer_apply": " Ctrl+S: apply "
   },
+  "actor_picker": {
+    "title": "Actors",
+    "filter_placeholder": "Filter actors…",
+    "no_matches": "(no actors — templates missing?)"
+  },
   "theme_picker": {
     "title": "Color themes",
     "filter_placeholder": "Filter color themes...",

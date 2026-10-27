@@ -58,7 +58,10 @@
     "skill": "Kỹ năng",
     "decision": "Quyết định",
     "question": "Câu hỏi",
-    "generating_response": "Đang tạo phản hồi..."
+    "generating_response": "Đang tạo phản hồi...",
+    "trace": {
+      "explored_prefix": "Explored "
+    }
   },
   "metrics": {
     "tok_per_sec": "..."
@@ -93,6 +96,7 @@
     "wait_before_branch": "...",
     "branch_failed": "...",
     "branch_failed_prefix": "...",
-    "branched": "..."
+    "branched": "...",
+    "response_ready_in_session": "Phản hồi đã sẵn sàng trong {name}"
   }
 }

@@ -150,6 +150,34 @@ func formatTodoLine(it todoItem) string {
 	return fmt.Sprintf("[%s] %s. %s", mark, it.ID, strings.TrimSpace(it.Task))
 }
 
+// FormatTodosSidebar renders session todos for the TUI right sidebar (one line per item).
+func FormatTodosSidebar(sessionID string) string {
+	items := DefaultTodoManager().items(sessionID)
+	if len(items) == 0 {
+		return ""
+	}
+	sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
+	var lines []string
+	for _, it := range items {
+		if it.Status == todoCancelled {
+			continue
+		}
+		task := strings.TrimSpace(it.Task)
+		if task == "" {
+			continue
+		}
+		prefix := "[ ] "
+		switch it.Status {
+		case todoDone:
+			prefix = "[x] "
+		case todoInProgress:
+			prefix = "[>] "
+		}
+		lines = append(lines, prefix+task)
+	}
+	return strings.Join(lines, "\n")
+}
+
 func (m *TodoManager) items(sessionID string) []todoItem {
 	sid := normalizeSessionID(sessionID)
 	m.mu.Lock()

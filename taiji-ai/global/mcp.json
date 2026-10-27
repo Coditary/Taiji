@@ -1,13 +1,5 @@
 {
   "mcpServers": {
-    "test-filesystem": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/tmp"
-      ]
-    },
     "context7": {
       "command": "npx",
       "args": [

@@ -278,8 +278,10 @@
       "flat": "Se mantendrá igual"
     },
     "tool_call_density": {
-      "compact": "Compacto",
-      "detailed": "Detallado"
+      "inline": "Inline",
+      "subtree": "Subtree",
+      "clustered": "Clustered",
+      "ignore": "Ignore"
     },
     "presentation": {
       "markdown": "Etiqueta de interfaz de usuario: Markdown",

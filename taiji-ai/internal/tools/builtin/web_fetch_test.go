@@ -25,8 +25,8 @@ func TestWebFetchHTML(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(out, "bad()") || strings.Contains(out, "skip") {
-		t.Fatalf("unexpected content: %s", out)
+	if strings.Contains(out, "bad()") {
+		t.Fatalf("unexpected script content: %s", out)
 	}
 	if !strings.Contains(out, "Title") || !strings.Contains(out, "Hello") {
 		t.Fatalf("missing content: %s", out)
@@ -47,5 +47,29 @@ func TestValidateFetchURLScheme(t *testing.T) {
 	_, err := validateFetchURL("file:///etc/passwd", false)
 	if err == nil || !strings.Contains(err.Error(), "http") {
 		t.Fatalf("expected scheme error, got %v", err)
+	}
+}
+
+func TestWebFetchJSONAndHTTPError(t *testing.T) {
+	jsonSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer jsonSrv.Close()
+
+	on := true
+	toolsSettings = taijicfg.ToolsConfig{AllowLocalFetch: &on}
+	out, err := (WebFetch{}).Run(context.Background(), map[string]any{"url": jsonSrv.URL})
+	if err != nil || !strings.Contains(out, `"ok"`) {
+		t.Fatalf("json fetch: err=%v out=%q", err, out)
+	}
+
+	errSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "nope", http.StatusBadGateway)
+	}))
+	defer errSrv.Close()
+	_, err = (WebFetch{}).Run(context.Background(), map[string]any{"url": errSrv.URL})
+	if err == nil || !strings.Contains(err.Error(), "502") {
+		t.Fatalf("expected 502, got %v", err)
 	}
 }

@@ -1,0 +1,26 @@
+[package]
+name = "taiji-tools"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "taiji-tools"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+globset = "0.4"
+ignore = "0.4"
+git2 = "0.19"
+html2text = "0.14"
+tantivy = "0.22"
+tree-sitter = "0.24"
+tree-sitter-go = "0.23"
+tree-sitter-rust = "0.23"
+tree-sitter-javascript = "0.23"
+tree-sitter-python = "0.23"
+streaming-iterator = "0.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+walkdir = "2"
+tempfile = "3"

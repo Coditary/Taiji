@@ -1,5 +1,6 @@
 #include "session_sidebar.hpp"
 
+#include "ui_test_ids.hpp"
 #include "ui_anim.hpp"
 #include "ui_layout.hpp"
 #include "ui_locale.hpp"
@@ -123,6 +124,15 @@ std::vector<std::string> json_split_objects(const std::string& array_json) {
 
 constexpr const char* kProjectNewGlyph = u8"󰐕";
 
+class SidebarHitRegion : public tuinator::Widget {
+  public:
+    explicit SidebarHitRegion(std::string id) { set_test_id(std::move(id)); }
+
+    tuinator::Size preferred_size() const override { return {0, 0}; }
+    void layout(tuinator::Rect bounds) override { bounds_ = bounds; }
+    void paint(tuinator::PaintContext&) const override {}
+};
+
 } // namespace
 
 SessionSidebar::SessionSidebar(tuinator::Theme theme, SessionSelectHandler on_select, NewSessionHandler on_new,
@@ -133,7 +143,9 @@ SessionSidebar::SessionSidebar(tuinator::Theme theme, SessionSelectHandler on_se
       on_new_(std::move(on_new)),
       on_context_(std::move(on_context)),
       on_settings_(std::move(on_settings)),
-      on_add_folder_(std::move(on_add_folder)) {}
+      on_add_folder_(std::move(on_add_folder)) {
+    set_test_id(taiji::ui::test_id::kSessionSidebar);
+}
 
 void SessionSidebar::set_width_hint(int cols) {
     width_hint_ = std::max(18, cols);
@@ -223,7 +235,7 @@ void SessionSidebar::parse_project_groups(const std::string& json, const std::st
             }
             group.sessions.push_back(std::move(item));
         }
-        if (!group.sessions.empty()) {
+        if (!group.root.empty()) {
             out.push_back(std::move(group));
         }
     }
@@ -250,6 +262,15 @@ void SessionSidebar::refresh(uint64_t taiji_handle) {
     parse_project_groups(json, "folders", folders_);
     parse_project_groups(json, "projects", projects_);
 
+    rebuild_rows();
+    mark_dirty();
+}
+
+void SessionSidebar::apply_list_json(const std::string& json) {
+    folders_.clear();
+    projects_.clear();
+    parse_project_groups(json, "folders", folders_);
+    parse_project_groups(json, "projects", projects_);
     rebuild_rows();
     mark_dirty();
 }
@@ -352,6 +373,12 @@ void SessionSidebar::rebuild_rows() {
                     .active = session.active,
                 });
             }
+            if (project.sessions.empty()) {
+                const std::string hint = ui_shell("sidebar.no_sessions");
+                rows_.push_back(Row{.kind = Row::Kind::EmptyHint,
+                                     .project_root = project.root,
+                                     .label = hint.empty() ? "(no chats yet)" : hint});
+            }
         }
     };
 
@@ -436,6 +463,64 @@ void SessionSidebar::layout(tuinator::Rect bounds) {
         scroll_offset_ = std::min(scroll_offset_, static_cast<int>(rows_.size()) - content_height);
     } else {
         scroll_offset_ = 0;
+    }
+    sync_hit_regions();
+}
+
+void SessionSidebar::sync_hit_regions() {
+    hit_regions_.clear();
+    if (bounds_.width <= 0 || bounds_.height <= 0) {
+        return;
+    }
+
+    if (on_settings_) {
+        auto settings = std::make_unique<SidebarHitRegion>(taiji::ui::test_id::kSessionSidebarSettings);
+        const int fy = footer_y();
+        settings->layout({kUiPadX, fy, std::max(1, bounds_.width - kUiPadX * 2), 1});
+        hit_regions_.push_back(std::move(settings));
+    }
+
+    const int content_height = std::max(0, bounds_.height - 2);
+    const int visible_rows = std::min(content_height, static_cast<int>(rows_.size()) - scroll_offset_);
+    for (int y = 0; y < visible_rows; ++y) {
+        const int row_index = scroll_offset_ + y;
+        if (row_index < 0 || row_index >= static_cast<int>(rows_.size())) {
+            break;
+        }
+        const Row& row = rows_[static_cast<std::size_t>(row_index)];
+        const int paint_y = y + 1;
+
+        if (row.kind == Row::Kind::Session && !row.session_id.empty()) {
+            auto region = std::make_unique<SidebarHitRegion>(taiji::ui::test_id::session_row(row.session_id));
+            region->layout({0, paint_y, bounds_.width, 1});
+            hit_regions_.push_back(std::move(region));
+            continue;
+        }
+        if (row.kind == Row::Kind::ProjectHeader) {
+            auto header = std::make_unique<SidebarHitRegion>(taiji::ui::test_id::project_header(row.project_root));
+            header->layout({0, paint_y, bounds_.width, 1});
+            hit_regions_.push_back(std::move(header));
+            const int btn_w = tuinator::text_display_width(kProjectNewGlyph) + 1;
+            auto btn = std::make_unique<SidebarHitRegion>(taiji::ui::test_id::project_new_button(row.project_root));
+            btn->layout({trailing_action_button_x(), paint_y, btn_w, 1});
+            hit_regions_.push_back(std::move(btn));
+            continue;
+        }
+        if (row.kind == Row::Kind::SectionHeader && row.section_add) {
+            const int btn_w = tuinator::text_display_width(kProjectNewGlyph) + 1;
+            auto btn = std::make_unique<SidebarHitRegion>(taiji::ui::test_id::kSessionSidebarAddFolder);
+            btn->layout({trailing_action_button_x(), paint_y, btn_w, 1});
+            hit_regions_.push_back(std::move(btn));
+        }
+    }
+}
+
+void SessionSidebar::for_each_descendant(const std::function<void(tuinator::Widget*)>& visitor) {
+    Widget::for_each_descendant(visitor);
+    for (const std::unique_ptr<tuinator::Widget>& region : hit_regions_) {
+        if (region != nullptr) {
+            visitor(region.get());
+        }
     }
 }
 
@@ -549,6 +634,10 @@ void SessionSidebar::paint(tuinator::PaintContext& ctx) const {
         } else if (row.kind == Row::Kind::ProjectHeader) {
             const char* chevron = is_project_collapsed(row.project_root) ? "▸" : "▾";
             text = std::string(chevron) + " " + row.label;
+        } else if (row.kind == Row::Kind::EmptyHint) {
+            style.dim = true;
+            style.foreground_rgb = ui_secondary_text();
+            text = "    " + row.label;
         } else if (row.active) {
             text = row.label;
         } else {
@@ -620,6 +709,11 @@ void SessionSidebar::paint(tuinator::PaintContext& ctx) const {
         }
         if (!suffix_draw.empty()) {
             tuinator::Style suffix_style = ui_secondary_style(theme_);
+            if (style.background_rgb.has_value()) {
+                suffix_style.background_rgb = style.background_rgb;
+            } else if (row_fill.background_rgb.has_value()) {
+                suffix_style.background_rgb = row_fill.background_rgb;
+            }
             const int suffix_x =
                 std::max(pad, bounds_.width - pad - new_btn_cols - tuinator::text_display_width(suffix_draw));
             ctx.canvas.draw_text({suffix_x, paint_y}, suffix_draw, ui_resolve_sidebar_text(ctx, *this, suffix_style));
@@ -653,8 +747,12 @@ bool SessionSidebar::handle_event(const tuinator::Event& event) {
     if (mouse != nullptr) {
         const tuinator::Point local{mouse->position.x - bounds_.x, mouse->position.y - bounds_.y};
         if (mouse->action == tuinator::MouseAction::Move) {
-            hovered_row_ = row_at_y(local.y);
+            const int row = row_at_y(local.y);
             const bool in_settings = is_settings_click(local.x, local.y);
+            if (row != hovered_row_) {
+                hovered_row_ = row;
+                mark_dirty();
+            }
             if (in_settings != settings_hover_) {
                 settings_hover_ = in_settings;
                 mark_dirty();
@@ -672,8 +770,11 @@ bool SessionSidebar::handle_event(const tuinator::Event& event) {
                 const int row_index = row_at_y(local.y);
                 if (row_index >= 0 && row_index < static_cast<int>(rows_.size())) {
                     const Row& row = rows_[static_cast<std::size_t>(row_index)];
-                    if (row.kind == Row::Kind::Session && on_context_) {
-                        on_context_(row.project_root, row.session_id, mouse->position);
+                    if (on_context_ &&
+                        (row.kind == Row::Kind::Session || row.kind == Row::Kind::ProjectHeader)) {
+                        const std::string session_id =
+                            row.kind == Row::Kind::Session ? row.session_id : std::string();
+                        on_context_(row.project_root, session_id, mouse->position);
                     }
                 }
                 return true;

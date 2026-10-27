@@ -6,17 +6,18 @@ import (
 )
 
 func TestDefaultSkillsDirs(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", "")
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg-config"))
+	t.Setenv("XDG_DATA_HOME", filepath.Join(home, "xdg-data"))
 
 	root := filepath.Join(home, "project")
 	got := DefaultSkillsDirs(root)
 	if len(got) != 2 {
 		t.Fatalf("dirs = %v", got)
 	}
-	wantProject := filepath.Join(root, ".taiji", "skills")
-	wantGlobal := filepath.Join(home, ".config", "taiji", "skills")
+	wantProject := filepath.Join(home, "xdg-data", "taiji", "projects", ProjectKey(root), "skills")
+	wantGlobal := filepath.Join(home, "xdg-config", "taiji", "skills")
 	if got[0] != wantProject {
 		t.Fatalf("project dir = %q want %q", got[0], wantProject)
 	}
@@ -26,9 +27,10 @@ func TestDefaultSkillsDirs(t *testing.T) {
 }
 
 func TestEnsureSkillsDirsUsesDefaultsWhenUnset(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", "")
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("XDG_DATA_HOME", filepath.Join(home, "xdg-data"))
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg-config"))
 
 	root := filepath.Join(home, "repo")
 	cfg := &Config{Root: root}

@@ -40,6 +40,13 @@ func TestJobManagerStartLogsKill(t *testing.T) {
 	}
 }
 
+func TestJobManagerStartRequiresCommand(t *testing.T) {
+	mgr := NewJobManager()
+	if _, _, err := mgr.Start("s", "  ", ""); err == nil {
+		t.Fatal("expected empty command error")
+	}
+}
+
 func TestJobManagerKillSession(t *testing.T) {
 	mgr := NewJobManager()
 	id, _, err := mgr.Start("s2", "sleep 60", "")

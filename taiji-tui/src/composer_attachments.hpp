@@ -1,5 +1,6 @@
 #pragma once
 
+#include <tuinator/render/terminal_image.hpp>
 #include <tuinator/render/theme.hpp>
 
 #include <string>
@@ -8,6 +9,7 @@
 enum class ComposerChipKind {
     AgentMode,
     Skill,
+    Context,
     File,
     GitDiff,
     Clipboard,
@@ -24,4 +26,20 @@ struct ComposerChip {
     tuinator::Rgb color{169, 177, 214};
 };
 
-std::string composer_build_outgoing_message(const std::string& user_text, const std::vector<ComposerChip>& chips);
+struct ComposerImageAttachment {
+    std::string id;
+    std::string label;
+    std::string source_path;
+    tuinator::TerminalImage image;
+};
+
+constexpr int kComposerImageThumbCols = 10;
+constexpr int kComposerImageThumbRows = 4;
+constexpr int kComposerImageChipWidth = kComposerImageThumbCols + 2;
+constexpr int kComposerImageChipHeight = kComposerImageThumbRows + 1;
+
+std::string composer_build_outgoing_message(const std::string& user_text, const std::vector<ComposerChip>& chips,
+                                            const std::vector<ComposerImageAttachment>& images,
+                                            const std::string& work_dir);
+
+std::string composer_persist_image_attachment(const ComposerImageAttachment& image, const std::string& work_dir);

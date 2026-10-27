@@ -11,6 +11,7 @@ import (
 	"github.com/coditary/taiji/internal/decisions"
 	"github.com/coditary/taiji/internal/hooks"
 	"github.com/coditary/taiji/internal/memory"
+	"github.com/coditary/taiji/internal/packs"
 	"github.com/coditary/taiji/internal/question"
 	"github.com/coditary/taiji/internal/provider"
 	"github.com/coditary/taiji/internal/rag"
@@ -47,6 +48,7 @@ type Runtime struct {
 	Decisions         *decision.Service
 	DecisionProfiles  *decisions.Loader
 	Memory            *memory.Service
+	PackIndex         *packs.Index
 	Questions         *question.Service
 	Hooks             *hooks.Runner
 }
@@ -120,8 +122,42 @@ func New(ctx context.Context, cfg *taijicfg.Config, opts Options) (*Runtime, err
 		logInfo(opts, "taiji: memory: %s\n", memSvc.DescribeDirs())
 	}
 
+	if len(cfg.Packs.Dirs) == 0 {
+		cfg.Packs.Dirs = taijicfg.DefaultPacksDirs(cfg.Root)
+	}
+	packLoader := packs.NewLoader(cfg.Packs.Dirs)
+	packIndex := packs.NewIndex(packLoader, ragSvc, cfg, cfg.Root)
+	if packIndex != nil {
+		if err := packIndex.Reload(); err != nil {
+			logInfo(opts, "taiji: packs reload: %v\n", err)
+		} else if nodes := packIndex.Nodes(); len(nodes) > 0 {
+			logInfo(opts, "taiji: context packs: %d nodes\n", len(nodes))
+		}
+		indexPacks := func() {
+			if err := packIndex.EnsureSemanticIndexed(ctx); err != nil {
+				logInfo(opts, "taiji: packs semantic index: %v\n", err)
+			}
+		}
+		if opts.Quiet {
+			go indexPacks()
+		} else {
+			indexPacks()
+		}
+		builtin.EnablePackRemember(toolReg, cfg.Packs.Dirs, func() error {
+			if packIndex != nil {
+				return packIndex.Reload()
+			}
+			return nil
+		})
+	}
+
 	questionsSvc := question.NewService(question.RejectPrompter{})
 	builtin.EnableAskUser(toolReg, questionsSvc)
+	builtin.EnableActorTools(toolReg)
+	if cfg != nil {
+		builtin.EnableGraphTools(toolReg, cfg.Root)
+	}
+	builtin.EnableCreateChatTool(toolReg)
 
 	bridge := mcp.NewBridge()
 
@@ -148,6 +184,7 @@ func New(ctx context.Context, cfg *taijicfg.Config, opts Options) (*Runtime, err
 		Decisions:        decSvc,
 		DecisionProfiles: profileLoader,
 		Memory:           memSvc,
+		PackIndex:        packIndex,
 		Questions:        questionsSvc,
 		Hooks:            hookRunner,
 	}

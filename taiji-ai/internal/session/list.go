@@ -71,6 +71,6 @@ func loadSummary(dir string) (Summary, error) {
 		Provider:  state.Provider,
 		CreatedAt: state.CreatedAt,
 		Requests:  state.Stats.Requests,
-		Messages:  len(state.Messages),
+		Messages:  VisibleTurnCount(state.Messages),
 	}, nil
 }

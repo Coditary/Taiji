@@ -40,8 +40,14 @@ func EstimateContextUsage(req RunRequest, activeSkillNames []string) session.Con
 			}
 		}
 	}
+	mcpTokens := 0
 	if mcpExtra != "" {
-		toolsTokens += session.EstimateTokens(mcpExtra)
+		mcpTokens = session.EstimateTokens(mcpExtra)
+	}
+
+	rulesTokens := 0
+	if appendix, err := loadAgentsAppendix(projectWorkspaceRoot(req)); err == nil && appendix != "" {
+		rulesTokens = session.EstimateTokens(appendix)
 	}
 
 	skillsTokens := session.EstimateTokens(skillsExtra)
@@ -49,10 +55,15 @@ func EstimateContextUsage(req RunRequest, activeSkillNames []string) session.Con
 	if systemTokens > 0 {
 		systemTokens += 4
 	}
+	if rulesTokens > 0 && systemTokens >= rulesTokens {
+		systemTokens -= rulesTokens
+	}
 
 	return session.ContextUsageBreakdown{
 		SystemTokens:       systemTokens,
 		ToolsTokens:        toolsTokens,
+		MCPTokens:          mcpTokens,
+		RulesTokens:        rulesTokens,
 		SkillsTokens:       skillsTokens,
 		ConversationTokens: conversation,
 	}
@@ -79,7 +90,7 @@ func systemPromptSections(req RunRequest, agentRT session.AgentRuntime, activeSk
 			systemPrompt += "\n\n" + appendix
 		}
 	}
-	if appendix, err := loadAgentsAppendix(req.WorkDir); err == nil && appendix != "" {
+	if appendix, err := loadAgentsAppendix(projectWorkspaceRoot(req)); err == nil && appendix != "" {
 		systemPrompt += "\n\n" + appendix
 	}
 	if appendix := rag.SystemPromptAppendix(req.RAG); appendix != "" {

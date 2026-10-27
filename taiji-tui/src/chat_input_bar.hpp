@@ -1,12 +1,11 @@
 #pragma once
 
+#include "speech_mic_button.hpp"
 #include "ui_chat_column.hpp"
 
 #include <tuinator/tuinator.hpp>
 
 #include <memory>
-
-class SpeechMicButton;
 
 /// Composer plus speech mic overlaid at the bottom-right inside the prompt frame.
 class ChatInputBar : public tuinator::Widget {
@@ -23,6 +22,7 @@ class ChatInputBar : public tuinator::Widget {
     tuinator::Widget* hit_test(tuinator::Point point) override;
     tuinator::Widget* hit_test_focusable(tuinator::Point point) override;
     void set_on_layout(std::function<void()> callback) override;
+    void for_each_descendant(const std::function<void(tuinator::Widget*)>& visitor) override;
 
   private:
     std::unique_ptr<CenteredChatColumn> column_;

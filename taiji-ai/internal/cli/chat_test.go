@@ -64,8 +64,38 @@ func TestResolveChatSessionUsesSeparateBindingsPerDirectory(t *testing.T) {
 	}
 }
 
+func TestHandleSlashCommandHelp(t *testing.T) {
+	state := &chatState{
+		app:     &App{Config: &config.Config{Root: t.TempDir()}},
+		session: &session.Session{State: session.State{ID: "abc123"}},
+	}
+	handled, exit, err := state.handleSlashCommand("/help")
+	if err != nil || !handled || exit {
+		t.Fatalf("handled=%v exit=%v err=%v", handled, exit, err)
+	}
+}
+
+func TestHandleSlashCommandClear(t *testing.T) {
+	root := t.TempDir()
+	state := &chatState{
+		app:        &App{Config: &config.Config{Root: root}},
+		session:    &session.Session{State: session.State{ID: "old"}},
+		workDir:    root,
+		providerID: "dummy",
+	}
+	oldID := state.session.State.ID
+	handled, exit, err := state.handleSlashCommand("/clear")
+	if err != nil || !handled || exit {
+		t.Fatalf("handled=%v exit=%v err=%v", handled, exit, err)
+	}
+	if state.session.State.ID == oldID {
+		t.Fatal("expected new session after /clear")
+	}
+}
+
 func TestHandleSlashCommandExit(t *testing.T) {
 	state := &chatState{
+		app:     &App{Config: &config.Config{Root: t.TempDir()}},
 		session: &session.Session{State: session.State{ID: "abc123"}},
 	}
 
@@ -82,6 +112,7 @@ func TestHandleSlashCommandExit(t *testing.T) {
 
 func TestHandleSlashCommandSession(t *testing.T) {
 	state := &chatState{
+		app:     &App{Config: &config.Config{Root: t.TempDir()}},
 		session: &session.Session{State: session.State{ID: "abc123", Name: "Test chat"}},
 	}
 
@@ -100,7 +131,10 @@ func TestHandleSlashCommandName(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	state := &chatState{session: sess}
+	state := &chatState{
+		app:     &App{Config: &config.Config{Root: root}},
+		session: sess,
+	}
 
 	handled, exit, err := state.handleSlashCommand("/name My Session")
 	if err != nil {
@@ -153,6 +187,7 @@ func TestHandleSlashCommandDeleteCurrentSession(t *testing.T) {
 
 func TestHandleSlashCommandNotSlash(t *testing.T) {
 	state := &chatState{
+		app:     &App{Config: &config.Config{Root: t.TempDir()}},
 		session: &session.Session{State: session.State{ID: "abc123"}},
 	}
 

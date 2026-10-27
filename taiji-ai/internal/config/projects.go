@@ -37,9 +37,10 @@ type ProjectSessions struct {
 
 // ProjectsSidebar is the JSON payload for the TUI left sidebar.
 type ProjectsSidebar struct {
-	CurrentProject  string            `json:"current_project"`
-	CurrentSession  string            `json:"current_session"`
-	Projects        []ProjectSessions `json:"projects"`
+	CurrentProject string            `json:"current_project"`
+	CurrentSession string            `json:"current_session"`
+	Folders        []ProjectSessions `json:"folders"`
+	Projects       []ProjectSessions `json:"projects"`
 }
 
 func projectsRegistryPath() string {
@@ -67,7 +68,9 @@ func RegisterProject(root string, local bool) error {
 	for i, entry := range entries {
 		if cleanProjectRoot(entry.Root) == root {
 			entries[i].LastAccessed = now
-			entries[i].Local = local
+			if local {
+				entries[i].Local = true
+			}
 			if strings.TrimSpace(entries[i].Name) == "" {
 				entries[i].Name = projectDisplayName(root)
 			}
@@ -143,9 +146,17 @@ func projectDisplayName(root string) string {
 	return filepath.Base(root)
 }
 
-// VisibleProjects returns project entries that should appear in the sidebar.
-// Local-only projects are visible only when the viewer is in that exact root.
-func VisibleProjects(currentRoot string, currentLocal bool) ([]ProjectEntry, error) {
+// VisibleProjects returns non-local (multi-root) project entries for the sidebar.
+func VisibleProjects(currentRoot string) ([]ProjectEntry, error) {
+	return visibleRegistryEntries(currentRoot, false)
+}
+
+// VisibleFolders returns folder-scoped (local) roots for the sidebar.
+func VisibleFolders(currentRoot string) ([]ProjectEntry, error) {
+	return visibleRegistryEntries(currentRoot, true)
+}
+
+func visibleRegistryEntries(currentRoot string, folders bool) ([]ProjectEntry, error) {
 	currentRoot = cleanProjectRoot(currentRoot)
 	entries, err := loadProjectsRegistry()
 	if err != nil {
@@ -163,13 +174,11 @@ func VisibleProjects(currentRoot string, currentLocal bool) ([]ProjectEntry, err
 		if _, ok := seen[root]; ok {
 			return
 		}
-		if !projectHasSessions(root) {
+		wantLocal := folders
+		if entry.Local != wantLocal {
 			return
 		}
-		if entry.Local && root != currentRoot {
-			return
-		}
-		if currentLocal && root != currentRoot {
+		if !folders && !projectHasSessions(root) {
 			return
 		}
 		seen[root] = struct{}{}
@@ -184,11 +193,11 @@ func VisibleProjects(currentRoot string, currentLocal bool) ([]ProjectEntry, err
 		add(entry)
 	}
 
-	if currentRoot != "" && projectHasSessions(currentRoot) {
+	if folders && currentRoot != "" {
 		add(ProjectEntry{
 			Root:  currentRoot,
 			Name:  projectDisplayName(currentRoot),
-			Local: currentLocal,
+			Local: true,
 		})
 	}
 

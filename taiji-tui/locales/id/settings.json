@@ -278,8 +278,10 @@
       "flat": "Datar"
     },
     "tool_call_density": {
-      "compact": "Ringkas",
-      "detailed": "Terperinci"
+      "inline": "Inline",
+      "subtree": "Subtree",
+      "clustered": "Clustered",
+      "ignore": "Ignore"
     },
     "presentation": {
       "markdown": "...",

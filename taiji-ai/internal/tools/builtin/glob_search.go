@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -14,7 +13,7 @@ type GlobSearch struct{}
 func (GlobSearch) Name() string { return "glob_search" }
 
 func (GlobSearch) Description() string {
-	return "Find files matching a glob pattern under a directory (e.g. *.go, **/*.md). Skips node_modules, .git, and similar."
+	return "Find files matching a glob pattern under a directory (e.g. *.go, **/*.md). Uses taiji-tools glob (Rust ignore + globset): respects .gitignore and standard ignore rules."
 }
 
 func (GlobSearch) Parameters() map[string]any {
@@ -38,7 +37,7 @@ func (GlobSearch) Parameters() map[string]any {
 	}
 }
 
-func (GlobSearch) Run(_ context.Context, args map[string]any) (string, error) {
+func (GlobSearch) Run(ctx context.Context, args map[string]any) (string, error) {
 	pattern, _ := args["pattern"].(string)
 	pattern = strings.TrimSpace(pattern)
 	if pattern == "" {
@@ -62,7 +61,7 @@ func (GlobSearch) Run(_ context.Context, args map[string]any) (string, error) {
 		return "", fmt.Errorf("%s is not a directory", root)
 	}
 
-	matches, err := findGlobMatches(root, pattern, maxResults)
+	matches, err := runGlobwalkBinary(ctx, root, pattern, maxResults)
 	if err != nil {
 		return "", err
 	}
@@ -75,39 +74,4 @@ func (GlobSearch) Run(_ context.Context, args map[string]any) (string, error) {
 		out += fmt.Sprintf("\n\n(truncated at %d results)", maxResults)
 	}
 	return out, nil
-}
-
-func findGlobMatches(root, pattern string, maxResults int) ([]string, error) {
-	var matches []string
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if d.IsDir() {
-			if path != root && isSkippedPath(d.Name()) {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		rel, err := filepath.Rel(root, path)
-		if err != nil {
-			return nil
-		}
-		if pathHasSkippedSegment(rel) {
-			return nil
-		}
-		ok, err := matchGlob(rel, pattern)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return nil
-		}
-		matches = append(matches, rel)
-		if len(matches) >= maxResults {
-			return filepath.SkipAll
-		}
-		return nil
-	})
-	return matches, err
 }

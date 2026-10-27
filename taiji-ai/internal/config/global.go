@@ -10,25 +10,21 @@ import (
 
 const globalMCPFile = "mcp.json"
 
-// GlobalConfigDir returns the user-level Taiji config directory (~/.taiji).
+// GlobalConfigDir returns the user-level Taiji config directory ($XDG_CONFIG_HOME/taiji).
 func GlobalConfigDir() string {
-	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		return filepath.Join(xdg, dirName)
+	if xdg := strings.TrimSpace(os.Getenv("XDG_CONFIG_HOME")); xdg != "" {
+		return filepath.Join(xdg, "taiji")
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(home, dirName)
+	return filepath.Join(home, ".config", "taiji")
 }
 
 func loadGlobalFileConfig() *fileConfig {
-	globalDir := GlobalConfigDir()
-	if globalDir == "" {
-		return nil
-	}
-	raw, err := os.ReadFile(filepath.Join(globalDir, configFile))
-	if err != nil {
+	raw, _, ok := readFirstExistingConfigFile(configFile)
+	if !ok {
 		return nil
 	}
 	var global fileConfig
@@ -38,7 +34,7 @@ func loadGlobalFileConfig() *fileConfig {
 	return &global
 }
 
-// GlobalMCPServerNames returns MCP server names from ~/.taiji/config.yaml.
+// GlobalMCPServerNames returns MCP server names from the global config file.
 func GlobalMCPServerNames() []string {
 	global := loadGlobalFileConfig()
 	if global == nil {

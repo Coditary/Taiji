@@ -24,9 +24,12 @@
     "vi",
     "tr"
   ],
-  "key_count": 348,
+  "key_count": 419,
   "keys_by_module": {
     "common": [
+      "actor_picker.filter_placeholder",
+      "actor_picker.no_matches",
+      "actor_picker.title",
       "app.settings_apply_hint",
       "app.settings_footer_apply",
       "app.settings_footer_help",
@@ -69,7 +72,10 @@
       "categories.shortcuts_short",
       "categories.tools",
       "categories.tools_short",
+      "empty.builtin_tools_none",
+      "empty.council_actors_none",
       "empty.mcp_none",
+      "empty.packs_none",
       "empty.skills_none",
       "nav.categories",
       "options.auto_compact.off",
@@ -82,6 +88,8 @@
       "options.chat_width.medium",
       "options.chat_width.narrow",
       "options.chat_width.wide",
+      "options.file_diff_layout.side_by_side",
+      "options.file_diff_layout.stacked",
       "options.mcp_tool_state.allowed",
       "options.mcp_tool_state.blocked",
       "options.message_align.auto",
@@ -108,19 +116,38 @@
       "options.skill_state.auto",
       "options.skill_state.off",
       "options.skill_state.pinned",
+      "options.spacing_lines.0",
+      "options.spacing_lines.1",
+      "options.spacing_lines.2",
+      "options.spacing_lines.3",
+      "options.spacing_lines.4",
       "options.stt_language.auto",
       "options.stt_quality.balanced",
       "options.stt_quality.careful",
       "options.stt_quality.default",
       "options.stt_quality.fast",
-      "options.tool_call_density.compact",
-      "options.tool_call_density.detailed",
+      "options.tool_call_density.clustered",
+      "options.tool_call_density.ignore",
+      "options.tool_call_density.inline",
+      "options.tool_call_density.subtree",
+      "options.tool_expand_args_format.json",
+      "options.tool_expand_args_format.pretty",
+      "options.tool_expand_result_format.json",
+      "options.tool_expand_result_format.text",
+      "options.tool_expand_sections.both",
+      "options.tool_expand_sections.none",
+      "options.tool_expand_sections.parameters_only",
+      "options.tool_expand_sections.response_only",
       "options.turn_metrics_preset.compact",
       "options.turn_metrics_preset.dev",
       "options.turn_metrics_preset.off",
       "options.ui_corners.flat",
       "options.ui_corners.rounded",
       "options.ui_corners.square",
+      "rows.activity_show_pipeline_title.hint",
+      "rows.activity_show_pipeline_title.label",
+      "rows.activity_spacing_lines.hint",
+      "rows.activity_spacing_lines.label",
       "rows.assistant_message_align.hint",
       "rows.assistant_message_align.label",
       "rows.assistant_message_fill_background.hint",
@@ -143,6 +170,8 @@
       "rows.context_window_fixed.label",
       "rows.decisions_enabled.hint",
       "rows.decisions_enabled.label",
+      "rows.file_diff_layout.hint",
+      "rows.file_diff_layout.label",
       "rows.key_open_theme_picker.hint",
       "rows.key_open_theme_picker.label",
       "rows.max_steps.hint",
@@ -155,12 +184,16 @@
       "rows.mcp_tool_toggle.label",
       "rows.memory_enabled.hint",
       "rows.memory_enabled.label",
+      "rows.message_spacing_lines.hint",
+      "rows.message_spacing_lines.label",
       "rows.message_time_clock.hint",
       "rows.message_time_clock.label",
       "rows.message_timestamps.hint",
       "rows.message_timestamps.label",
       "rows.model.hint",
       "rows.model.label",
+      "rows.pack_toggle.hint",
+      "rows.pack_toggle.label",
       "rows.presentation.hint",
       "rows.presentation.label",
       "rows.preset_combo.hint",
@@ -203,6 +236,12 @@
       "rows.thought_max_chars.label",
       "rows.tool_call_density.hint",
       "rows.tool_call_density.label",
+      "rows.tool_expand_args_format.hint",
+      "rows.tool_expand_args_format.label",
+      "rows.tool_expand_result_format.hint",
+      "rows.tool_expand_result_format.label",
+      "rows.tool_expand_sections.hint",
+      "rows.tool_expand_sections.label",
       "rows.tool_labels_locale.hint",
       "rows.tool_labels_locale.label",
       "rows.turn_metrics_preset.hint",
@@ -228,11 +267,14 @@
       "scope.save_to",
       "sections.agent_chat",
       "sections.assistant_messages",
+      "sections.builtin_tools",
+      "sections.council",
       "sections.execution",
       "sections.global",
       "sections.labels_motion",
       "sections.language",
       "sections.mcp_servers",
+      "sections.packs",
       "sections.prompt",
       "sections.skills",
       "sections.speech_to_text",
@@ -256,6 +298,7 @@
       "activity.skill",
       "activity.thinking",
       "activity.tool",
+      "activity.trace.explored_prefix",
       "chat.author_summary",
       "chat.author_you",
       "chat.thinking",
@@ -263,9 +306,12 @@
       "composer_menu.skills",
       "composer_menu.skills_hint",
       "context.conversation",
+      "context.mcp_definitions",
+      "context.rules",
       "context.skills",
       "context.system_prompt",
       "context.title",
+      "context.tools",
       "context.tools_mcp",
       "empty.hint_send",
       "empty.quick_analyze_git",
@@ -273,6 +319,8 @@
       "empty.quick_index_codebase",
       "empty.uncommitted_many",
       "empty.uncommitted_one",
+      "folder_menu.new_chat",
+      "folder_menu.open",
       "footer.shortcuts_default",
       "metrics.tok_per_sec",
       "question.custom_label",
@@ -285,14 +333,20 @@
       "sidebar.decisions",
       "sidebar.empty_inactive",
       "sidebar.empty_none",
+      "sidebar.folders",
       "sidebar.lsp",
       "sidebar.mcp_not_connected",
       "sidebar.mcp_title",
       "sidebar.mcp_title_count",
       "sidebar.new_session",
+      "sidebar.no_sessions",
       "sidebar.projects",
       "sidebar.projects_menu_hint",
       "sidebar.skills",
+      "sidebar.todos",
+      "sidebar.todos_empty",
+      "sidebar.todos_section",
+      "sidebar.todos_section_count",
       "status.agent_failed_prefix",
       "status.agent_still_starting",
       "status.answer_question",
@@ -310,14 +364,17 @@
       "status.enter_queues_message",
       "status.failed_create_session_prefix",
       "status.failed_delete_session_prefix",
+      "status.failed_open_folder_prefix",
       "status.failed_switch_session_prefix",
       "status.generating_esc_stop",
       "status.generating_with_queue",
+      "status.graph_transition_denied",
       "status.init_failed_prefix",
       "status.message_copied",
       "status.recording_hint",
       "status.request_failed",
       "status.response_copied",
+      "status.response_ready_in_session",
       "status.speech_input",
       "status.starting",
       "status.starting_agent",
@@ -344,12 +401,17 @@
       "metrics.total",
       "metrics.wait",
       "names.ask_user",
+      "names.await",
       "names.batch_edit",
       "names.bg_process",
+      "names.create_chat_tool",
+      "names.create_goal",
       "names.decide",
       "names.decision_remember",
       "names.delegate_task",
+      "names.delete_file",
       "names.edit_file",
+      "names.edit_notebook",
       "names.file_outline",
       "names.generate_image",
       "names.git_inspect",
@@ -366,14 +428,23 @@
       "names.rag_index",
       "names.rag_search",
       "names.read_file",
+      "names.read_lints",
       "names.read_mcp_resource",
+      "names.remember_in_pack",
       "names.run_tests",
+      "names.search_conversations",
+      "names.set_active_branch",
       "names.shell",
       "names.skill_search",
+      "names.switch_agent_mode",
       "names.todo_plan",
       "names.turn_route",
+      "names.update_actor_state",
+      "names.update_goal",
       "names.web_fetch",
+      "names.web_search",
       "names.workspace_checkpoint",
+      "names.workspace_find",
       "names.write_file",
       "scopes.decision",
       "scopes.mcp",
@@ -384,6 +455,21 @@
     ]
   },
   "keys": [
+    {
+      "module": "common",
+      "key": "actor_picker.filter_placeholder",
+      "en": "Filter actors…"
+    },
+    {
+      "module": "common",
+      "key": "actor_picker.no_matches",
+      "en": "(no actors — templates missing?)"
+    },
+    {
+      "module": "common",
+      "key": "actor_picker.title",
+      "en": "Actors"
+    },
     {
       "module": "common",
       "key": "app.settings_apply_hint",
@@ -586,8 +672,23 @@
     },
     {
       "module": "settings",
+      "key": "empty.builtin_tools_none",
+      "en": "(none)"
+    },
+    {
+      "module": "settings",
+      "key": "empty.council_actors_none",
+      "en": "(use /council add <id>)"
+    },
+    {
+      "module": "settings",
       "key": "empty.mcp_none",
       "en": "(none connected)"
+    },
+    {
+      "module": "settings",
+      "key": "empty.packs_none",
+      "en": "(none — add .taiji/packs/<name>/)"
     },
     {
       "module": "settings",
@@ -648,6 +749,16 @@
       "module": "settings",
       "key": "options.chat_width.wide",
       "en": "Wide"
+    },
+    {
+      "module": "settings",
+      "key": "options.file_diff_layout.side_by_side",
+      "en": "Side by side"
+    },
+    {
+      "module": "settings",
+      "key": "options.file_diff_layout.stacked",
+      "en": "Stacked"
     },
     {
       "module": "settings",
@@ -781,6 +892,31 @@
     },
     {
       "module": "settings",
+      "key": "options.spacing_lines.0",
+      "en": "0 lines"
+    },
+    {
+      "module": "settings",
+      "key": "options.spacing_lines.1",
+      "en": "1 line"
+    },
+    {
+      "module": "settings",
+      "key": "options.spacing_lines.2",
+      "en": "2 lines"
+    },
+    {
+      "module": "settings",
+      "key": "options.spacing_lines.3",
+      "en": "3 lines"
+    },
+    {
+      "module": "settings",
+      "key": "options.spacing_lines.4",
+      "en": "4 lines"
+    },
+    {
+      "module": "settings",
       "key": "options.stt_language.auto",
       "en": "Auto-detect"
     },
@@ -806,13 +942,63 @@
     },
     {
       "module": "settings",
-      "key": "options.tool_call_density.compact",
-      "en": "Compact"
+      "key": "options.tool_call_density.clustered",
+      "en": "Clustered"
     },
     {
       "module": "settings",
-      "key": "options.tool_call_density.detailed",
-      "en": "Detailed"
+      "key": "options.tool_call_density.ignore",
+      "en": "Ignore"
+    },
+    {
+      "module": "settings",
+      "key": "options.tool_call_density.inline",
+      "en": "Inline"
+    },
+    {
+      "module": "settings",
+      "key": "options.tool_call_density.subtree",
+      "en": "Subtree"
+    },
+    {
+      "module": "settings",
+      "key": "options.tool_expand_args_format.json",
+      "en": "JSON (raw)"
+    },
+    {
+      "module": "settings",
+      "key": "options.tool_expand_args_format.pretty",
+      "en": "Pretty (key: value)"
+    },
+    {
+      "module": "settings",
+      "key": "options.tool_expand_result_format.json",
+      "en": "JSON (pretty)"
+    },
+    {
+      "module": "settings",
+      "key": "options.tool_expand_result_format.text",
+      "en": "Plain text"
+    },
+    {
+      "module": "settings",
+      "key": "options.tool_expand_sections.both",
+      "en": "Parameters and result"
+    },
+    {
+      "module": "settings",
+      "key": "options.tool_expand_sections.none",
+      "en": "Nothing"
+    },
+    {
+      "module": "settings",
+      "key": "options.tool_expand_sections.parameters_only",
+      "en": "Parameters only"
+    },
+    {
+      "module": "settings",
+      "key": "options.tool_expand_sections.response_only",
+      "en": "Response only"
     },
     {
       "module": "settings",
@@ -843,6 +1029,26 @@
       "module": "settings",
       "key": "options.ui_corners.square",
       "en": "Square"
+    },
+    {
+      "module": "settings",
+      "key": "rows.activity_show_pipeline_title.hint",
+      "en": "Show the Taiji (model) header line above tool steps in the activity tree."
+    },
+    {
+      "module": "settings",
+      "key": "rows.activity_show_pipeline_title.label",
+      "en": "Activity model row"
+    },
+    {
+      "module": "settings",
+      "key": "rows.activity_spacing_lines.hint",
+      "en": "Blank lines between tool steps, writes, edits, and diff cards in a turn."
+    },
+    {
+      "module": "settings",
+      "key": "rows.activity_spacing_lines.label",
+      "en": "Activity spacing"
     },
     {
       "module": "settings",
@@ -956,6 +1162,16 @@
     },
     {
       "module": "settings",
+      "key": "rows.file_diff_layout.hint",
+      "en": "Show file changes stacked (unified) or side by side (original vs modified)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.file_diff_layout.label",
+      "en": "File diff layout"
+    },
+    {
+      "module": "settings",
       "key": "rows.key_open_theme_picker.hint",
       "en": "Global shortcut to open the color theme picker (e.g. Ctrl+T)."
     },
@@ -1016,6 +1232,16 @@
     },
     {
       "module": "settings",
+      "key": "rows.message_spacing_lines.hint",
+      "en": "Blank lines between your messages and assistant replies, and between turns."
+    },
+    {
+      "module": "settings",
+      "key": "rows.message_spacing_lines.label",
+      "en": "Message spacing"
+    },
+    {
+      "module": "settings",
       "key": "rows.message_time_clock.hint",
       "en": "24-hour clock or 12-hour with AM/PM."
     },
@@ -1043,6 +1269,16 @@
       "module": "settings",
       "key": "rows.model.label",
       "en": "Model"
+    },
+    {
+      "module": "settings",
+      "key": "rows.pack_toggle.hint",
+      "en": "Enable or disable context packs for this chat (empty allowlist = all packs)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.pack_toggle.label",
+      "en": ""
     },
     {
       "module": "settings",
@@ -1247,12 +1483,42 @@
     {
       "module": "settings",
       "key": "rows.tool_call_density.hint",
-      "en": "Compact or detailed tool-call lines in the activity log."
+      "en": "How tool steps appear in the chat: inline (write rows + diffs), subtree, clustered summary, or ignore (file change diffs only, no tool rows)."
     },
     {
       "module": "settings",
       "key": "rows.tool_call_density.label",
-      "en": "Tool call density"
+      "en": "Tool activity"
+    },
+    {
+      "module": "settings",
+      "key": "rows.tool_expand_args_format.hint",
+      "en": "How expanded tool arguments are formatted."
+    },
+    {
+      "module": "settings",
+      "key": "rows.tool_expand_args_format.label",
+      "en": "Tool parameter format"
+    },
+    {
+      "module": "settings",
+      "key": "rows.tool_expand_result_format.hint",
+      "en": "How expanded tool output is formatted (JSON pretty-prints when the output is valid JSON)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.tool_expand_result_format.label",
+      "en": "Tool result format"
+    },
+    {
+      "module": "settings",
+      "key": "rows.tool_expand_sections.hint",
+      "en": "What to show when you expand a tool step (parameters, result, both, or nothing)."
+    },
+    {
+      "module": "settings",
+      "key": "rows.tool_expand_sections.label",
+      "en": "Tool expand content"
     },
     {
       "module": "settings",
@@ -1381,6 +1647,16 @@
     },
     {
       "module": "settings",
+      "key": "sections.builtin_tools",
+      "en": "Built-in tools"
+    },
+    {
+      "module": "settings",
+      "key": "sections.council",
+      "en": "Council"
+    },
+    {
+      "module": "settings",
       "key": "sections.execution",
       "en": "Execution"
     },
@@ -1403,6 +1679,11 @@
       "module": "settings",
       "key": "sections.mcp_servers",
       "en": "MCP Servers"
+    },
+    {
+      "module": "settings",
+      "key": "sections.packs",
+      "en": "Context packs"
     },
     {
       "module": "settings",
@@ -1511,6 +1792,11 @@
     },
     {
       "module": "shell",
+      "key": "activity.trace.explored_prefix",
+      "en": "Explored "
+    },
+    {
+      "module": "shell",
       "key": "chat.author_summary",
       "en": "summary"
     },
@@ -1546,6 +1832,16 @@
     },
     {
       "module": "shell",
+      "key": "context.mcp_definitions",
+      "en": "MCP definitions"
+    },
+    {
+      "module": "shell",
+      "key": "context.rules",
+      "en": "Rules"
+    },
+    {
+      "module": "shell",
       "key": "context.skills",
       "en": "Skills"
     },
@@ -1558,6 +1854,11 @@
       "module": "shell",
       "key": "context.title",
       "en": "CONTEXT"
+    },
+    {
+      "module": "shell",
+      "key": "context.tools",
+      "en": "Tool definitions"
     },
     {
       "module": "shell",
@@ -1593,6 +1894,16 @@
       "module": "shell",
       "key": "empty.uncommitted_one",
       "en": "{count} uncommitted change"
+    },
+    {
+      "module": "shell",
+      "key": "folder_menu.new_chat",
+      "en": "New chat"
+    },
+    {
+      "module": "shell",
+      "key": "folder_menu.open",
+      "en": "Open folder"
     },
     {
       "module": "shell",
@@ -1656,6 +1967,11 @@
     },
     {
       "module": "shell",
+      "key": "sidebar.folders",
+      "en": "FOLDERS"
+    },
+    {
+      "module": "shell",
       "key": "sidebar.lsp",
       "en": "LSP"
     },
@@ -1681,6 +1997,11 @@
     },
     {
       "module": "shell",
+      "key": "sidebar.no_sessions",
+      "en": "(no chats yet)"
+    },
+    {
+      "module": "shell",
       "key": "sidebar.projects",
       "en": "PROJECTS"
     },
@@ -1693,6 +2014,26 @@
       "module": "shell",
       "key": "sidebar.skills",
       "en": "Skills"
+    },
+    {
+      "module": "shell",
+      "key": "sidebar.todos",
+      "en": "Todos"
+    },
+    {
+      "module": "shell",
+      "key": "sidebar.todos_empty",
+      "en": "none"
+    },
+    {
+      "module": "shell",
+      "key": "sidebar.todos_section",
+      "en": "TODOS"
+    },
+    {
+      "module": "shell",
+      "key": "sidebar.todos_section_count",
+      "en": "TODOS ({count})"
     },
     {
       "module": "shell",
@@ -1781,6 +2122,11 @@
     },
     {
       "module": "shell",
+      "key": "status.failed_open_folder_prefix",
+      "en": "Could not open folder: "
+    },
+    {
+      "module": "shell",
       "key": "status.failed_switch_session_prefix",
       "en": "Failed to switch session: "
     },
@@ -1793,6 +2139,11 @@
       "module": "shell",
       "key": "status.generating_with_queue",
       "en": "Generating...  ·  {count} queued"
+    },
+    {
+      "module": "shell",
+      "key": "status.graph_transition_denied",
+      "en": "Graph: transition not allowed"
     },
     {
       "module": "shell",
@@ -1818,6 +2169,11 @@
       "module": "shell",
       "key": "status.response_copied",
       "en": "Response copied"
+    },
+    {
+      "module": "shell",
+      "key": "status.response_ready_in_session",
+      "en": "Response ready in {name}"
     },
     {
       "module": "shell",
@@ -1941,6 +2297,11 @@
     },
     {
       "module": "tools",
+      "key": "names.await",
+      "en": "Await"
+    },
+    {
+      "module": "tools",
       "key": "names.batch_edit",
       "en": "Batch edit"
     },
@@ -1948,6 +2309,16 @@
       "module": "tools",
       "key": "names.bg_process",
       "en": "Background"
+    },
+    {
+      "module": "tools",
+      "key": "names.create_chat_tool",
+      "en": "Create tool"
+    },
+    {
+      "module": "tools",
+      "key": "names.create_goal",
+      "en": "Create goal"
     },
     {
       "module": "tools",
@@ -1966,8 +2337,18 @@
     },
     {
       "module": "tools",
+      "key": "names.delete_file",
+      "en": "Delete file"
+    },
+    {
+      "module": "tools",
       "key": "names.edit_file",
       "en": "Edit"
+    },
+    {
+      "module": "tools",
+      "key": "names.edit_notebook",
+      "en": "Edit notebook"
     },
     {
       "module": "tools",
@@ -2051,13 +2432,33 @@
     },
     {
       "module": "tools",
+      "key": "names.read_lints",
+      "en": "Read lints"
+    },
+    {
+      "module": "tools",
       "key": "names.read_mcp_resource",
       "en": "Read MCP resource"
     },
     {
       "module": "tools",
+      "key": "names.remember_in_pack",
+      "en": "Remember in pack"
+    },
+    {
+      "module": "tools",
       "key": "names.run_tests",
       "en": "Test"
+    },
+    {
+      "module": "tools",
+      "key": "names.search_conversations",
+      "en": "Search chats"
+    },
+    {
+      "module": "tools",
+      "key": "names.set_active_branch",
+      "en": "Set branch"
     },
     {
       "module": "tools",
@@ -2071,6 +2472,11 @@
     },
     {
       "module": "tools",
+      "key": "names.switch_agent_mode",
+      "en": "Switch mode"
+    },
+    {
+      "module": "tools",
       "key": "names.todo_plan",
       "en": "Plan"
     },
@@ -2081,13 +2487,33 @@
     },
     {
       "module": "tools",
+      "key": "names.update_actor_state",
+      "en": "Update actor state"
+    },
+    {
+      "module": "tools",
+      "key": "names.update_goal",
+      "en": "Update goal"
+    },
+    {
+      "module": "tools",
       "key": "names.web_fetch",
       "en": "Fetch URL"
     },
     {
       "module": "tools",
+      "key": "names.web_search",
+      "en": "Web search"
+    },
+    {
+      "module": "tools",
       "key": "names.workspace_checkpoint",
       "en": "Checkpoint"
+    },
+    {
+      "module": "tools",
+      "key": "names.workspace_find",
+      "en": "Find project"
     },
     {
       "module": "tools",

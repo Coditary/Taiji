@@ -114,13 +114,13 @@ ensure_go_toolchain() {
 
 install_os_deps_fedora() {
     log "Installing build dependencies (dnf)…"
-    sudo dnf install -y git golang gcc-c++ cmake ncurses-devel cargo python3
+    sudo dnf install -y git golang gcc-c++ cmake ncurses-devel zlib-devel openssl-devel cargo python3
 }
 
 install_os_deps_debian() {
     log "Installing build dependencies (apt)…"
     sudo apt-get update -qq
-    sudo apt-get install -y git golang-go build-essential cmake libncurses-dev cargo python3
+    sudo apt-get install -y git golang-go build-essential cmake libncurses-dev zlib1g-dev libssl-dev cargo python3
 }
 
 install_os_deps() {

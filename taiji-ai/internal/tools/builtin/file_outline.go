@@ -3,7 +3,6 @@ package builtin
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 )
@@ -29,19 +28,29 @@ func (FileOutline) Parameters() map[string]any {
 	}
 }
 
-func (FileOutline) Run(_ context.Context, args map[string]any) (string, error) {
+func (FileOutline) Run(ctx context.Context, args map[string]any) (string, error) {
 	path, _ := args["path"].(string)
 	path = strings.TrimSpace(path)
 	if path == "" {
 		return "", fmt.Errorf("path is required")
 	}
-	raw, err := os.ReadFile(path)
+	abs, err := explorePath(path)
 	if err != nil {
 		return "", err
 	}
-	ext := strings.ToLower(filepath.Ext(path))
+	if resolveTaijiToolsBinary() != "" {
+		out, err := runTaijiTools(ctx, "outline", "--path", abs)
+		if err == nil && strings.TrimSpace(out) != "" {
+			return strings.TrimSpace(out), nil
+		}
+	}
+	raw, err := readFileBytes(abs)
+	if err != nil {
+		return "", err
+	}
+	ext := strings.ToLower(filepath.Ext(abs))
 	if ext == ".go" {
-		out, err := outlineGoSource(path, raw)
+		out, err := outlineGoSource(abs, raw)
 		if err != nil {
 			return "", err
 		}

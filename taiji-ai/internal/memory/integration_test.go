@@ -43,7 +43,7 @@ func TestIntegrationMemoryFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("remember: %v", err)
 	}
-	indexPath := filepath.Join(root, ".taiji", "memory", "entries.json")
+	indexPath := filepath.Join(taijicfg.ProjectMemoryDir(root), "entries.json")
 	if _, err := os.Stat(indexPath); err != nil {
 		t.Fatalf("memory index missing: %v", err)
 	}

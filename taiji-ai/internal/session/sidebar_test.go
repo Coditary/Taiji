@@ -7,6 +7,23 @@ import (
 	"github.com/coditary/taiji/internal/skills"
 )
 
+func TestIsDraft(t *testing.T) {
+	if IsDraft(nil) {
+		t.Fatal("nil session is not a draft")
+	}
+	if !IsDraft(&Session{State: State{Messages: nil}}) {
+		t.Fatal("empty messages should be draft")
+	}
+	if IsDraft(&Session{State: State{Messages: []provider.Message{{Role: provider.RoleUser, Content: "hi"}}}}) {
+		t.Fatal("session with messages is not a draft")
+	}
+	if !IsDraft(&Session{State: State{Messages: []provider.Message{
+		{Role: provider.RoleSystem, Content: "internal"},
+	}}}) {
+		t.Fatal("system-only session should still be a draft")
+	}
+}
+
 func TestTurnsFromMessages(t *testing.T) {
 	turns := TurnsFromMessages([]provider.Message{
 		{Role: provider.RoleUser, Content: "hello"},

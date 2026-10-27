@@ -278,8 +278,10 @@
       "flat": "Квартира"
     },
     "tool_call_density": {
-      "compact": "Компактный",
-      "detailed": "Подробно"
+      "inline": "Inline",
+      "subtree": "Subtree",
+      "clustered": "Clustered",
+      "ignore": "Ignore"
     },
     "presentation": {
       "markdown": "...",

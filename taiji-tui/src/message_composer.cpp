@@ -1,5 +1,6 @@
 #include "message_composer.hpp"
 
+#include "ui_test_ids.hpp"
 #include "ui_keybindings.hpp"
 
 #include <tuinator/platform/clipboard.hpp>
@@ -19,6 +20,8 @@
 
 namespace {
 
+constexpr int kMaxComposerOverlayPrefHeight = 10;
+
 void replace_agent_mode_chip(std::vector<ComposerChip>& chips, ComposerChip chip) {
     chips.erase(std::remove_if(chips.begin(), chips.end(),
                                [](const ComposerChip& c) { return c.kind == ComposerChipKind::AgentMode; }),
@@ -31,9 +34,12 @@ void replace_agent_mode_chip(std::vector<ComposerChip>& chips, ComposerChip chip
 MessageComposer::MessageComposer(tuinator::TextInputOptions input_options, tuinator::Style style,
                                  tuinator::Style focused_style, tuinator::Theme theme)
     : palette_(theme), theme_picker_(theme), actor_picker_(theme), theme_(std::move(theme)) {
+    set_test_id(taiji::ui::test_id::kComposerRoot);
+    palette_.set_test_id(taiji::ui::test_id::kComposerPalette);
     default_input_placeholder_ = input_options.placeholder;
     input_options.prompt = "  ";
     input_ = std::make_unique<ChatTextInput>(input_options, style, focused_style);
+    input_->set_test_id(taiji::ui::test_id::kComposerPromptInput);
     input_->set_on_layout([this]() { mark_layout_dirty(); });
     input_->set_on_submit([this](const std::string& value) {
         if (theme_picker_.is_open()) {
@@ -185,17 +191,21 @@ tuinator::Size MessageComposer::preferred_size() const {
         h += 1;
     }
     if (theme_picker_.is_open()) {
-        h += theme_picker_.preferred_size(42).height;
+        h += std::min(theme_picker_.preferred_size(42).height, kMaxComposerOverlayPrefHeight);
     } else if (actor_picker_.is_open()) {
-        h += actor_picker_.preferred_size(42).height;
+        h += std::min(actor_picker_.preferred_size(42).height, kMaxComposerOverlayPrefHeight);
     } else if (palette_.is_open()) {
-        h += palette_.preferred_size().height;
+        h += std::min(palette_.preferred_size().height, kMaxComposerOverlayPrefHeight);
     }
     return {0, h};
 }
 
 tuinator::Rect MessageComposer::stream_bounds(const tuinator::Rect& bounds) const {
     const ChatStreamLayout column = chat_stream_layout_in_widget(bounds.width);
+    // CenteredChatColumn already lays the composer on the stream column; do not inset twice.
+    if (column.offset_x == 0 && bounds.width <= column.content_width) {
+        return bounds;
+    }
     return {bounds.x + column.offset_x, bounds.y, column.content_width, bounds.height};
 }
 
@@ -206,9 +216,6 @@ void MessageComposer::layout(tuinator::Rect bounds) {
     const int image_h = image_attachment_bar_height();
     const int chips_h = chips_.empty() ? 0 : 1;
     const int input_h = input_ != nullptr ? std::max(3, input_->preferred_size().height) : 3;
-    if (input_h > bounds.height) {
-        mark_layout_dirty();
-    }
 
     int overlay_h = 0;
     if (theme_picker_.is_open()) {
@@ -219,11 +226,13 @@ void MessageComposer::layout(tuinator::Rect bounds) {
         overlay_h = palette_.preferred_size().height;
     }
 
-    const int stack_h = image_h + chips_h + overlay_h + input_h;
+    overlay_h = std::min(overlay_h, kMaxComposerOverlayPrefHeight);
+
     const int stack_bottom = bounds.y + bounds.height;
-    const int stack_top = stack_bottom - stack_h;
     const int input_y = stack_bottom - input_h;
-    const int overlay_y = stack_top;
+    const int max_overlay_h = std::max(0, input_y - bounds.y - image_h - chips_h);
+    overlay_h = std::min(overlay_h, max_overlay_h);
+    const int overlay_y = input_y - chips_h - image_h - overlay_h;
     const int overlay_slot_h = overlay_h;
 
     theme_picker_bounds_ = {};
@@ -256,10 +265,11 @@ void MessageComposer::layout(tuinator::Rect bounds) {
         chips_bounds_ = {stream.x, input_y - chips_h, stream.width, chips_h};
     }
 
-    const int visible_input_h = std::min(input_h, std::max(0, bounds.y + bounds.height - input_y));
-    input_bounds_ = {stream.x, input_y, stream.width, visible_input_h};
-    if (input_ != nullptr && visible_input_h > 0) {
+    input_bounds_ = {stream.x, input_y, stream.width, input_h};
+    if (input_ != nullptr && input_h > 0) {
         input_->layout(input_bounds_);
+    } else if (input_ != nullptr) {
+        input_->layout({stream.x, input_y, stream.width, 0});
     }
 }
 
@@ -616,6 +626,16 @@ void MessageComposer::collect_focusable(std::vector<tuinator::Widget*>& out) {
     if (input_ != nullptr) {
         input_->collect_focusable(out);
     }
+}
+
+void MessageComposer::for_each_descendant(const std::function<void(tuinator::Widget*)>& visitor) {
+    if (input_ != nullptr) {
+        visitor(input_.get());
+        input_->for_each_descendant(visitor);
+    }
+    visitor(&palette_);
+    palette_.for_each_descendant(visitor);
+    Widget::for_each_descendant(visitor);
 }
 
 void MessageComposer::rebuild_actor_picker_entries() {
@@ -1162,14 +1182,6 @@ void MessageComposer::open_theme_picker(const std::string& active_theme_id) {
     close_actor_picker();
     theme_revert_id_ = active_theme_id;
     stashed_input_ = input_->value();
-    input_->set_value("");
-    if (stashed_input_.empty()) {
-        const std::string ph = ui_tr("common", "theme_picker.filter_placeholder");
-        input_->set_placeholder(ph.empty() ? "Filter color themes…" : ph);
-    } else {
-        const std::string ph = ui_tr("common", "theme_picker.filter_placeholder_draft");
-        input_->set_placeholder(ph.empty() ? "Filter themes — Esc restores your message" : ph);
-    }
     input_->set_composer_intercept_key([this](const tuinator::KeyPress& key) { return route_theme_picker_key(key); });
     theme_picker_.open(active_theme_id, !stashed_input_.empty());
     if (on_palette_open_changed_) {
@@ -1189,6 +1201,10 @@ void MessageComposer::close_theme_picker(bool commit) {
     theme_picker_.close();
     restore_stashed_input();
     theme_revert_id_.clear();
+    if (input_ != nullptr) {
+        layout_input_height_ = std::max(3, input_->preferred_size().height);
+        input_->sync_frame_border_style();
+    }
     if (on_palette_open_changed_) {
         on_palette_open_changed_(false);
     }
@@ -1202,8 +1218,13 @@ void MessageComposer::restore_stashed_input() {
     }
     input_->set_composer_intercept_key(nullptr);
     input_->set_placeholder(default_input_placeholder_);
-    input_->set_value(stashed_input_);
+    const std::string restored = stashed_input_;
     stashed_input_.clear();
+    input_->set_value(restored);
+    layout_input_height_ = input_->preferred_size().height;
+    sync_palette_key_intercept();
+    notify_input_changed(restored);
+    mark_layout_dirty();
 }
 
 std::string MessageComposer::read_file_snippet(const std::string& rel_path) const {

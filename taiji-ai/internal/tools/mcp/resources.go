@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/coditary/taiji/internal/tools"
@@ -84,6 +85,10 @@ func (t listMCPResources) Name() string { return "list_mcp_resources" }
 // MCPServerName marks this as an MCP-related tool; it spans all servers.
 func (t listMCPResources) MCPServerName() string { return "" }
 
+func (t listMCPResources) MCPLocalToolName() string { return "list_mcp_resources" }
+
+func (t listMCPResources) ToolNamespace() string { return tools.NamespaceMCPMeta }
+
 func (t listMCPResources) Description() string {
 	return "List resources exposed by connected MCP servers."
 }
@@ -126,6 +131,10 @@ func (t readMCPResource) Name() string { return "read_mcp_resource" }
 // MCPServerName marks this as an MCP-related tool; the server is an argument.
 func (t readMCPResource) MCPServerName() string { return "" }
 
+func (t readMCPResource) MCPLocalToolName() string { return "read_mcp_resource" }
+
+func (t readMCPResource) ToolNamespace() string { return tools.NamespaceMCPMeta }
+
 func (t readMCPResource) Description() string {
 	return "Read a resource from a connected MCP server."
 }
@@ -142,6 +151,10 @@ func (t readMCPResource) Parameters() map[string]any {
 				"type":        "string",
 				"description": "Resource URI from list_mcp_resources",
 			},
+			"download_path": map[string]any{
+				"type":        "string",
+				"description": "Optional workspace-relative path to save the resource instead of returning content to the model",
+			},
 		},
 		"required": []string{"server", "uri"},
 	}
@@ -150,12 +163,24 @@ func (t readMCPResource) Parameters() map[string]any {
 func (t readMCPResource) Run(ctx context.Context, args map[string]any) (string, error) {
 	server, _ := args["server"].(string)
 	uri, _ := args["uri"].(string)
+	downloadPath, _ := args["download_path"].(string)
 	server = strings.TrimSpace(server)
 	uri = strings.TrimSpace(uri)
+	downloadPath = strings.TrimSpace(downloadPath)
 	if server == "" || uri == "" {
 		return "", fmt.Errorf("server and uri are required")
 	}
-	return t.bridge.ReadResource(ctx, server, uri)
+	content, err := t.bridge.ReadResource(ctx, server, uri)
+	if err != nil {
+		return "", err
+	}
+	if downloadPath == "" {
+		return content, nil
+	}
+	if err := os.WriteFile(downloadPath, []byte(content), 0o644); err != nil {
+		return "", fmt.Errorf("write download_path: %w", err)
+	}
+	return fmt.Sprintf("saved resource to %s (%d bytes)", downloadPath, len(content)), nil
 }
 
 func registerResourceTools(bridge *Bridge, reg *tools.Registry) {

@@ -1,0 +1,34 @@
+id: demo-forge
+name: Demo — Schmiede & Wald
+description: Beispiel für Entity/Node-Entkopplung (Bardin ist unique_mobile, nicht im Knoten fest verdrahtet).
+start_node: node_forge
+initial_node_states:
+  node_forge: "Feuer glüht, Amboss bereit."
+  node_forest: "Schnee knirscht unter den Füßen."
+nodes:
+  - id: node_forge
+    title: Zwergenschmiede
+    description: |
+      Eine rußige Werkstatt. Hier gibt es Werkzeuge (use_anvil), aber keinen fest eingebauten NPC —
+      wer hier ist, kommt aus der Entity-Registry (location == node_forge oder party).
+    tools_hint:
+      - update_actor_state
+      - graph_move_entity
+  - id: node_forest
+    title: Schneewald
+    description: Dichter Nadelwald, Spuren im Schnee. Goblin-Späher können instanced spawnen.
+entities:
+  - id: npc_bardin
+    kind: actor
+    name: Bardin
+    persistence: unique_mobile
+    template_id: zwerg-schmied
+    location: node_forge
+    memory: "Meister der Schmiede; kennt jeden Hammer."
+edges:
+  - from: node_forge
+    to: node_forest
+    label: Pfad in den Wald
+  - from: node_forest
+    to: node_forge
+    label: Zurück zur Schmiede

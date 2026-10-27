@@ -278,8 +278,10 @@
       "flat": "Apartamento"
     },
     "tool_call_density": {
-      "compact": "Compacto",
-      "detailed": "Detalhado"
+      "inline": "Inline",
+      "subtree": "Subtree",
+      "clustered": "Clustered",
+      "ignore": "Ignore"
     },
     "presentation": {
       "markdown": "...",

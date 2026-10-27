@@ -1,0 +1,46 @@
+# Mutation testing (go-gremlins/gremlins). Installed via scripts/mutate.sh — not a go.mod dependency.
+#
+# Quality gates: gremlins exits non-zero if thresholds are not met (efficacy ≈ killed/(killed+lived)).
+# Baseline efficacy from `make mutate-module` (2026-03): ~97.5%. Mutant-coverage gate: 80%.
+
+silent: false
+
+unleash:
+  workers: 0
+  test-cpu: 0
+  timeout-coefficient: 5
+  threshold:
+    efficacy: 97
+    mutant-coverage: 80
+  exclude-files:
+    - "_test\\.go$"
+    - "catalog_gen\\.go$"
+    - "agent\\.pb\\.go$"
+    - "agent_grpc\\.pb\\.go$"
+    - "^api/proto/"
+    - "^cmd/"
+    - "^embed/"
+
+mutants:
+  arithmetic-base:
+    enabled: true
+  conditionals-boundary:
+    enabled: true
+  conditionals-negation:
+    enabled: true
+  increment-decrement:
+    enabled: true
+  invert-negatives:
+    enabled: true
+  invert-assignments:
+    enabled: false
+  invert-bitwise:
+    enabled: false
+  invert-bwassign:
+    enabled: false
+  invert-logical:
+    enabled: false
+  invert-loopctrl:
+    enabled: false
+  remove-self-assignments:
+    enabled: false

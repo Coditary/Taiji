@@ -58,7 +58,10 @@
     "skill": "スキル",
     "decision": "決定",
     "question": "質問",
-    "generating_response": "応答を生成中..."
+    "generating_response": "応答を生成中...",
+    "trace": {
+      "explored_prefix": "Explored "
+    }
   },
   "status": {
     "starting": "起動中...",
@@ -90,7 +93,8 @@
     "wait_before_branch": "...",
     "branch_failed": "...",
     "branch_failed_prefix": "...",
-    "branched": "..."
+    "branched": "...",
+    "response_ready_in_session": "{name} の応答が完了しました"
   },
   "metrics": {
     "tok_per_sec": "{value} トークン/秒"

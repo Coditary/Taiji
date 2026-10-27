@@ -1,5 +1,6 @@
 #include "composer_palette.hpp"
 
+#include "skim_fuzzy.hpp"
 #include "ui_theme.hpp"
 
 #include <tuinator/core/event.hpp>
@@ -19,21 +20,20 @@ std::string repeat_utf8(std::string_view glyph, int count) {
     return out;
 }
 
-bool icontains(const std::string& haystack, const std::string& needle) {
-    if (needle.empty()) {
-        return true;
+constexpr int kPaletteMaxListRows = 10;
+
+void sync_list_scroll(int selected, int max_visible, int total_visible, int& list_scroll) {
+    if (max_visible <= 0) {
+        list_scroll = 0;
+        return;
     }
-    std::string lower_h;
-    lower_h.reserve(haystack.size());
-    for (unsigned char ch : haystack) {
-        lower_h.push_back(static_cast<char>(std::tolower(ch)));
+    if (selected < list_scroll) {
+        list_scroll = selected;
+    } else if (selected >= list_scroll + max_visible) {
+        list_scroll = selected - max_visible + 1;
     }
-    std::string lower_n;
-    lower_n.reserve(needle.size());
-    for (unsigned char ch : needle) {
-        lower_n.push_back(static_cast<char>(std::tolower(ch)));
-    }
-    return lower_h.find(lower_n) != std::string::npos;
+    const int max_scroll = std::max(0, total_visible - max_visible);
+    list_scroll = std::clamp(list_scroll, 0, max_scroll);
 }
 
 } // namespace
@@ -101,26 +101,34 @@ void ComposerPalette::tick(int dt_ms) {
 
 void ComposerPalette::rebuild_visible() {
     visible_.clear();
-    for (int i = 0; i < static_cast<int>(rows_.size()); ++i) {
-        const ComposerPaletteRow& row = rows_[i];
-        if (!filter_.empty()) {
-            if (!icontains(row.title, filter_) && !icontains(row.subtitle, filter_) && !icontains(row.id, filter_)) {
-                continue;
-            }
+    std::vector<std::string> lines;
+    std::vector<std::string> meta;
+    lines.reserve(rows_.size());
+    meta.reserve(rows_.size());
+    for (const ComposerPaletteRow& row : rows_) {
+        lines.push_back(row.title + "  " + row.subtitle + "  " + row.id);
+        meta.push_back(row.id + " " + row.title + " " + row.subtitle + " " + row.section);
+    }
+    const std::vector<int> hits = skim_fuzzy_filter_indices(filter_, lines, meta, meta);
+    for (int i : hits) {
+        if (i >= 0 && i < static_cast<int>(rows_.size())) {
+            visible_.push_back(i);
         }
-        visible_.push_back(i);
     }
     if (selected_ >= static_cast<int>(visible_.size())) {
         selected_ = std::max(0, static_cast<int>(visible_.size()) - 1);
     }
+    const int list_rows = std::min(kPaletteMaxListRows, static_cast<int>(visible_.size()));
+    sync_list_scroll(selected_, list_rows, static_cast<int>(visible_.size()), list_scroll_);
 }
 
 int ComposerPalette::panel_height() const {
     if (!open_) {
         return 0;
     }
-    const int rows = std::max(1, static_cast<int>(visible_.size()));
-    return std::min(14, rows + 3);
+    const int row_count = std::max(1, static_cast<int>(visible_.empty() ? 1 : visible_.size()));
+    const int visible = std::min(kPaletteMaxListRows, row_count);
+    return std::min(kPaletteMaxListRows + 3, visible + 3);
 }
 
 tuinator::Size ComposerPalette::preferred_size() const {
@@ -138,8 +146,7 @@ tuinator::Rect ComposerPalette::main_panel_rect() const {
     const int h = panel_height();
     const int w = std::min(bounds_.width, 44);
     const int x = std::max(0, (bounds_.width - w) / 2);
-    const int y = 0;
-    return {x, y, w, h};
+    return {x, 0, w, h};
 }
 
 tuinator::Rect ComposerPalette::flyout_panel_rect() const {
@@ -212,45 +219,67 @@ void ComposerPalette::paint(tuinator::PaintContext& ctx) const {
     ctx.canvas.draw_text({inner_x, y}, repeat_utf8(u8"─", inner_w), hint);
     ++y;
 
-    for (int vi = 0; vi < static_cast<int>(visible_.size()) && y < panel.y + panel.height - 1; ++vi) {
-        const ComposerPaletteRow& row = rows_[static_cast<std::size_t>(visible_[vi])];
+    const int max_list_rows = std::min(kPaletteMaxListRows, panel.height - 3);
+    for (int row = 0; row < max_list_rows; ++row) {
+        const int vi = list_scroll_ + row;
+        if (vi >= static_cast<int>(visible_.size()) || y >= panel.y + panel.height - 1) {
+            break;
+        }
+        const ComposerPaletteRow& palette_row = rows_[static_cast<std::size_t>(visible_[vi])];
         const tuinator::Style& style = vi == selected_ ? row_active : row_style;
 
-        if (!row.section.empty() && (vi == 0 || rows_[static_cast<std::size_t>(visible_[vi - 1])].section != row.section)) {
+        if (!palette_row.section.empty() &&
+            (vi == 0 || rows_[static_cast<std::size_t>(visible_[vi - 1])].section != palette_row.section)) {
             if (y > panel.y + 2) {
                 ctx.canvas.draw_text({inner_x, y}, std::string(u8"├") + repeat_utf8(u8"─", std::max(0, inner_w - 1)), hint);
                 ++y;
             }
         }
 
-        std::string prefix = row.icon.empty() ? "  " : row.icon + " ";
-        std::string line = prefix + row.title;
-        if (!row.subtitle.empty()) {
+        std::string prefix = palette_row.icon.empty() ? "  " : palette_row.icon + " ";
+        std::string line = prefix + palette_row.title;
+        if (!palette_row.subtitle.empty()) {
             line += "  ";
         }
         const int title_max = inner_w - 8;
         const std::size_t title_bytes = tuinator::text_byte_length_for_width(line, title_max);
         ctx.canvas.draw_text({inner_x, y}, line.substr(0, title_bytes), style);
 
-        if (!row.subtitle.empty()) {
-            const std::string sub = row.subtitle;
-            const int sub_x = inner_x + inner_w - tuinator::text_display_width(sub) - (row.submenu ? 2 : 0);
+        if (!palette_row.subtitle.empty()) {
+            const std::string sub = palette_row.subtitle;
+            const int sub_x = inner_x + inner_w - tuinator::text_display_width(sub) - (palette_row.submenu ? 2 : 0);
             tuinator::Style sub_style = hint;
             sub_style.background = style.background;
             sub_style.background_rgb = style.background_rgb;
             ctx.canvas.draw_text({sub_x, y}, sub, sub_style);
         }
-        if (row.submenu) {
+        if (palette_row.submenu) {
             ctx.canvas.draw_text({inner_x + inner_w - 2, y}, "▸", style);
-        } else if (row.checked) {
+        } else if (palette_row.checked) {
             ctx.canvas.draw_text({inner_x + inner_w - 2, y}, "✓", style);
-        } else if (!row.hint.empty()) {
-            const int hx = inner_x + inner_w - tuinator::text_display_width(row.hint);
+        } else if (!palette_row.hint.empty()) {
+            const int hx = inner_x + inner_w - tuinator::text_display_width(palette_row.hint);
             tuinator::Style hs = hint;
             hs.background_rgb = style.background_rgb;
-            ctx.canvas.draw_text({hx, y}, row.hint, hs);
+            ctx.canvas.draw_text({hx, y}, palette_row.hint, hs);
         }
         ++y;
+    }
+
+    if (!visible_.empty()) {
+        std::string scroll_text = std::to_string(selected_ + 1) + "/" + std::to_string(visible_.size());
+        if (static_cast<int>(visible_.size()) > max_list_rows) {
+            scroll_text += "  ↑↓";
+        }
+        const int caption_y = panel.y + panel.height - 1;
+        const int text_w = tuinator::text_display_width(scroll_text);
+        const int caption_x = panel.x + panel.width - 2 - text_w;
+        tuinator::Style caption = frame;
+        caption.dim = true;
+        caption.foreground_rgb = ui_secondary_text();
+        caption.background_rgb = ui_input_chrome_fill();
+        ctx.canvas.fill_rect({caption_x - 1, caption_y, text_w + 2, 1}, ' ', frame);
+        ctx.canvas.draw_text({caption_x, caption_y}, scroll_text, caption);
     }
 
     const tuinator::Rect fly = flyout_panel_rect();
@@ -277,67 +306,82 @@ void ComposerPalette::paint(tuinator::PaintContext& ctx) const {
     }
 }
 
+bool ComposerPalette::handle_keypress(const tuinator::KeyPress& key) {
+    if (!open_) {
+        return false;
+    }
+
+    if (key.key == tuinator::Key::Escape) {
+        close();
+        return true;
+    }
+    if (key.key == tuinator::Key::Up) {
+        selected_ = std::max(0, selected_ - 1);
+        sync_list_scroll(selected_, std::min(kPaletteMaxListRows, static_cast<int>(visible_.size())),
+                         static_cast<int>(visible_.size()), list_scroll_);
+        mark_dirty();
+        return true;
+    }
+    if (key.key == tuinator::Key::Down) {
+        selected_ = std::min(static_cast<int>(visible_.size()) - 1, selected_ + 1);
+        sync_list_scroll(selected_, std::min(kPaletteMaxListRows, static_cast<int>(visible_.size())),
+                         static_cast<int>(visible_.size()), list_scroll_);
+        mark_dirty();
+        return true;
+    }
+    if (key.key == tuinator::Key::Right) {
+        flyout_parent_ = selected_;
+        mark_dirty();
+        return true;
+    }
+    if (key.key == tuinator::Key::Left) {
+        flyout_parent_ = -1;
+        mark_dirty();
+        return true;
+    }
+    if (key.key == tuinator::Key::Enter) {
+        if (flyout_parent_ >= 0) {
+            return true;
+        }
+        if (selected_ >= 0 && selected_ < static_cast<int>(visible_.size())) {
+            const ComposerPaletteRow& row = rows_[static_cast<std::size_t>(visible_[selected_])];
+            if (row.submenu) {
+                flyout_parent_ = selected_;
+                mark_dirty();
+                return true;
+            }
+            if (on_select_) {
+                on_select_(row.id);
+            }
+            return true;
+        }
+        return true;
+    }
+    if (key.key == tuinator::Key::Backspace) {
+        if (!filter_.empty()) {
+            filter_.pop_back();
+            rebuild_visible();
+            mark_dirty();
+        }
+        return true;
+    }
+    const std::string insert = tuinator::keypress_insert_text(key);
+    if (!insert.empty() && insert[0] >= 32) {
+        filter_ += insert;
+        rebuild_visible();
+        mark_dirty();
+        return true;
+    }
+    return false;
+}
+
 bool ComposerPalette::handle_event(const tuinator::Event& event) {
     if (!open_) {
         return false;
     }
 
     if (const auto* key = std::get_if<tuinator::KeyPress>(&event)) {
-        if (key->key == tuinator::Key::Escape) {
-            close();
-            return true;
-        }
-        if (key->key == tuinator::Key::Up) {
-            selected_ = std::max(0, selected_ - 1);
-            mark_dirty();
-            return true;
-        }
-        if (key->key == tuinator::Key::Down) {
-            selected_ = std::min(static_cast<int>(visible_.size()) - 1, selected_ + 1);
-            mark_dirty();
-            return true;
-        }
-        if (key->key == tuinator::Key::Right) {
-            flyout_parent_ = selected_;
-            mark_dirty();
-            return true;
-        }
-        if (key->key == tuinator::Key::Left) {
-            flyout_parent_ = -1;
-            mark_dirty();
-            return true;
-        }
-        if (key->key == tuinator::Key::Enter) {
-            if (flyout_parent_ >= 0) {
-                return true;
-            }
-            if (selected_ >= 0 && selected_ < static_cast<int>(visible_.size())) {
-                const ComposerPaletteRow& row = rows_[static_cast<std::size_t>(visible_[selected_])];
-                if (row.submenu) {
-                    flyout_parent_ = selected_;
-                    mark_dirty();
-                    return true;
-                }
-                if (on_select_) {
-                    on_select_(row.id);
-                }
-                return true;
-            }
-            return true;
-        }
-        if (key->key == tuinator::Key::Backspace) {
-            if (!filter_.empty()) {
-                filter_.pop_back();
-                rebuild_visible();
-                mark_dirty();
-            }
-            return true;
-        }
-        const std::string insert = tuinator::keypress_insert_text(*key);
-        if (!insert.empty() && insert[0] >= 32) {
-            filter_ += insert;
-            rebuild_visible();
-            mark_dirty();
+        if (handle_keypress(*key)) {
             return true;
         }
     }
@@ -365,8 +409,8 @@ bool ComposerPalette::handle_event(const tuinator::Event& event) {
         const tuinator::Rect panel = main_panel_rect();
         if (panel.contains(local)) {
             const int row_y = local.y - (panel.y + 2);
-            if (row_y >= 0 && row_y < static_cast<int>(visible_.size())) {
-                selected_ = row_y;
+            if (row_y >= 0 && row_y < std::min(kPaletteMaxListRows, static_cast<int>(visible_.size()))) {
+                selected_ = list_scroll_ + row_y;
                 const ComposerPaletteRow& row = rows_[static_cast<std::size_t>(visible_[selected_])];
                 if (row.submenu) {
                     flyout_parent_ = selected_;

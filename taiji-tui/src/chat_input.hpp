@@ -8,6 +8,7 @@
 class ChatTextInput : public tuinator::TextInput {
   public:
     using QuickKeyHandler = std::function<bool(const tuinator::KeyPress&)>;
+    using PasteInterceptHandler = std::function<bool(const std::string& pasted)>;
 
     ChatTextInput(tuinator::TextInputOptions options, tuinator::Style style, tuinator::Style focused_style);
 
@@ -15,8 +16,11 @@ class ChatTextInput : public tuinator::TextInput {
     void sync_frame_border_style();
     void sync_field_styles(tuinator::Style normal, tuinator::Style focused);
     void set_quick_key_handler(QuickKeyHandler handler);
+    /// Runs before bracketed paste is inserted (e.g. image attachments from clipboard).
+    void set_paste_intercept(PasteInterceptHandler handler);
     /// When set, runs before normal input handling while focused (e.g. theme picker ↑↓ Esc).
     void set_composer_intercept_key(QuickKeyHandler handler);
+    void insert_pasted_text(const std::string& text);
     void set_chrome_busy(bool busy);
     void tick_chrome(int dt_ms);
     bool chrome_animating() const { return chrome_busy_; }
@@ -43,5 +47,6 @@ class ChatTextInput : public tuinator::TextInput {
     std::string model_label_;
     std::string provider_label_;
     QuickKeyHandler quick_key_handler_;
+    PasteInterceptHandler paste_intercept_;
     QuickKeyHandler composer_intercept_key_;
 };

@@ -20,11 +20,9 @@ func TestFormatSkillsList(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	h := &runtimeHandle{
-		rt: &runtime.Runtime{
-			Skills: skills.NewLoader([]string{dir}),
-		},
-	}
+	h := newTestRuntimeHandle(&runtime.Runtime{
+		Skills: skills.NewLoader([]string{dir}),
+	})
 	out := formatSkillsList(h)
 	if !strings.Contains(out, "review") || !strings.Contains(out, "Code review workflow") {
 		t.Fatalf("unexpected output: %q", out)

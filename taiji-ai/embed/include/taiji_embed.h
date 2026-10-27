@@ -16,6 +16,8 @@ typedef struct taiji_session_stats_t {
     double estimated_cost_usd;
     int32_t usage_system_tokens;
     int32_t usage_tools_tokens;
+    int32_t usage_mcp_tokens;
+    int32_t usage_rules_tokens;
     int32_t usage_skills_tokens;
     int32_t usage_conversation_tokens;
 } taiji_session_stats_t;
@@ -63,6 +65,8 @@ char* taiji_provider_label(uint64_t handle);
 char* taiji_mcp_status(uint64_t handle);
 char* taiji_mcp_servers(uint64_t handle);
 char* taiji_skills_list(uint64_t handle);
+char* taiji_pack_mentions(uint64_t handle);
+char* taiji_template_mentions(uint64_t handle);
 char* taiji_decisions_list(uint64_t handle);
 char* taiji_active_skills(uint64_t handle);
 int taiji_session_stats(uint64_t handle, taiji_session_stats_t* out);
@@ -73,13 +77,18 @@ int taiji_ui_set_display_locales(uint64_t handle, char* ui_locale, char* tool_la
 char* taiji_tool_display_title(uint64_t handle, char* tool_name);
 char* taiji_tool_scope_label(uint64_t handle, char* scope);
 char* taiji_projects_list(uint64_t handle);
+int taiji_workspace_open(uint64_t handle, char* folder_path, char** error_out);
 char* taiji_session_turns(uint64_t handle);
+char* taiji_session_graph_view(uint64_t handle);
+int taiji_session_graph_goto(uint64_t handle, char* node_id);
 int taiji_session_truncate_after_turn(uint64_t handle, int32_t turn_index);
 int taiji_session_branch(uint64_t handle, int32_t through_turn, char** error_out);
 int taiji_session_compact(uint64_t handle, char** error_out);
 char* taiji_session_hud_line(uint64_t handle);
+char* taiji_session_todos(uint64_t handle);
 int taiji_session_switch(uint64_t handle, char* project_root, char* session_id, char** error_out);
 int taiji_session_new(uint64_t handle, char* project_root, char** error_out);
+int taiji_session_is_draft(uint64_t handle);
 int taiji_session_delete(uint64_t handle, char* project_root, char* session_id, char** error_out);
 char* taiji_init_error(void);
 

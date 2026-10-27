@@ -1,23 +1,32 @@
 {
   "sidebar": {
+    "folders": "FOLDERS",
     "projects": "PROJECTS",
     "projects_menu_hint": "R-Click: menu",
     "new_session": "New Session",
     "agent_laya": "AGENT & LAYA",
     "skills": "Skills",
     "decisions": "Decisions",
+    "todos": "Todos",
+    "todos_section": "TODOS",
+    "todos_section_count": "TODOS ({count})",
+    "todos_empty": "none",
     "lsp": "LSP",
     "connected": "Connected",
     "empty_none": "none",
     "empty_inactive": "inactive",
     "mcp_title": "MCP",
     "mcp_title_count": "MCP ({count})",
-    "mcp_not_connected": "not connected"
+    "mcp_not_connected": "not connected",
+    "no_sessions": "(no chats yet)"
   },
   "context": {
     "title": "CONTEXT",
     "skills": "Skills",
     "system_prompt": "System prompt",
+    "rules": "Rules",
+    "tools": "Tool definitions",
+    "mcp_definitions": "MCP definitions",
     "tools_mcp": "Tool definitions & MCP",
     "conversation": "Conversation"
   },
@@ -32,6 +41,10 @@
   "session_menu": {
     "open": "Open",
     "delete": "Delete"
+  },
+  "folder_menu": {
+    "open": "Open folder",
+    "new_chat": "New chat"
   },
   "footer": {
     "shortcuts_default": "Tab: focus · Shift+Enter: newline · Enter: send · Esc: stop"
@@ -58,7 +71,10 @@
     "skill": "Skill",
     "decision": "Decision",
     "question": "Question",
-    "generating_response": "Generating response..."
+    "generating_response": "Generating response...",
+    "trace": {
+      "explored_prefix": "Explored "
+    }
   },
   "metrics": {
     "tok_per_sec": "{value} tok/s"
@@ -96,6 +112,9 @@
     "compacted_ok": "Conversation compacted.",
     "compaction_failed": "Compaction failed.",
     "could_not_load_skills": "Could not load skills.",
-    "could_not_load_decisions": "Could not load decisions."
+    "could_not_load_decisions": "Could not load decisions.",
+    "response_ready_in_session": "Response ready in {name}",
+    "failed_open_folder_prefix": "Could not open folder: ",
+    "graph_transition_denied": "Graph: transition not allowed"
   }
 }

@@ -38,6 +38,9 @@
     "prompt": "Prompt",
     "mcp_servers": "MCP Servers",
     "skills": "Skills",
+    "packs": "Context packs",
+    "builtin_tools": "Built-in tools",
+    "council": "Council",
     "speech_to_text": "Speech-to-text (Wuji)",
     "theme": "Theme",
     "agent_chat": "Agent & Chat",
@@ -49,7 +52,10 @@
   },
   "empty": {
     "mcp_none": "(none connected)",
-    "skills_none": "(none loaded)"
+    "skills_none": "(none loaded)",
+    "packs_none": "(none — add .taiji/packs/<name>/)",
+    "builtin_tools_none": "(none)",
+    "council_actors_none": "(use /council add <id>)"
   },
   "rows": {
     "session_name": {
@@ -161,8 +167,36 @@
       "hint": "Language for settings labels and common UI text."
     },
     "tool_call_density": {
-      "label": "Tool call density",
-      "hint": "Compact or detailed tool-call lines in the activity log."
+      "label": "Tool activity",
+      "hint": "How tool steps appear in the chat: inline (write rows + diffs), subtree, clustered summary, or ignore (file change diffs only, no tool rows)."
+    },
+    "file_diff_layout": {
+      "label": "File diff layout",
+      "hint": "Show file changes stacked (unified) or side by side (original vs modified)."
+    },
+    "activity_spacing_lines": {
+      "label": "Activity spacing",
+      "hint": "Blank lines between tool steps, writes, edits, and diff cards in a turn."
+    },
+    "message_spacing_lines": {
+      "label": "Message spacing",
+      "hint": "Blank lines between your messages and assistant replies, and between turns."
+    },
+    "activity_show_pipeline_title": {
+      "label": "Activity model row",
+      "hint": "Show the Taiji (model) header line above tool steps in the activity tree."
+    },
+    "tool_expand_sections": {
+      "label": "Tool expand content",
+      "hint": "What to show when you expand a tool step (parameters, result, both, or nothing)."
+    },
+    "tool_expand_args_format": {
+      "label": "Tool parameter format",
+      "hint": "How expanded tool arguments are formatted."
+    },
+    "tool_expand_result_format": {
+      "label": "Tool result format",
+      "hint": "How expanded tool output is formatted (JSON pretty-prints when the output is valid JSON)."
     },
     "turn_metrics_preset": {
       "label": "Turn metrics",
@@ -255,6 +289,10 @@
     "skill_toggle": {
       "label": "",
       "hint": "Restrict skills to an allowlist, or allow all."
+    },
+    "pack_toggle": {
+      "label": "",
+      "hint": "Enable or disable context packs for this chat (empty allowlist = all packs)."
     }
   },
   "options": {
@@ -278,8 +316,35 @@
       "flat": "Flat"
     },
     "tool_call_density": {
-      "compact": "Compact",
-      "detailed": "Detailed"
+      "inline": "Inline",
+      "subtree": "Subtree",
+      "clustered": "Clustered",
+      "ignore": "Ignore"
+    },
+    "file_diff_layout": {
+      "stacked": "Stacked",
+      "side_by_side": "Side by side"
+    },
+    "tool_expand_sections": {
+      "both": "Parameters and result",
+      "parameters_only": "Parameters only",
+      "response_only": "Response only",
+      "none": "Nothing"
+    },
+    "tool_expand_args_format": {
+      "pretty": "Pretty (key: value)",
+      "json": "JSON (raw)"
+    },
+    "tool_expand_result_format": {
+      "text": "Plain text",
+      "json": "JSON (pretty)"
+    },
+    "spacing_lines": {
+      "0": "0 lines",
+      "1": "1 line",
+      "2": "2 lines",
+      "3": "3 lines",
+      "4": "4 lines"
     },
     "presentation": {
       "markdown": "Markdown",

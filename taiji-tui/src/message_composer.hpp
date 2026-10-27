@@ -87,6 +87,7 @@ class MessageComposer : public tuinator::Widget {
     tuinator::Widget* hit_test(tuinator::Point point) override;
     tuinator::Widget* hit_test_focusable(tuinator::Point point) override;
     void collect_focusable(std::vector<tuinator::Widget*>& out) override;
+    void for_each_descendant(const std::function<void(tuinator::Widget*)>& visitor) override;
     bool has_focused_descendant() const override;
     bool wants_initial_focus() const override { return true; }
     bool captures_keyboard() const override {

@@ -58,7 +58,10 @@
     "skill": "المهارة",
     "decision": "القرار",
     "question": "سؤال",
-    "generating_response": "جاري إنشاء الرد..."
+    "generating_response": "جاري إنشاء الرد...",
+    "trace": {
+      "explored_prefix": "Explored "
+    }
   },
   "metrics": {
     "tok_per_sec": "{value} توك/ثانية"
@@ -93,6 +96,7 @@
     "wait_before_branch": "...",
     "branch_failed": "...",
     "branch_failed_prefix": "...",
-    "branched": "..."
+    "branched": "...",
+    "response_ready_in_session": "الرد جاهز في {name}"
   }
 }

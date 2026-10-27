@@ -131,6 +131,26 @@ func (j *backgroundJob) pump(r io.Reader) {
 	}
 }
 
+// Status returns a short status label, recent log lines, and whether the job has finished.
+func (m *JobManager) Status(sessionID, jobID string, lines int) (status string, logs string, done bool, err error) {
+	job, err := m.job(sessionID, jobID)
+	if err != nil {
+		return "", "", false, err
+	}
+	if lines <= 0 {
+		lines = 50
+	}
+	if job.running {
+		status = "running"
+		done = false
+	} else {
+		status = fmt.Sprintf("exited (code %d)", job.exitCode)
+		done = true
+	}
+	logs = job.buffer.LastLines(lines)
+	return status, logs, done, nil
+}
+
 func (m *JobManager) Logs(sessionID, jobID string, lines int) (string, error) {
 	job, err := m.job(sessionID, jobID)
 	if err != nil {

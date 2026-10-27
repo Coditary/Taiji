@@ -13,7 +13,6 @@ decisions:
   # http_url: http://127.0.0.1:8100
 mcp:
   servers:
-    - test-filesystem
     - context7
 # memory:
 #   kinds_file: /path/to/custom-memory-kinds.yaml

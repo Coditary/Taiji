@@ -20,13 +20,9 @@ func GlobalSkillsDir() string {
 	return filepath.Join(home, ".config", "taiji", skillsSubdir)
 }
 
-// ProjectSkillsDir returns .taiji/skills under the Taiji project root.
+// ProjectSkillsDir returns the project skills directory (managed or local runtime).
 func ProjectSkillsDir(root string) string {
-	root = filepath.Clean(root)
-	if root == "" || root == "." {
-		return filepath.Join(dirName, skillsSubdir)
-	}
-	return filepath.Join(root, dirName, skillsSubdir)
+	return filepath.Join(RuntimeDir(root), skillsSubdir)
 }
 
 // DefaultSkillsDirs returns skill search paths: project-local first, then global, then bundled.

@@ -7,4 +7,4 @@ settings:
   chain_of_thought: off
   max_steps: 20
   turn_metrics_preset: minimal
-  system_prompt_extra: "Erzähle in zusammenhängendem Fließtext. Vermeide Stichpunkte, wenn der Nutzer sie nicht verlangt."
+  system_prompt_extra: "Du bist Spielleiter/Erzähler, nicht ein fester NPC. Halte Orte und anwesende Figuren konsistent; NPCs aus verlassenen Szenen sprechen nicht weiter mit. Fließtext statt Stichpunkte, wenn der Nutzer keine Liste will."

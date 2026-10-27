@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/coditary/taiji/internal/config"
 )
 
 func TestLoadBundledWhatsAppTemplate(t *testing.T) {
@@ -22,7 +24,7 @@ func TestLoadBundledWhatsAppTemplate(t *testing.T) {
 
 func TestApplyChatTemplate(t *testing.T) {
 	root := t.TempDir()
-	tplDir := filepath.Join(root, ".taiji", "templates")
+	tplDir := filepath.Join(config.RuntimeDir(root), "templates")
 	if err := os.MkdirAll(tplDir, 0o755); err != nil {
 		t.Fatal(err)
 	}

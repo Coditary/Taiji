@@ -1,15 +1,11 @@
 package builtin
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"regexp"
-	"sort"
 	"strings"
 )
 
@@ -116,29 +112,20 @@ func parseContentSearchArgs(args map[string]any) (contentSearchArgs, error) {
 	}, nil
 }
 
-// RunContentSearch searches file contents using rg when available, else a Go fallback.
+// RunContentSearch searches file contents using ripgrep only.
 func RunContentSearch(ctx context.Context, args map[string]any) (string, error) {
 	parsed, err := parseContentSearchArgs(args)
 	if err != nil {
 		return "", err
 	}
-
-	_, rgErr := exec.LookPath("rg")
-	hasRG := rgErr == nil
-	if parsed.outputMode != "content" || parsed.contextLines > 0 || parsed.fileType != "" {
-		if !hasRG {
-			return "", fmt.Errorf("rg not found on PATH; install ripgrep for output_mode, context_lines, or type")
-		}
-		return runRipgrep(ctx, parsed)
+	rg, err := requireRipgrep()
+	if err != nil {
+		return "", err
 	}
-
-	if hasRG {
-		return runRipgrep(ctx, parsed)
-	}
-	return runBuiltinGrep(parsed)
+	return runRipgrep(ctx, rg, parsed)
 }
 
-func runRipgrep(ctx context.Context, parsed contentSearchArgs) (string, error) {
+func runRipgrep(ctx context.Context, rgBin string, parsed contentSearchArgs) (string, error) {
 	args := []string{"--color=never"}
 	switch parsed.outputMode {
 	case "files_with_matches":
@@ -167,7 +154,7 @@ func runRipgrep(ctx context.Context, parsed contentSearchArgs) (string, error) {
 	}
 	args = append(args, parsed.pattern, parsed.root)
 
-	cmd := exec.CommandContext(ctx, "rg", args...)
+	cmd := exec.CommandContext(ctx, rgBin, args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -197,99 +184,3 @@ func noMatchesMessage(parsed contentSearchArgs) string {
 	return fmt.Sprintf("no matches for %q under %s", parsed.pattern, parsed.root)
 }
 
-func runBuiltinGrep(parsed contentSearchArgs) (string, error) {
-	flags := ""
-	if parsed.caseInsensitive {
-		flags = "(?i)"
-	}
-	re, err := regexp.Compile(flags + parsed.pattern)
-	if err != nil {
-		return "", fmt.Errorf("invalid pattern: %w", err)
-	}
-
-	info, err := os.Stat(parsed.root)
-	if err != nil {
-		return "", err
-	}
-
-	var matches []string
-	appendMatch := func(rel string, lineNum int, line string) {
-		matches = append(matches, fmt.Sprintf("%s:%d:%s", rel, lineNum, strings.TrimRight(line, "\n\r")))
-	}
-
-	if !info.IsDir() {
-		rel := filepath.Base(parsed.root)
-		if err := grepFile(parsed.root, rel, parsed.glob, re, parsed.headLimit, appendMatch); err != nil {
-			return "", err
-		}
-	} else {
-		err = filepath.WalkDir(parsed.root, func(path string, d os.DirEntry, err error) error {
-			if err != nil {
-				return nil
-			}
-			if d.IsDir() {
-				if path != parsed.root && isSkippedPath(d.Name()) {
-					return filepath.SkipDir
-				}
-				return nil
-			}
-			rel, err := filepath.Rel(parsed.root, path)
-			if err != nil || pathHasSkippedSegment(rel) {
-				return nil
-			}
-			if len(matches) >= parsed.headLimit {
-				return filepath.SkipAll
-			}
-			return grepFile(path, rel, parsed.glob, re, parsed.headLimit-len(matches), appendMatch)
-		})
-		if err != nil {
-			return "", err
-		}
-	}
-
-	if len(matches) == 0 {
-		return noMatchesMessage(parsed), nil
-	}
-	sort.Strings(matches)
-	out := strings.Join(matches, "\n")
-	if len(matches) >= parsed.headLimit {
-		out += fmt.Sprintf("\n\n(truncated at %d lines)", parsed.headLimit)
-	}
-	return out, nil
-}
-
-func grepFile(path, rel, glob string, re *regexp.Regexp, remaining int, appendMatch func(string, int, string)) error {
-	if remaining <= 0 {
-		return nil
-	}
-	if strings.TrimSpace(glob) != "" {
-		ok, err := matchGlob(rel, glob)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return nil
-		}
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil
-	}
-	if bytes.IndexByte(data, 0) >= 0 {
-		return nil
-	}
-	sc := bufio.NewScanner(bytes.NewReader(data))
-	lineNum := 0
-	for sc.Scan() {
-		lineNum++
-		line := sc.Text()
-		if re.FindStringIndex(line) != nil {
-			appendMatch(rel, lineNum, line)
-			remaining--
-			if remaining <= 0 {
-				break
-			}
-		}
-	}
-	return sc.Err()
-}

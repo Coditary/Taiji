@@ -1,10 +1,14 @@
 #include "settings_gear.hpp"
 
+#include "ui_test_ids.hpp"
+
 #include <tuinator/render/text.hpp>
 
 SettingsGearButton::SettingsGearButton(tuinator::Style normal_style, tuinator::Style hover_style,
                                        std::function<void()> on_click)
-    : normal_style_(std::move(normal_style)), hover_style_(std::move(hover_style)), on_click_(std::move(on_click)) {}
+    : normal_style_(std::move(normal_style)), hover_style_(std::move(hover_style)), on_click_(std::move(on_click)) {
+    set_test_id(taiji::ui::test_id::kSettingsGear);
+}
 
 tuinator::Size SettingsGearButton::preferred_size() const {
     const int w = tuinator::text_display_width(kLabel);

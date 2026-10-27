@@ -278,8 +278,10 @@
       "flat": "सपाट"
     },
     "tool_call_density": {
-      "compact": "संक्षिप्त",
-      "detailed": "विस्तृत"
+      "inline": "Inline",
+      "subtree": "Subtree",
+      "clustered": "Clustered",
+      "ignore": "Ignore"
     },
     "presentation": {
       "markdown": "मार्कडाउन",

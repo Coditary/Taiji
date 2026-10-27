@@ -73,6 +73,14 @@ bool ui_key_ctrl_char(const tuinator::KeyPress& key, char ch, bool allow_shift) 
     return false;
 }
 
+bool ui_key_alt_digit(const tuinator::KeyPress& key, int digit) {
+    if (!key.alt || key.ctrl || digit < 1 || digit > 9) {
+        return false;
+    }
+    const char want = static_cast<char>('0' + digit);
+    return key.character == want;
+}
+
 bool ui_key_plain_char(const tuinator::KeyPress& key, char ch) {
     if (key.ctrl || key.alt) {
         return false;

@@ -7,7 +7,7 @@ import (
 )
 
 func TestAgentRuntimeForRunSessionOverrides(t *testing.T) {
-	cfg, err := taijicfg.LoadAt(t.TempDir())
+	cfg, err := taijicfg.LoadAt(t.TempDir(), taijicfg.LoadOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,6 +33,13 @@ func TestAgentRuntimeForRunSessionOverrides(t *testing.T) {
 	}
 	if rt.Model != "custom-model" {
 		t.Fatalf("model = %q", rt.Model)
+	}
+}
+
+func TestBuiltinToolAllowed(t *testing.T) {
+	rt := AgentRuntime{BuiltinToolsAllow: []string{"read_file"}, BuiltinToolsDeny: []string{"bash"}}
+	if !rt.BuiltinToolAllowed("read_file") || rt.BuiltinToolAllowed("bash") || rt.BuiltinToolAllowed("write_file") {
+		t.Fatalf("builtin allow/deny mismatch")
 	}
 }
 

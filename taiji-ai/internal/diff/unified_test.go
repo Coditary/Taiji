@@ -24,6 +24,15 @@ func TestUnifiedModified(t *testing.T) {
 	}
 }
 
+func TestUnifiedIncludesContextWindow(t *testing.T) {
+	old := "l1\nl2\nl3\nl4\nl5\nl6\nl7\n"
+	newText := "l1\nl2\nl3\nL4\nl5\nl6\nl7\n"
+	out := Unified("x.txt", old, newText, 50)
+	if !strings.Contains(out, " l3") || !strings.Contains(out, " l5") {
+		t.Fatalf("expected context lines around change: %q", out)
+	}
+}
+
 func TestUnifiedTruncate(t *testing.T) {
 	lines := make([]string, 30)
 	for i := range lines {

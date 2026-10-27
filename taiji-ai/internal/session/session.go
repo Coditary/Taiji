@@ -24,6 +24,7 @@ type State struct {
 	Messages   []provider.Message `json:"messages"`
 	Stats      Stats              `json:"stats,omitempty"`
 	Settings   Settings           `json:"settings,omitempty"`
+	Graph      *GraphSession      `json:"graph,omitempty"`
 }
 
 // Stats aggregates usage for a session.

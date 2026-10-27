@@ -1,5 +1,6 @@
 #include "chat_message_chrome.hpp"
 
+#include "ui_anim.hpp"
 #include "ui_chat_column.hpp"
 
 #include <tuinator/render/text.hpp>
@@ -64,9 +65,14 @@ ChatChromeStyles chat_chrome_styles(ChatMessageRole role, const tuinator::Style&
         out.accent.foreground_rgb = ui_user_bubble();
     } else {
         out.accent = ui_thinking_style();
+        out.accent.foreground_rgb = ui_assistant_chrome_accent_rgb();
         out.body = ui_resolve_main_text(out.accent);
         out.body.bold = false;
-        out.body.foreground_rgb = ui_text();
+        if (ui_narrative_presentation()) {
+            out.body.foreground_rgb = ui_fade_toward(ui_text(), ui_secondary_text(), 0.12);
+        } else {
+            out.body.foreground_rgb = ui_text();
+        }
     }
 
     if (role == ChatMessageRole::User) {

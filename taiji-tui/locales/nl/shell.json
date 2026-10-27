@@ -58,7 +58,10 @@
     "skill": "Vaardigheid",
     "decision": "Besluit",
     "question": "Vraag",
-    "generating_response": "Reactie wordt gegenereerd..."
+    "generating_response": "Reactie wordt gegenereerd...",
+    "trace": {
+      "explored_prefix": "Explored "
+    }
   },
   "metrics": {
     "tok_per_sec": "..."
@@ -93,6 +96,7 @@
     "wait_before_branch": "...",
     "branch_failed": "...",
     "branch_failed_prefix": "...",
-    "branched": "..."
+    "branched": "...",
+    "response_ready_in_session": "Antwoord klaar in {name}"
   }
 }

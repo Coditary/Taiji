@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+)
 
 func TestResolvedMemoryDefaults(t *testing.T) {
 	cfg := &Config{}
@@ -31,8 +34,9 @@ func TestMemoryPrefetchOnTurnConfig(t *testing.T) {
 }
 
 func TestProjectMemoryDir(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	got := ProjectMemoryDir("/tmp/proj")
-	want := "/tmp/proj/.taiji/memory"
+	want := filepath.Join(RuntimeDir("/tmp/proj"), "memory")
 	if got != want {
 		t.Fatalf("got %q want %q", got, want)
 	}

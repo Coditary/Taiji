@@ -1,10 +1,17 @@
 package config
 
+import (
+	"os"
+	"strings"
+)
+
 // ToolsConfig controls built-in agent tool behavior.
 type ToolsConfig struct {
-	AutoFormat      *bool `yaml:"auto_format,omitempty"`
-	AutoVet         *bool `yaml:"auto_vet,omitempty"`
-	AllowLocalFetch *bool `yaml:"allow_local_fetch,omitempty"`
+	AutoFormat          *bool  `yaml:"auto_format,omitempty"`
+	AutoVet             *bool  `yaml:"auto_vet,omitempty"`
+	AllowLocalFetch     *bool  `yaml:"allow_local_fetch,omitempty"`
+	BraveSearchAPIKey   string `yaml:"brave_search_api_key,omitempty"`
+	WebSearchMaxResults int    `yaml:"web_search_max_results,omitempty"`
 }
 
 // DefaultToolsConfig returns built-in tool defaults.
@@ -37,6 +44,12 @@ func mergeTools(dst *ToolsConfig, src ToolsConfig) {
 	if src.AllowLocalFetch != nil {
 		dst.AllowLocalFetch = src.AllowLocalFetch
 	}
+	if strings.TrimSpace(src.BraveSearchAPIKey) != "" {
+		dst.BraveSearchAPIKey = strings.TrimSpace(src.BraveSearchAPIKey)
+	}
+	if src.WebSearchMaxResults > 0 {
+		dst.WebSearchMaxResults = src.WebSearchMaxResults
+	}
 }
 
 func (t ToolsConfig) AutoFormatOrDefault() bool {
@@ -58,4 +71,18 @@ func (t ToolsConfig) AllowLocalFetchOrDefault() bool {
 		return false
 	}
 	return *t.AllowLocalFetch
+}
+
+func (t ToolsConfig) WebSearchMaxResultsOrDefault() int {
+	if t.WebSearchMaxResults <= 0 {
+		return 8
+	}
+	return t.WebSearchMaxResults
+}
+
+func (t ToolsConfig) BraveSearchKey() string {
+	if k := strings.TrimSpace(t.BraveSearchAPIKey); k != "" {
+		return k
+	}
+	return strings.TrimSpace(os.Getenv("BRAVE_API_KEY"))
 }

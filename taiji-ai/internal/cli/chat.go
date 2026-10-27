@@ -221,6 +221,7 @@ func runChatREPL(parent context.Context, app *App, opts chatOptions) error {
 			Memory:     state.rt.Memory,
 			MCP:              state.rt.MCP,
 			DecisionProfiles: state.rt.DecisionProfiles,
+			PackIndex:        state.rt.PackIndex,
 			Hooks:            state.rt.Hooks,
 			Questions:        state.rt.Questions,
 			WorkDir:    state.workDir,
@@ -300,6 +301,25 @@ func (s *chatState) handleSlashCommand(line string) (handled bool, exit bool, er
 		return true, false, nil
 	}
 
+	if reply, ok, err := session.ParseCheckpointCommand(s.session, s.app.Config.Root, line); ok {
+		if err != nil {
+			return true, false, err
+		}
+		fmt.Fprintln(os.Stderr, reply)
+		return true, false, nil
+	}
+
+	if strings.HasPrefix(strings.ToLower(line), "/council") {
+		reply, ok, err := session.ParseCouncilCommand(s.session, s.app.Config.Root, line)
+		if ok {
+			if err != nil {
+				return true, false, err
+			}
+			fmt.Fprintln(os.Stderr, reply)
+			return true, false, nil
+		}
+	}
+
 	switch strings.ToLower(fields[0]) {
 	case "/exit", "/quit":
 		return true, true, nil
@@ -367,6 +387,18 @@ func (s *chatState) handleSlashCommand(line string) (handled bool, exit bool, er
 			return true, false, err
 		}
 		fmt.Fprintf(os.Stderr, "new session: %s\n", s.session.Label())
+		return true, false, nil
+	case "/template", "/actor":
+		if len(fields) < 2 {
+			for _, t := range session.ListChatTemplates(s.app.Config.Root) {
+				fmt.Fprintf(os.Stderr, "  %s — %s\n", t.ID, t.Name)
+			}
+			return true, false, nil
+		}
+		if err := session.ApplyChatTemplate(s.session, s.app.Config.Root, fields[1]); err != nil {
+			return true, false, err
+		}
+		fmt.Fprintf(os.Stderr, "template active: %s\n", fields[1])
 		return true, false, nil
 	case "/provider":
 		if len(fields) == 1 {

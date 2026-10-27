@@ -27,6 +27,7 @@ type Message struct {
 // ToolDef describes a callable tool for the model.
 type ToolDef struct {
 	Name        string         `json:"name"`
+	Namespace   string         `json:"namespace,omitempty"`
 	Description string         `json:"description"`
 	Parameters  map[string]any `json:"parameters"`
 }

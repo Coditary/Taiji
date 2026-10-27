@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/coditary/taiji/internal/config"
 )
 
 func TestDirBindingSaveLoad(t *testing.T) {
@@ -72,12 +74,15 @@ func TestDirBindingStoredUnderRuntimeRoot(t *testing.T) {
 	if err := os.MkdirAll(localRoot, 0o755); err != nil {
 		t.Fatal(err)
 	}
+	if err := config.RegisterProject(localRoot, true); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := SaveDirBinding(localRoot, localRoot, "local-session"); err != nil {
 		t.Fatal(err)
 	}
 
-	path := filepath.Join(localRoot, ".taiji", "dir-sessions")
+	path := filepath.Join(config.RuntimeDir(localRoot), "dir-sessions")
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		t.Fatal(err)

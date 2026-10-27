@@ -1,0 +1,20 @@
+---
+description: New features and behavior changes — write failing tests first, then implementation
+alwaysApply: true
+---
+
+# New features: test first → red → implement → green
+
+When implementing a **new feature**, **behavior change**, or **non-trivial enhancement** (not question-only or docs-only work):
+
+1. **Specify expected behavior** — what users or callers should observe (UI, API, config paths, CLI flags, etc.).
+2. **Add automated tests first** that encode that expectation. Use the right layer:
+   - TUI: `taiji-tui/tests/` (`AppDriver`, `test_id`, component/integration/i18n tests).
+   - Backend: `taiji-ai` `*_test.go` next to the package under change.
+   - Scripts/gates: extend `scripts/check_*.py` or locale tests when the feature is i18n or static analysis.
+3. **Run tests before production code** — the new test(s) should be **red** (or fail for the right reason). If they pass without implementation, fix the test (wrong assertion, scene, or setup).
+4. **Then implement** the minimal product change until tests are **green**. Re-run the relevant suite before claiming done.
+
+Skip or narrow TDD only when tests are genuinely impractical (hardware, flaky external services, one-off prototypes the user labels as throwaway). Say what you tried and what you shipped instead.
+
+Bug fixes from user criticism follow `.cursor/rules/user-reported-bugs-tdd.mdc` (same red-first spirit).

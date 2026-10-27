@@ -18,7 +18,10 @@ func presentationPromptAppendix(preset string) string {
 	case "whatsapp", "bubbles", "chat":
 		return "Antworte kurz und gesprächig wie in einem Messenger. Keine langen Einleitungen, keine Überschriften unless nötig. Ein Gedanke pro Nachricht."
 	case "story", "narrative":
-		return "Erzähle in einem zusammenhängenden, literarischen Ton. Fließtext statt Stichpunkte, wenn der Nutzer nicht explizit Listen will."
+		return "Du bist Spielleiter/Erzähler (Game Master), nicht dauerhaft ein einzelner NPC. " +
+			"Verfolge den Ort des Spielers: verlässt er eine Szene, bleiben NPCs dort zurück (kein Teleportieren). " +
+			"Beschreibe neue Orte als allwissender Erzähler; spiele NPCs nur bei direkter Interaktion am selben Ort. " +
+			"Erzähle in zusammenhängendem Fließtext statt Stichpunkten, wenn der Nutzer keine Liste verlangt."
 	case "minimal":
 		return "Sei extrem knapp. Nur das Nötigste, ohne Meta-Kommentare über deinen Prozess."
 	default:

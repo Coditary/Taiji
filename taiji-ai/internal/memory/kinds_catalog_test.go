@@ -21,7 +21,7 @@ func TestLoadKindCatalogIncludesPersona(t *testing.T) {
 
 func TestKindCatalogProjectOverride(t *testing.T) {
 	root := t.TempDir()
-	projectFile := filepath.Join(root, ".taiji", "memory-kinds.yaml")
+	projectFile := filepath.Join(taijicfg.RuntimeDir(root), "memory-kinds.yaml")
 	if err := os.MkdirAll(filepath.Dir(projectFile), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +96,7 @@ func TestSuggestStoreKindsPersona(t *testing.T) {
 
 func TestParseKindCustomKind(t *testing.T) {
 	root := t.TempDir()
-	projectFile := filepath.Join(root, ".taiji", "memory-kinds.yaml")
+	projectFile := filepath.Join(taijicfg.RuntimeDir(root), "memory-kinds.yaml")
 	if err := os.MkdirAll(filepath.Dir(projectFile), 0o755); err != nil {
 		t.Fatal(err)
 	}

@@ -28,6 +28,7 @@ const (
 	TypeUserPrompt     Type = "user_prompt"
 	TypeDone           Type = "done"
 	TypeTurnMetrics    Type = "turn_metrics"
+	TypeActorSwitch    Type = "actor_switch"
 )
 
 // Event is a single agent loop event.
@@ -48,6 +49,7 @@ type Event struct {
 	IsAskUser  bool           `json:"is_ask_user,omitempty"`
 	SkillName  string         `json:"skill_name,omitempty"`
 	Data       map[string]any `json:"data,omitempty"`
+	Diff       string         `json:"diff,omitempty"`
 }
 
 // Writer appends events to a JSONL file and fans out to subscribers.

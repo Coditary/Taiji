@@ -140,9 +140,12 @@ void CenteredChatColumn::layout(tuinator::Rect bounds) {
     }
 
     const int top_pad = apply_top_pad_ ? kChatStreamPadTop : 0;
-    const int y = bounds_.y + top_pad;
-    const int h = std::max(0, bounds_.height - top_pad);
-    content_->layout({bounds_.x, y, bounds_.width, h});
+    const int avail_h = std::max(0, bounds_.height - top_pad);
+    const tuinator::Size pref = content_->preferred_size();
+    const int content_h = std::min(avail_h, std::max(1, pref.height));
+    const int y = bounds_.y + top_pad + (avail_h - content_h);
+    const ChatStreamLayout column = chat_stream_layout_in_widget(bounds_.width);
+    content_->layout({bounds_.x + column.offset_x, y, column.content_width, content_h});
 }
 
 void CenteredChatColumn::paint(tuinator::PaintContext& ctx) const {
@@ -180,4 +183,12 @@ void CenteredChatColumn::collect_focusable(std::vector<tuinator::Widget*>& out) 
     if (content_ != nullptr) {
         content_->collect_focusable(out);
     }
+}
+
+void CenteredChatColumn::for_each_descendant(const std::function<void(tuinator::Widget*)>& visitor) {
+    if (content_ != nullptr) {
+        visitor(content_.get());
+        content_->for_each_descendant(visitor);
+    }
+    Widget::for_each_descendant(visitor);
 }

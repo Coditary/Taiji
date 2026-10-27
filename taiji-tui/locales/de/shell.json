@@ -1,23 +1,32 @@
 {
   "sidebar": {
+    "folders": "ORDNER",
     "projects": "PROJEKTE",
     "projects_menu_hint": "Rechtsklick: Menü",
     "new_session": "Neue Session",
     "agent_laya": "Agent & LAYA",
     "skills": "Fertigkeiten",
     "decisions": "Entscheidungen",
+    "todos": "Aufgaben",
+    "todos_section": "AUFGABEN",
+    "todos_section_count": "AUFGABEN ({count})",
+    "todos_empty": "keine",
     "lsp": "Sprachserver",
     "connected": "Verbunden",
     "empty_none": "keine",
     "empty_inactive": "inaktiv",
     "mcp_title": "MCP-Server",
     "mcp_title_count": "MCP",
-    "mcp_not_connected": "nicht verbunden"
+    "mcp_not_connected": "nicht verbunden",
+    "no_sessions": "(noch keine Chats)"
   },
   "context": {
     "title": "KONTEXT",
     "skills": "Fertigkeiten",
     "system_prompt": "System-Prompt",
+    "rules": "Regeln",
+    "tools": "Tool-Definitionen",
+    "mcp_definitions": "MCP-Definitionen",
     "tools_mcp": "Tool-Definitionen & MCP",
     "conversation": "Konversation"
   },
@@ -32,6 +41,10 @@
   "session_menu": {
     "open": "Öffnen",
     "delete": "Löschen"
+  },
+  "folder_menu": {
+    "open": "Ordner öffnen",
+    "new_chat": "Neuer Chat"
   },
   "footer": {
     "shortcuts_default": "Tab: Fokus · Umsch+Enter: Zeile · Enter: Senden · Esc: Stopp"
@@ -58,7 +71,10 @@
     "skill": "Fertigkeit",
     "decision": "Entscheidung",
     "question": "Frage",
-    "generating_response": "Antwort wird generiert..."
+    "generating_response": "Antwort wird generiert...",
+    "trace": {
+      "explored_prefix": "Erkundet "
+    }
   },
   "status": {
     "starting": "Startet...",
@@ -93,7 +109,10 @@
     "compacted_ok": "Konversation komprimiert.",
     "compaction_failed": "Komprimieren fehlgeschlagen.",
     "could_not_load_skills": "Skills konnten nicht geladen werden.",
-    "could_not_load_decisions": "Entscheidungen konnten nicht geladen werden."
+    "could_not_load_decisions": "Entscheidungen konnten nicht geladen werden.",
+    "response_ready_in_session": "Antwort fertig in {name}",
+    "failed_open_folder_prefix": "Ordner konnte nicht geöffnet werden: ",
+    "graph_transition_denied": "Graph: Übergang nicht erlaubt"
   },
   "metrics": {
     "tok_per_sec": "{value} Tok/s"

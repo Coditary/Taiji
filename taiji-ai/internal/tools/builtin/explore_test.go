@@ -31,6 +31,9 @@ func TestListDir(t *testing.T) {
 }
 
 func TestGlobSearch(t *testing.T) {
+	if resolveTaijiToolsBinary() == "" {
+		t.Skip("taiji-tools not built; run make taiji-tools in taiji-ai")
+	}
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "main.go"), []byte("package main"), 0o644); err != nil {
 		t.Fatal(err)
@@ -55,6 +58,9 @@ func TestGlobSearch(t *testing.T) {
 }
 
 func TestGrepBuiltin(t *testing.T) {
+	if _, err := exec.LookPath("rg"); err != nil {
+		t.Skip("rg not on PATH")
+	}
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "sample.go"), []byte("func HelloWorld() {}\n"), 0o644); err != nil {
 		t.Fatal(err)

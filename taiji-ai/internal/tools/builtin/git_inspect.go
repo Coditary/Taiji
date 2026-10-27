@@ -60,6 +60,16 @@ func (GitInspect) Run(ctx context.Context, args map[string]any) (string, error) 
 }
 
 func gitInspectStatus() (string, error) {
+	root := workspaceProjectRoot()
+	if root == "" {
+		root = "."
+	}
+	if resolveTaijiToolsBinary() != "" {
+		out, err := runTaijiTools(context.Background(), "git-status", "--root", root)
+		if err == nil && strings.TrimSpace(out) != "" {
+			return strings.TrimSpace(out), nil
+		}
+	}
 	branch, err := runGitOutput("rev-parse", "--abbrev-ref", "HEAD")
 	if err != nil {
 		return "", fmt.Errorf("not a git repository or git unavailable: %w", err)
@@ -81,6 +91,16 @@ func gitInspectLog(args map[string]any) (string, error) {
 	}
 	if limit > 30 {
 		limit = 30
+	}
+	root := workspaceProjectRoot()
+	if root == "" {
+		root = "."
+	}
+	if resolveTaijiToolsBinary() != "" {
+		out, err := runTaijiTools(context.Background(), "git-log", "--root", root, "--limit", fmt.Sprintf("%d", limit))
+		if err == nil && strings.TrimSpace(out) != "" {
+			return strings.TrimSpace(out), nil
+		}
 	}
 	path := stringArg(args, "path")
 	gitArgs := []string{

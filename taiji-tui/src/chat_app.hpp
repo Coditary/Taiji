@@ -163,6 +163,7 @@ class ChatApp {
     void refresh_active_turn_stream();
     void request_chat_layout_refresh();
     void flush_chat_layout(bool scroll_to_bottom = false);
+    void sync_prompt_and_chat_layout();
     void update_chat_wrap_widths();
     void tick_ui_animations();
     void update_turn_action_hovers();
@@ -327,6 +328,7 @@ class ChatApp {
     std::string init_error_;
     std::mutex init_mu_;
     bool startup_new_session_ = false;
+    bool startup_local_mode_ = false;
     std::string startup_project_root_;
     bool runtime_ready_applied_ = false;
     std::chrono::steady_clock::time_point runtime_ready_at_{};

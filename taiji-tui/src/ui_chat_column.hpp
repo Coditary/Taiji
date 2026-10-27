@@ -53,6 +53,7 @@ class CenteredChatColumn : public tuinator::Widget {
     tuinator::Widget* hit_test(tuinator::Point point) override;
     tuinator::Widget* hit_test_focusable(tuinator::Point point) override;
     void collect_focusable(std::vector<tuinator::Widget*>& out) override;
+    void for_each_descendant(const std::function<void(tuinator::Widget*)>& visitor) override;
     void set_on_layout(std::function<void()> callback) override;
     void set_on_dirty(std::function<void(tuinator::Rect)> callback) override;
 

@@ -278,8 +278,10 @@
       "flat": "Appartamento"
     },
     "tool_call_density": {
-      "compact": "Compatto",
-      "detailed": "Dettagliato"
+      "inline": "Inline",
+      "subtree": "Subtree",
+      "clustered": "Clustered",
+      "ignore": "Ignore"
     },
     "presentation": {
       "markdown": "...",

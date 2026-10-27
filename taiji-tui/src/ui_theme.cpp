@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -43,6 +44,8 @@ UiChatRolePrefs g_ui_assistant_chat_prefs{
 };
 bool g_ui_user_message_fill_background = true;
 bool g_ui_assistant_message_fill_background = true;
+bool g_ui_narrative_presentation = false;
+std::optional<tuinator::Rgb> g_ui_template_accent_rgb;
 
 struct UiPalette {
     tuinator::Rgb main_bg{26, 27, 38};
@@ -642,6 +645,80 @@ void ui_apply_chat_message_prefs(const std::string& user_style, const std::strin
     g_ui_assistant_chat_prefs.for_assistant = true;
 }
 
+bool ui_parse_hex_rgb(const std::string& raw, tuinator::Rgb& out) {
+    std::string hex;
+    hex.reserve(raw.size());
+    for (unsigned char ch : raw) {
+        if (std::isspace(static_cast<unsigned char>(ch))) {
+            continue;
+        }
+        hex.push_back(static_cast<char>(ch));
+    }
+    if (hex.size() >= 1 && hex[0] == '#') {
+        hex.erase(hex.begin());
+    }
+    if (hex.size() != 6) {
+        return false;
+    }
+    auto nibble = [](char c) -> int {
+        if (c >= '0' && c <= '9') {
+            return c - '0';
+        }
+        if (c >= 'a' && c <= 'f') {
+            return 10 + (c - 'a');
+        }
+        if (c >= 'A' && c <= 'F') {
+            return 10 + (c - 'A');
+        }
+        return -1;
+    };
+    int r1 = nibble(hex[0]);
+    int r2 = nibble(hex[1]);
+    int g1 = nibble(hex[2]);
+    int g2 = nibble(hex[3]);
+    int b1 = nibble(hex[4]);
+    int b2 = nibble(hex[5]);
+    if (r1 < 0 || r2 < 0 || g1 < 0 || g2 < 0 || b1 < 0 || b2 < 0) {
+        return false;
+    }
+    out = tuinator::rgb(static_cast<uint8_t>((r1 << 4) | r2), static_cast<uint8_t>((g1 << 4) | g2),
+                        static_cast<uint8_t>((b1 << 4) | b2));
+    return true;
+}
+
+void ui_set_template_accent_color(const std::string& hex) {
+    tuinator::Rgb rgb{};
+    if (hex.empty() || !ui_parse_hex_rgb(hex, rgb)) {
+        g_ui_template_accent_rgb.reset();
+        return;
+    }
+    g_ui_template_accent_rgb = rgb;
+}
+
+bool ui_narrative_presentation() { return g_ui_narrative_presentation; }
+
+void ui_apply_presentation_mode(const std::string& mode) {
+    std::string m;
+    m.reserve(mode.size());
+    for (unsigned char ch : mode) {
+        m.push_back(static_cast<char>(std::tolower(ch)));
+    }
+    g_ui_narrative_presentation = (m == "narrative" || m == "story");
+    if (m == "whatsapp" || m == "bubbles" || m == "chat") {
+        ui_apply_chat_message_prefs("messenger", "right", 80, "messenger", "left", 80);
+        return;
+    }
+    if (g_ui_narrative_presentation) {
+        ui_apply_chat_message_prefs("plain", "auto", 100, "header", "auto", 100);
+        return;
+    }
+    if (m == "minimal") {
+        ui_apply_chat_message_prefs("plain", "auto", 80, "plain", "auto", 80);
+        return;
+    }
+    ui_apply_chat_message_prefs("plain", "auto", 80, "plain", "auto", 80);
+}
+
 void ui_apply_corners_pref(const std::string& pref) {
     std::string normalized;
     normalized.reserve(pref.size());
@@ -733,13 +810,18 @@ tuinator::Style ui_thinking_style() {
     return fallback;
 }
 
-tuinator::Rgb ui_assistant_message_border_rgb() {
+tuinator::Rgb ui_assistant_chrome_accent_rgb() {
+    if (g_ui_template_accent_rgb.has_value()) {
+        return *g_ui_template_accent_rgb;
+    }
     const tuinator::Style style = ui_thinking_style();
     if (style.foreground_rgb.has_value()) {
         return *style.foreground_rgb;
     }
     return tuinator::rgb(255, 140, 64);
 }
+
+tuinator::Rgb ui_assistant_message_border_rgb() { return ui_assistant_chrome_accent_rgb(); }
 
 tuinator::Style ui_composer_input_style() {
     tuinator::Style style;

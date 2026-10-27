@@ -56,6 +56,17 @@ void ChatTextInput::set_quick_key_handler(QuickKeyHandler handler) {
     quick_key_handler_ = std::move(handler);
 }
 
+void ChatTextInput::set_paste_intercept(PasteInterceptHandler handler) {
+    paste_intercept_ = std::move(handler);
+}
+
+void ChatTextInput::insert_pasted_text(const std::string& text) {
+    PasteInterceptHandler saved = std::move(paste_intercept_);
+    paste_intercept_ = {};
+    handle_event(tuinator::ClipboardPaste{text});
+    paste_intercept_ = std::move(saved);
+}
+
 void ChatTextInput::set_composer_intercept_key(QuickKeyHandler handler) {
     composer_intercept_key_ = std::move(handler);
 }
@@ -117,6 +128,14 @@ bool ChatTextInput::handle_event(const tuinator::Event& event) {
     if (quick_key_handler_) {
         if (const auto* key = std::get_if<tuinator::KeyPress>(&event)) {
             if (quick_key_handler_(*key)) {
+                return true;
+            }
+        }
+    }
+    if (paste_intercept_) {
+        if (const auto* paste = std::get_if<tuinator::ClipboardPaste>(&event)) {
+            if (paste_intercept_(paste->text)) {
+                note_caret_activity();
                 return true;
             }
         }
@@ -267,22 +286,25 @@ void ChatTextInput::paint(tuinator::PaintContext& ctx) const {
     // Focused+empty: ghost placeholder to the right of the block caret (do not erase the caret cell).
     if (focused && value().empty() && !placeholder().empty() &&
         options_.chrome == tuinator::TextInputChrome::Framed) {
-        const int row = 1;
-        const int col_start = 2 + tuinator::text_display_width(prompt());
-        const int inner_w =
-            std::max(0, bounds_.width - 4 - static_cast<int>(tuinator::text_display_width(prompt())));
+        const std::optional<tuinator::Point> caret = caret_local_cell();
+        if (caret.has_value()) {
+            const int prompt_w = static_cast<int>(tuinator::text_display_width(prompt()));
+            const int col_start = 2 + prompt_w + std::max(0, options_.content_pad_left);
+            const int inner_w = std::max(0, bounds_.width - 4 - prompt_w - std::max(0, options_.content_pad_left) -
+                                                  std::max(0, options_.content_pad_right));
 
-        tuinator::Style placeholder_base;
-        placeholder_base.background_rgb = ui_input_chrome_fill();
-        placeholder_base.foreground_rgb = ui_secondary_text();
-        placeholder_base.dim = true;
-        const tuinator::Style placeholder_style = ctx.styles().text(*this, placeholder_base);
+            tuinator::Style placeholder_base;
+            placeholder_base.background_rgb = ui_input_chrome_fill();
+            placeholder_base.foreground_rgb = ui_secondary_text();
+            placeholder_base.dim = true;
+            const tuinator::Style placeholder_style = ctx.styles().text(*this, placeholder_base);
 
-        const int placeholder_col = col_start + 1;
-        const int placeholder_w = std::max(0, inner_w - 1);
-        const std::size_t bytes = tuinator::text_byte_length_for_width(placeholder(), placeholder_w);
-        if (bytes > 0) {
-            ctx.canvas.draw_text({placeholder_col, row}, placeholder().substr(0, bytes), placeholder_style);
+            const int placeholder_col = caret->x + 1;
+            const int placeholder_w = std::max(0, col_start + inner_w - placeholder_col);
+            const std::size_t bytes = tuinator::text_byte_length_for_width(placeholder(), placeholder_w);
+            if (bytes > 0) {
+                ctx.canvas.draw_text({placeholder_col, caret->y}, placeholder().substr(0, bytes), placeholder_style);
+            }
         }
     }
 

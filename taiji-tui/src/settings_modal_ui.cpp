@@ -1,5 +1,6 @@
 #include "settings_modal.hpp"
 
+#include "ui_chat_spacing.hpp"
 #include "ui_navigation.hpp"
 
 #include "ui_locale.hpp"
@@ -28,6 +29,35 @@ std::string settings_empty_label(const char* key, const std::string& fallback) {
 std::string settings_value_label(const char* key, const std::string& fallback) {
     const std::string translated = ui_tr("settings", std::string("values.") + key);
     return translated.empty() ? fallback : translated;
+}
+
+std::string tool_expand_sections_id(bool show_parameters, bool show_result) {
+    if (show_parameters && show_result) {
+        return "both";
+    }
+    if (show_parameters) {
+        return "parameters_only";
+    }
+    if (show_result) {
+        return "response_only";
+    }
+    return "none";
+}
+
+void apply_tool_expand_sections_id(const std::string& section, SettingsModal::Draft& draft) {
+    if (section == "parameters_only") {
+        draft.tool_expand_show_parameters = true;
+        draft.tool_expand_show_result = false;
+    } else if (section == "response_only") {
+        draft.tool_expand_show_parameters = false;
+        draft.tool_expand_show_result = true;
+    } else if (section == "none") {
+        draft.tool_expand_show_parameters = false;
+        draft.tool_expand_show_result = false;
+    } else {
+        draft.tool_expand_show_parameters = true;
+        draft.tool_expand_show_result = true;
+    }
 }
 
 std::string clip(std::string text, int max_cols) {
@@ -592,6 +622,29 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             mem.kind = Row::Kind::BoolToggle;
             mem.enum_key = "memory_enabled";
             rows.push_back(mem);
+            Row gap_council;
+            gap_council.kind = Row::Kind::Gap;
+            rows.push_back(gap_council);
+            Row sec_council;
+            sec_council.kind = Row::Kind::Section;
+            sec_council.label = settings_section_label("council", "Council");
+            rows.push_back(sec_council);
+            Row council_on;
+            council_on.label = "Council enabled";
+            council_on.kind = Row::Kind::BoolToggle;
+            council_on.enum_key = "council_enabled";
+            rows.push_back(council_on);
+            Row council_list;
+            council_list.label = "Council actors";
+            council_list.kind = Row::Kind::FixedValue;
+            council_list.enum_key = "council_actors_summary";
+            rows.push_back(council_list);
+            Row pacing;
+            pacing.label = "Stream pacing";
+            pacing.kind = Row::Kind::EnumCycle;
+            pacing.enum_key = "stream_pacing";
+            pacing.enum_values = {"", "natural_typing"};
+            rows.push_back(pacing);
             Row gap1;
             gap1.kind = Row::Kind::Gap;
             rows.push_back(gap1);
@@ -668,6 +721,27 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
                 hint.enum_key = "none";
                 rows.push_back(hint);
             }
+            Row gap_bt;
+            gap_bt.kind = Row::Kind::Gap;
+            rows.push_back(gap_bt);
+            Row sec_bt;
+            sec_bt.kind = Row::Kind::Section;
+            sec_bt.label = settings_section_label("builtin_tools", "Built-in tools");
+            rows.push_back(sec_bt);
+            for (const std::string& tool : draft_.builtin_tools_available) {
+                Row tool_row;
+                tool_row.label = tool;
+                tool_row.kind = Row::Kind::BuiltinToolToggle;
+                tool_row.builtin_tool_name = tool;
+                rows.push_back(tool_row);
+            }
+            if (draft_.builtin_tools_available.empty()) {
+                Row hint;
+                hint.label = settings_empty_label("builtin_tools_none", "(none)");
+                hint.kind = Row::Kind::Text;
+                hint.enum_key = "none";
+                rows.push_back(hint);
+            }
             Row gap_sk;
             gap_sk.kind = Row::Kind::Gap;
             rows.push_back(gap_sk);
@@ -685,6 +759,36 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             if (draft_.skills_available.empty()) {
                 Row hint;
                 hint.label = settings_empty_label("skills_none", "(none loaded)");
+                hint.kind = Row::Kind::Text;
+                hint.enum_key = "none";
+                rows.push_back(hint);
+            }
+            Row gap_pk;
+            gap_pk.kind = Row::Kind::Gap;
+            rows.push_back(gap_pk);
+            Row sec_pk;
+            sec_pk.kind = Row::Kind::Section;
+            sec_pk.label = settings_section_label("packs", "Context packs");
+            rows.push_back(sec_pk);
+            for (std::size_t i = 0; i < draft_.packs_available.size(); ++i) {
+                Row row;
+                const std::string& name = draft_.packs_available[i];
+                int nodes = 0;
+                if (i < draft_.packs_node_counts.size()) {
+                    nodes = draft_.packs_node_counts[i];
+                }
+                if (nodes > 0) {
+                    row.label = name + " (" + std::to_string(nodes) + " nodes)";
+                } else {
+                    row.label = name;
+                }
+                row.kind = Row::Kind::PackAllowToggle;
+                row.pack_index = static_cast<int>(i);
+                rows.push_back(row);
+            }
+            if (draft_.packs_available.empty()) {
+                Row hint;
+                hint.label = settings_empty_label("packs_none", "(none — add .taiji/packs/<name>/)");
                 hint.kind = Row::Kind::Text;
                 hint.enum_key = "none";
                 rows.push_back(hint);
@@ -803,8 +907,49 @@ std::vector<SettingsModal::Row> SettingsModal::rows_for_category() const {
             tool_density.label = "Tool call density";
             tool_density.kind = Row::Kind::EnumCycle;
             tool_density.enum_key = "tool_call_density";
-            tool_density.enum_values = {"compact", "detailed"};
+            tool_density.enum_values = {"inline", "subtree", "clustered", "ignore"};
             rows.push_back(tool_density);
+            Row file_diff_layout;
+            file_diff_layout.label = "File diff layout";
+            file_diff_layout.kind = Row::Kind::EnumCycle;
+            file_diff_layout.enum_key = "file_diff_layout";
+            file_diff_layout.enum_values = {"stacked", "side_by_side"};
+            rows.push_back(file_diff_layout);
+            Row activity_spacing;
+            activity_spacing.label = "Activity spacing";
+            activity_spacing.kind = Row::Kind::EnumCycle;
+            activity_spacing.enum_key = "activity_spacing_lines";
+            activity_spacing.enum_values = {"0", "1", "2", "3", "4"};
+            rows.push_back(activity_spacing);
+            Row message_spacing;
+            message_spacing.label = "Message spacing";
+            message_spacing.kind = Row::Kind::EnumCycle;
+            message_spacing.enum_key = "message_spacing_lines";
+            message_spacing.enum_values = {"0", "1", "2", "3", "4"};
+            rows.push_back(message_spacing);
+            Row pipeline_title;
+            pipeline_title.label = "Activity model row";
+            pipeline_title.kind = Row::Kind::BoolToggle;
+            pipeline_title.enum_key = "activity_show_pipeline_title";
+            rows.push_back(pipeline_title);
+            Row tool_expand_sections;
+            tool_expand_sections.label = "Tool expand content";
+            tool_expand_sections.kind = Row::Kind::EnumCycle;
+            tool_expand_sections.enum_key = "tool_expand_sections";
+            tool_expand_sections.enum_values = {"both", "parameters_only", "response_only", "none"};
+            rows.push_back(tool_expand_sections);
+            Row tool_expand_args_fmt;
+            tool_expand_args_fmt.label = "Tool parameter format";
+            tool_expand_args_fmt.kind = Row::Kind::EnumCycle;
+            tool_expand_args_fmt.enum_key = "tool_expand_args_format";
+            tool_expand_args_fmt.enum_values = {"pretty", "json"};
+            rows.push_back(tool_expand_args_fmt);
+            Row tool_expand_result_fmt;
+            tool_expand_result_fmt.label = "Tool result format";
+            tool_expand_result_fmt.kind = Row::Kind::EnumCycle;
+            tool_expand_result_fmt.enum_key = "tool_expand_result_format";
+            tool_expand_result_fmt.enum_values = {"text", "json"};
+            rows.push_back(tool_expand_result_fmt);
             Row metrics;
             metrics.label = "Turn metrics";
             metrics.kind = Row::Kind::EnumCycle;
@@ -1001,14 +1146,23 @@ bool SettingsModal::row_bool_toggle_on(const Row& row) const {
     if (row.kind == Row::Kind::MCPToolToggle) {
         return !mcp_tool_denied(row.mcp_tool_server, row.mcp_tool_name);
     }
+    if (row.kind == Row::Kind::BuiltinToolToggle) {
+        return !builtin_tool_denied(row.builtin_tool_name);
+    }
     if (row.enum_key == "decisions_enabled") {
         return draft_.decisions_enabled;
     }
     if (row.enum_key == "memory_enabled") {
         return draft_.memory_enabled;
     }
+    if (row.enum_key == "council_enabled") {
+        return draft_.council_enabled;
+    }
     if (row.enum_key == "turn_metrics_show_actions") {
         return draft_.turn_metrics_show_actions;
+    }
+    if (row.enum_key == "activity_show_pipeline_title") {
+        return draft_.activity_show_pipeline_title;
     }
     if (row.enum_key == "code_block_wrap") {
         return draft_.code_block_wrap;
@@ -1114,6 +1268,19 @@ std::string SettingsModal::row_value_text(const Row& row) const {
                 }
                 return format_context_window(draft_.context_window);
             }
+            if (row.enum_key == "council_actors_summary") {
+                if (draft_.council_actors.empty()) {
+                    return settings_empty_label("council_actors_none", "(use /council add <id>)");
+                }
+                std::string joined;
+                for (std::size_t i = 0; i < draft_.council_actors.size(); ++i) {
+                    if (i > 0) {
+                        joined += ", ";
+                    }
+                    joined += draft_.council_actors[i];
+                }
+                return joined;
+            }
             return "";
         case Row::Kind::IntValue:
             if (editing_text_ && text_edit_target_ == row.enum_key) {
@@ -1173,6 +1340,12 @@ std::string SettingsModal::row_value_text(const Row& row) const {
             if (row.enum_key == "chain_of_thought") {
                 return settings_cot_label(draft_.chain_of_thought);
             }
+            if (row.enum_key == "stream_pacing") {
+                if (draft_.stream_pacing.empty()) {
+                    return ui_settings_option("stream_pacing", "off", "off");
+                }
+                return ui_settings_option("stream_pacing", draft_.stream_pacing, draft_.stream_pacing);
+            }
             if (row.enum_key == "turn_metrics_preset") {
                 const std::string preset = normalize_metrics(draft_.turn_metrics_preset);
                 return ui_settings_option("turn_metrics_preset", preset, preset);
@@ -1195,6 +1368,32 @@ std::string SettingsModal::row_value_text(const Row& row) const {
             }
             if (row.enum_key == "tool_call_density") {
                 return ui_settings_option("tool_call_density", draft_.tool_call_density, draft_.tool_call_density);
+            }
+            if (row.enum_key == "file_diff_layout") {
+                return ui_settings_option("file_diff_layout", draft_.file_diff_layout, draft_.file_diff_layout);
+            }
+            if (row.enum_key == "tool_expand_sections") {
+                const std::string section =
+                    tool_expand_sections_id(draft_.tool_expand_show_parameters, draft_.tool_expand_show_result);
+                return ui_settings_option("tool_expand_sections", section, section);
+            }
+            if (row.enum_key == "tool_expand_args_format") {
+                const std::string fmt =
+                    draft_.tool_expand_args_format == "json" ? "json" : "pretty";
+                return ui_settings_option("tool_expand_args_format", fmt, fmt);
+            }
+            if (row.enum_key == "tool_expand_result_format") {
+                const std::string fmt =
+                    draft_.tool_expand_result_format == "json" ? "json" : "text";
+                return ui_settings_option("tool_expand_result_format", fmt, fmt);
+            }
+            if (row.enum_key == "activity_spacing_lines") {
+                const std::string value = std::to_string(ui_clamp_spacing_lines(draft_.activity_spacing_lines));
+                return ui_settings_option("spacing_lines", value, value);
+            }
+            if (row.enum_key == "message_spacing_lines") {
+                const std::string value = std::to_string(ui_clamp_spacing_lines(draft_.message_spacing_lines));
+                return ui_settings_option("spacing_lines", value, value);
             }
             if (row.enum_key == "presentation") {
                 return settings_presentation_label(draft_.presentation);
@@ -1247,8 +1446,14 @@ std::string SettingsModal::row_value_text(const Row& row) const {
             if (row.enum_key == "memory_enabled") {
                 return settings_bool_label(draft_.memory_enabled);
             }
+            if (row.enum_key == "council_enabled") {
+                return settings_bool_label(draft_.council_enabled);
+            }
             if (row.enum_key == "turn_metrics_show_actions") {
                 return settings_bool_label(draft_.turn_metrics_show_actions);
+            }
+            if (row.enum_key == "activity_show_pipeline_title") {
+                return settings_bool_label(draft_.activity_show_pipeline_title);
             }
             if (row.enum_key == "code_block_wrap") {
                 return settings_bool_label(draft_.code_block_wrap);
@@ -1286,10 +1491,22 @@ std::string SettingsModal::row_value_text(const Row& row) const {
             return ui_settings_option("mcp_tool_state", allowed ? "allowed" : "blocked",
                                       allowed ? "allowed" : "blocked");
         }
+        case Row::Kind::BuiltinToolToggle: {
+            const bool allowed = !builtin_tool_denied(row.builtin_tool_name);
+            return ui_settings_option("mcp_tool_state", allowed ? "allowed" : "blocked",
+                                      allowed ? "allowed" : "blocked");
+        }
         case Row::Kind::SkillAllowToggle: {
             const std::string& name = draft_.skills_available[row.skill_index];
             const std::string state = skill_state(name);
             return ui_settings_option("skill_state", state, state);
+        }
+        case Row::Kind::PackAllowToggle: {
+            if (row.pack_index < 0 || row.pack_index >= static_cast<int>(draft_.packs_available.size())) {
+                return "";
+            }
+            const std::string& name = draft_.packs_available[static_cast<std::size_t>(row.pack_index)];
+            return settings_bool_label(pack_enabled(name));
         }
         case Row::Kind::PresetCombo: {
             if (!draft_.preset.empty()) {
@@ -1324,6 +1541,10 @@ std::string SettingsModal::row_hint_text(const Row& row) const {
     }
     if (row.kind == Row::Kind::SkillAllowToggle) {
         return apply_settings_hint_placeholders(ui_settings_row_hint("skill_toggle", ""));
+    }
+    if (row.kind == Row::Kind::PackAllowToggle) {
+        return apply_settings_hint_placeholders(ui_settings_row_hint("pack_toggle",
+                                                                    "Enable or disable context packs for this chat."));
     }
     return apply_settings_hint_placeholders(ui_settings_row_hint(row.enum_key, ""));
 }
@@ -1614,6 +1835,53 @@ void SettingsModal::activate_row(int row, int direction) {
             } else if (r.enum_key == "tool_call_density") {
                 field = &draft_.tool_call_density;
                 current = draft_.tool_call_density;
+            } else if (r.enum_key == "file_diff_layout") {
+                field = &draft_.file_diff_layout;
+                current = draft_.file_diff_layout.empty() ? "stacked" : draft_.file_diff_layout;
+            } else if (r.enum_key == "tool_expand_sections") {
+                std::string current_section =
+                    tool_expand_sections_id(draft_.tool_expand_show_parameters, draft_.tool_expand_show_result);
+                std::size_t idx = 0;
+                for (std::size_t i = 0; i < r.enum_values.size(); ++i) {
+                    if (r.enum_values[i] == current_section) {
+                        idx = i;
+                        break;
+                    }
+                }
+                const std::size_t next =
+                    (idx + static_cast<std::size_t>(dir) + r.enum_values.size()) % r.enum_values.size();
+                apply_tool_expand_sections_id(r.enum_values[next], draft_);
+                break;
+            } else if (r.enum_key == "tool_expand_args_format") {
+                field = &draft_.tool_expand_args_format;
+                current = draft_.tool_expand_args_format == "json" ? "json" : "pretty";
+            } else if (r.enum_key == "tool_expand_result_format") {
+                field = &draft_.tool_expand_result_format;
+                current = draft_.tool_expand_result_format == "json" ? "json" : "text";
+            } else if (r.enum_key == "activity_spacing_lines") {
+                static const int kSpacingLevels[] = {0, 1, 2, 3, 4};
+                std::size_t idx = 1;
+                for (std::size_t i = 0; i < 5; ++i) {
+                    if (draft_.activity_spacing_lines == kSpacingLevels[i]) {
+                        idx = i;
+                        break;
+                    }
+                }
+                const std::size_t next = (idx + static_cast<std::size_t>(dir) + 5) % 5;
+                draft_.activity_spacing_lines = kSpacingLevels[next];
+                break;
+            } else if (r.enum_key == "message_spacing_lines") {
+                static const int kSpacingLevels[] = {0, 1, 2, 3, 4};
+                std::size_t idx = 1;
+                for (std::size_t i = 0; i < 5; ++i) {
+                    if (draft_.message_spacing_lines == kSpacingLevels[i]) {
+                        idx = i;
+                        break;
+                    }
+                }
+                const std::size_t next = (idx + static_cast<std::size_t>(dir) + 5) % 5;
+                draft_.message_spacing_lines = kSpacingLevels[next];
+                break;
             } else if (r.enum_key == "presentation") {
                 field = &draft_.presentation;
                 current = draft_.presentation;
@@ -1664,6 +1932,9 @@ void SettingsModal::activate_row(int row, int direction) {
             } else if (r.enum_key == "stt_quality") {
                 field = &draft_.stt_quality;
                 current = draft_.stt_quality;
+            } else if (r.enum_key == "stream_pacing") {
+                field = &draft_.stream_pacing;
+                current = draft_.stream_pacing;
             }
             if (field != nullptr && !r.enum_values.empty()) {
                 std::size_t idx = 0;
@@ -1712,8 +1983,12 @@ void SettingsModal::activate_row(int row, int direction) {
                 draft_.decisions_enabled = !draft_.decisions_enabled;
             } else if (r.enum_key == "memory_enabled") {
                 draft_.memory_enabled = !draft_.memory_enabled;
+            } else if (r.enum_key == "council_enabled") {
+                draft_.council_enabled = !draft_.council_enabled;
             } else if (r.enum_key == "turn_metrics_show_actions") {
                 draft_.turn_metrics_show_actions = !draft_.turn_metrics_show_actions;
+            } else if (r.enum_key == "activity_show_pipeline_title") {
+                draft_.activity_show_pipeline_title = !draft_.activity_show_pipeline_title;
             } else if (r.enum_key == "code_block_wrap") {
                 draft_.code_block_wrap = !draft_.code_block_wrap;
             } else if (r.enum_key == "reduce_motion") {
@@ -1806,9 +2081,18 @@ void SettingsModal::activate_row(int row, int direction) {
         case Row::Kind::MCPToolToggle:
             toggle_mcp_tool_denied(r.mcp_tool_server, r.mcp_tool_name);
             break;
+        case Row::Kind::BuiltinToolToggle:
+            toggle_builtin_tool_denied(r.builtin_tool_name);
+            break;
         case Row::Kind::SkillAllowToggle: {
             const std::string& name = draft_.skills_available[r.skill_index];
             cycle_skill_state(name);
+            break;
+        }
+        case Row::Kind::PackAllowToggle: {
+            if (r.pack_index >= 0 && r.pack_index < static_cast<int>(draft_.packs_available.size())) {
+                toggle_pack_enabled(draft_.packs_available[static_cast<std::size_t>(r.pack_index)]);
+            }
             break;
         }
         default:
@@ -1956,7 +2240,7 @@ void SettingsModal::paint_content_row(tuinator::Canvas& clipped, const Row& row,
         clipped.draw_text({value_x, y}, clip(rendered, value_w), toggle);
         return;
     }
-    if (row.kind == Row::Kind::MCPToolToggle) {
+    if (row.kind == Row::Kind::MCPToolToggle || row.kind == Row::Kind::BuiltinToolToggle) {
         const bool allowed = row_bool_toggle_on(row);
         tuinator::Style toggle = value_style;
         if (allowed) {
@@ -1982,6 +2266,24 @@ void SettingsModal::paint_content_row(tuinator::Canvas& clipped, const Row& row,
             rendered = "● " + value;
         } else if (state == "auto") {
             toggle.foreground_rgb = ui_emphasis();
+            rendered = "● " + value;
+        } else {
+            toggle.foreground_rgb = ui_toggle_off();
+            toggle.dim = true;
+            rendered = "○ " + value;
+        }
+        clipped.draw_text({value_x, y}, clip(rendered, value_w), toggle);
+        return;
+    }
+    if (row.kind == Row::Kind::PackAllowToggle) {
+        if (row.pack_index < 0 || row.pack_index >= static_cast<int>(draft_.packs_available.size())) {
+            return;
+        }
+        const std::string& name = draft_.packs_available[static_cast<std::size_t>(row.pack_index)];
+        const bool on = pack_enabled(name);
+        tuinator::Style toggle = value_style;
+        if (on) {
+            toggle.foreground_rgb = ui_status_ok();
             rendered = "● " + value;
         } else {
             toggle.foreground_rgb = ui_toggle_off();
@@ -2459,7 +2761,8 @@ bool SettingsModal::handle_event(const tuinator::Event& event) {
                                r.kind == Row::Kind::FloatValue) {
                         begin_value_edit(selected_row_);
                     } else if (r.kind == Row::Kind::BoolToggle || r.kind == Row::Kind::MCPToggle ||
-                               r.kind == Row::Kind::MCPToolToggle || r.kind == Row::Kind::SkillAllowToggle) {
+                               r.kind == Row::Kind::MCPToolToggle || r.kind == Row::Kind::BuiltinToolToggle ||
+                               r.kind == Row::Kind::SkillAllowToggle || r.kind == Row::Kind::PackAllowToggle) {
                         activate_row(selected_row_, 1);
                     } else {
                         cycle_row_value(selected_row_, 1);

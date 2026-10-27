@@ -278,8 +278,10 @@
       "flat": "Căn hộ"
     },
     "tool_call_density": {
-      "compact": "Nhỏ gọn",
-      "detailed": "Chi tiết"
+      "inline": "Inline",
+      "subtree": "Subtree",
+      "clustered": "Clustered",
+      "ignore": "Ignore"
     },
     "presentation": {
       "markdown": "...",

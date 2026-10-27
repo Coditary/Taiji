@@ -278,8 +278,10 @@
       "flat": "Mieszkanie"
     },
     "tool_call_density": {
-      "compact": "Kompaktowy",
-      "detailed": "Szczegółowe"
+      "inline": "Inline",
+      "subtree": "Subtree",
+      "clustered": "Clustered",
+      "ignore": "Ignore"
     },
     "presentation": {
       "markdown": "Przetłumacz tę etykietę z interfejsu użytkownika oprogramowania na język docelowy: \"Markdown\"",

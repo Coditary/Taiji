@@ -41,7 +41,7 @@ func TestProviderToolChoiceDirect(t *testing.T) {
 	}
 	defs := make([]provider.ToolDef, 0, len(rt.Tools.Definitions()))
 	for _, d := range rt.Tools.Definitions() {
-		defs = append(defs, provider.ToolDef{Name: d.Name, Description: d.Description, Parameters: d.Parameters})
+		defs = append(defs, provider.ToolDef{Name: d.Name, Namespace: d.Namespace, Description: d.Description, Parameters: d.Parameters})
 	}
 	resp, err := p.Complete(ctx, provider.CompletionRequest{
 		Messages: []provider.Message{

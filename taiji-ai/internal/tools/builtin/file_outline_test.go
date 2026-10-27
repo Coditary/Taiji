@@ -40,6 +40,14 @@ func (w *Widget) Run() error {
 	}
 }
 
+func TestOutlineHeuristicPythonDef(t *testing.T) {
+	raw := "# comment\n\ndef greet():\n    pass\n\nclass Widget:\n    pass\n"
+	out := outlineHeuristic([]byte(raw))
+	if !strings.Contains(out, "def greet") || !strings.Contains(out, "class Widget") {
+		t.Fatalf("out=%q", out)
+	}
+}
+
 func TestFileOutlineToolGo(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "x.go")
 	content := "package p\n\nfunc Foo() {}\n"

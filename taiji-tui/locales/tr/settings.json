@@ -278,8 +278,10 @@
       "flat": "Düz"
     },
     "tool_call_density": {
-      "compact": "Özet",
-      "detailed": "Ayrıntılı"
+      "inline": "Inline",
+      "subtree": "Subtree",
+      "clustered": "Clustered",
+      "ignore": "Ignore"
     },
     "presentation": {
       "markdown": "...",

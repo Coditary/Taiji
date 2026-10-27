@@ -38,6 +38,9 @@
     "prompt": "Prompt-Vorlage",
     "mcp_servers": "MCP-Server",
     "skills": "Fertigkeiten",
+    "packs": "Context-Packs",
+    "builtin_tools": "Integrierte Tools",
+    "council": "Council",
     "speech_to_text": "Sprache-zu-Text (Wuji)",
     "theme": "Thema",
     "agent_chat": "Agent & Gespräch",
@@ -149,8 +152,36 @@
       "hint": "Sprache für Einstellungsbeschriftungen und gemeinsame UI-Texte."
     },
     "tool_call_density": {
-      "label": "Tool-Aufruf-Dichte",
-      "hint": "Kompakte oder detaillierte Tool-Zeilen im Aktivitätslog."
+      "label": "Tool-Aktivität",
+      "hint": "Darstellung im Chat: Inline (Writes mit Zeile), Subtree, gruppiert, oder Ausblenden (nur Änderungs-Diffs, keine Tool-Zeilen)."
+    },
+    "file_diff_layout": {
+      "label": "Diff-Ansicht",
+      "hint": "Dateiänderungen untereinander (unified) oder nebeneinander (alt vs. neu)."
+    },
+    "activity_spacing_lines": {
+      "label": "Tool-Abstand",
+      "hint": "Leerzeilen zwischen Tool-Schritten, Writes, Edits und Diff-Karten."
+    },
+    "message_spacing_lines": {
+      "label": "Nachrichten-Abstand",
+      "hint": "Leerzeilen zwischen deinen Nachrichten und Antworten sowie zwischen Turns."
+    },
+    "activity_show_pipeline_title": {
+      "label": "Modell-Zeile",
+      "hint": "Zeile „Taiji (Modell)“ über den Tool-Schritten im Activity-Baum ein- oder ausblenden."
+    },
+    "tool_expand_sections": {
+      "label": "Tool-Aufklapp: Inhalt",
+      "hint": "Was beim Aufklappen eines Tool-Schritts sichtbar ist (Parameter, Ergebnis, beides oder nichts)."
+    },
+    "tool_expand_args_format": {
+      "label": "Parameter-Format",
+      "hint": "Format der aufgeklappten Tool-Argumente."
+    },
+    "tool_expand_result_format": {
+      "label": "Ergebnis-Format",
+      "hint": "Format der Tool-Ausgabe (JSON wird schön formatiert, wenn die Ausgabe gültiges JSON ist)."
     },
     "turn_metrics_preset": {
       "label": "Turn-Metriken",
@@ -251,6 +282,10 @@
     "skill_toggle": {
       "label": "",
       "hint": "Skills auf Allowlist beschränken oder alle erlauben."
+    },
+    "pack_toggle": {
+      "label": "",
+      "hint": "Context-Packs für diesen Chat ein- oder ausschalten (leere Allowlist = alle)."
     }
   },
   "options": {
@@ -274,8 +309,35 @@
       "flat": "Flach"
     },
     "tool_call_density": {
-      "compact": "Kompakt",
-      "detailed": "Detailliert"
+      "inline": "Inline",
+      "subtree": "Subtree",
+      "clustered": "Gruppiert",
+      "ignore": "Ausblenden"
+    },
+    "file_diff_layout": {
+      "stacked": "Untereinander",
+      "side_by_side": "Nebeneinander"
+    },
+    "tool_expand_sections": {
+      "both": "Parameter und Ergebnis",
+      "parameters_only": "Nur Parameter",
+      "response_only": "Nur Ergebnis (Response)",
+      "none": "Nichts"
+    },
+    "tool_expand_args_format": {
+      "pretty": "Lesbar (Schlüssel: Wert)",
+      "json": "JSON (roh)"
+    },
+    "tool_expand_result_format": {
+      "text": "Klartext",
+      "json": "JSON (formatiert)"
+    },
+    "spacing_lines": {
+      "0": "0 Zeilen",
+      "1": "1 Zeile",
+      "2": "2 Zeilen",
+      "3": "3 Zeilen",
+      "4": "4 Zeilen"
     },
     "presentation": {
       "markdown": "Markdown-Darstellung",
@@ -336,6 +398,9 @@
   },
   "empty": {
     "mcp_none": "(nicht verbunden)",
-    "skills_none": "(nicht geladen)"
+    "skills_none": "(nicht geladen)",
+    "packs_none": "(keine — .taiji/packs/<name>/ anlegen)",
+    "builtin_tools_none": "(keine)",
+    "council_actors_none": "(mit /council add <id>)"
   }
 }

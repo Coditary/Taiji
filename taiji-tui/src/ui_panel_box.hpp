@@ -8,6 +8,8 @@ class MainPanelVBox : public tuinator::VBox {
   public:
     explicit MainPanelVBox(tuinator::BoxOptions options = {});
 
+    tuinator::Size preferred_size() const override;
+    void layout(tuinator::Rect bounds) override;
     void paint(tuinator::PaintContext& ctx) const override;
 };
 

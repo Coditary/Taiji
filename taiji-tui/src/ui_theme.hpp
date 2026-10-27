@@ -43,6 +43,24 @@ inline constexpr const char kNfGit[] = u8"󰊢";
 inline constexpr const char kNfAdd[] = u8"󰐕";
 inline constexpr const char kNfFolder[] = u8"󰉋";
 inline constexpr const char kNfPencil[] = u8"󰏫";
+inline constexpr const char kNfChevronRight[] = u8"󰅂";
+inline constexpr const char kNfChevronDown[] = u8"󰅁";
+
+// Seti / devicons (Nerd Font PUA); use kNfFile when the terminal font lacks them.
+inline constexpr const char kNfLangGo[] = u8"\uE626";
+inline constexpr const char kNfLangRust[] = u8"\uE68B";
+inline constexpr const char kNfLangCpp[] = u8"\uE61D";
+inline constexpr const char kNfLangC[] = u8"\uE61E";
+inline constexpr const char kNfLangPython[] = u8"\uE73C";
+inline constexpr const char kNfLangJavascript[] = u8"\uE74E";
+inline constexpr const char kNfLangTypescript[] = u8"\uE628";
+inline constexpr const char kNfLangJson[] = u8"\uE60B";
+inline constexpr const char kNfLangMarkdown[] = u8"\uE609";
+inline constexpr const char kNfLangYaml[] = u8"\uE60A";
+inline constexpr const char kNfLangToml[] = u8"\uE6B2";
+inline constexpr const char kNfLangHtml[] = u8"\uE60E";
+inline constexpr const char kNfLangCss[] = u8"\uE6A0";
+inline constexpr const char kNfLangShell[] = u8"\uE62E";
 
 // Semantic colors (from the active stylesheet @theme block).
 tuinator::Rgb ui_main_bg();
@@ -137,6 +155,8 @@ UiChatRolePrefs ui_assistant_chat_prefs();
 void ui_apply_chat_message_prefs(const std::string& user_style, const std::string& user_align, int user_max_width_pct,
                                  const std::string& assistant_style, const std::string& assistant_align,
                                  int assistant_max_width_pct);
+void ui_apply_presentation_mode(const std::string& mode);
+bool ui_parse_hex_rgb(const std::string& raw, tuinator::Rgb& out);
 UiMessageAlign ui_parse_message_align(const std::string& raw);
 UiMessageAlign ui_chat_resolved_align(const UiChatRolePrefs& prefs);
 int ui_chat_frame_max_cols(int stream_width_cols, const UiChatRolePrefs& prefs);
@@ -159,7 +179,10 @@ void ui_paint_chat_bubble_panel(tuinator::PaintContext& ctx, tuinator::Rect rect
                                 tuinator::Rgb border);
 
 tuinator::Style ui_thinking_style();
+tuinator::Rgb ui_assistant_chrome_accent_rgb();
 tuinator::Rgb ui_assistant_message_border_rgb();
+void ui_set_template_accent_color(const std::string& hex);
+bool ui_narrative_presentation();
 tuinator::Style ui_composer_input_style();
 tuinator::MarkdownStyleSet ui_chat_markdown_styles(const tuinator::Theme& theme);
 

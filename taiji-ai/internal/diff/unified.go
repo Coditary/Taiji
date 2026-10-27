@@ -32,7 +32,7 @@ func Unified(path string, oldText, newText string, maxLines int) string {
 	}
 	for _, h := range hunks {
 		out = append(out, fmt.Sprintf("@@ -%d,%d +%d,%d @@", h.oldStart+1, h.oldLen, h.newStart+1, h.newLen))
-		for _, line := range h.lines {
+		for _, line := range expandHunk(oldLines, newLines, h) {
 			out = append(out, line)
 		}
 	}
@@ -45,6 +45,63 @@ type hunk struct {
 	newStart int
 	newLen   int
 	lines    []string
+}
+
+func windowSizeForChanges(changes int) int {
+	if changes <= 0 {
+		return 0
+	}
+	if changes%2 == 1 {
+		return 5
+	}
+	return 6
+}
+
+func changeCount(h hunk) int {
+	n := h.oldLen
+	if h.newLen > n {
+		n = h.newLen
+	}
+	return n
+}
+
+func expandHunk(oldLines, newLines []string, h hunk) []string {
+	core := h.lines
+	if len(core) == 0 {
+		return core
+	}
+	win := windowSizeForChanges(changeCount(h))
+	if win <= 0 || len(core) >= win {
+		return core
+	}
+	before := (win - len(core)) / 2
+	after := win - len(core) - before
+	if before < 0 {
+		before = 0
+	}
+	if after < 0 {
+		after = 0
+	}
+
+	var out []string
+	for k := before; k >= 1; k-- {
+		oi := h.oldStart - k
+		ni := h.newStart - k
+		if oi >= 0 && ni >= 0 && oi < len(oldLines) && ni < len(newLines) && oldLines[oi] == newLines[ni] {
+			out = append(out, " "+oldLines[oi])
+		}
+	}
+	out = append(out, core...)
+	for k := 0; k < after; k++ {
+		oi := h.oldStart + h.oldLen + k
+		ni := h.newStart + h.newLen + k
+		if oi < len(oldLines) && ni < len(newLines) && oldLines[oi] == newLines[ni] {
+			out = append(out, " "+oldLines[oi])
+		} else {
+			break
+		}
+	}
+	return out
 }
 
 func lineHunks(oldLines, newLines []string) []hunk {

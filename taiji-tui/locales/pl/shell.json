@@ -58,7 +58,10 @@
     "skill": "Umiejętność",
     "decision": "Decyzja",
     "question": "Pytanie",
-    "generating_response": "Generowanie odpowiedzi..."
+    "generating_response": "Generowanie odpowiedzi...",
+    "trace": {
+      "explored_prefix": "Explored "
+    }
   },
   "metrics": {
     "tok_per_sec": "..."
@@ -93,6 +96,7 @@
     "wait_before_branch": "...",
     "branch_failed": "...",
     "branch_failed_prefix": "...",
-    "branched": "..."
+    "branched": "...",
+    "response_ready_in_session": "Odpowiedź gotowa w {name}"
   }
 }

@@ -24,6 +24,8 @@ type templateDocument struct {
 	Name        string   `yaml:"name"`
 	Description string   `yaml:"description"`
 	Settings    Settings `yaml:"settings"`
+	FewShotExamples []ExampleTurn
+	StateSchema     map[string]any
 }
 
 // TemplateDirs returns search paths (project overrides global overrides bundled).
@@ -53,28 +55,10 @@ func TemplateDirs(projectRoot string) []string {
 	if globalDir != "" {
 		add(filepath.Join(globalDir, "templates"))
 	}
-	if bundled := bundledTemplatesDir(projectRoot); bundled != "" {
+	if bundled := taijicfg.BundledTemplatesDir(projectRoot); bundled != "" {
 		add(bundled)
 	}
 	return dirs
-}
-
-func bundledTemplatesDir(projectRoot string) string {
-	projectRoot = strings.TrimSpace(projectRoot)
-	candidates := []string{
-		filepath.Join(projectRoot, "taiji-ai", "global", "templates"),
-		filepath.Join(projectRoot, "global", "templates"),
-	}
-	if projectRoot != "" {
-		dir := filepath.Dir(projectRoot)
-		candidates = append(candidates, filepath.Join(dir, "taiji-ai", "global", "templates"))
-	}
-	for _, path := range candidates {
-		if info, err := os.Stat(path); err == nil && info.IsDir() {
-			return path
-		}
-	}
-	return ""
 }
 
 // ListChatTemplates returns templates from all template dirs (later dirs override same id).
@@ -90,7 +74,8 @@ func ListChatTemplates(projectRoot string) []TemplateSummary {
 				continue
 			}
 			name := ent.Name()
-			if !strings.HasSuffix(strings.ToLower(name), ".yaml") && !strings.HasSuffix(strings.ToLower(name), ".yml") {
+			lower := strings.ToLower(name)
+			if !strings.HasSuffix(lower, ".yaml") && !strings.HasSuffix(lower, ".yml") && !strings.HasSuffix(lower, ".md") {
 				continue
 			}
 			path := filepath.Join(dir, name)
@@ -123,6 +108,9 @@ func ListChatTemplates(projectRoot string) []TemplateSummary {
 }
 
 func loadTemplateFile(path string) (*templateDocument, error) {
+	if strings.HasSuffix(strings.ToLower(path), ".md") {
+		return loadMarkdownTemplateFile(path)
+	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -147,7 +135,7 @@ func LoadChatTemplate(projectRoot, templateID string) (*templateDocument, error)
 	var found *templateDocument
 	var foundPath string
 	for _, dir := range TemplateDirs(projectRoot) {
-		for _, ext := range []string{".yaml", ".yml"} {
+		for _, ext := range []string{".yaml", ".yml", ".md"} {
 			path := filepath.Join(dir, templateID+ext)
 			doc, err := loadTemplateFile(path)
 			if err != nil {
@@ -182,6 +170,13 @@ func ApplyChatTemplate(s *Session, projectRoot, templateID string) error {
 	}
 	applySettingsReplace(&s.State.Settings, doc.Settings)
 	s.State.Settings.TemplateID = strings.TrimSpace(doc.ID)
+	s.State.Settings.FewShotExamples = append([]ExampleTurn(nil), doc.FewShotExamples...)
+	s.State.Settings.ActorState = actorStateFromSchema(doc.StateSchema)
+	if v := strings.TrimSpace(doc.Settings.TemplateDisplayName); v != "" {
+		s.State.Settings.TemplateDisplayName = v
+	} else if v := strings.TrimSpace(doc.Name); v != "" {
+		s.State.Settings.TemplateDisplayName = v
+	}
 	if name := strings.TrimSpace(doc.Name); name != "" && strings.TrimSpace(s.State.Name) == "" {
 		s.State.Name = name
 	}
@@ -224,6 +219,11 @@ func applySettingsReplace(dst *Settings, src Settings) {
 		dst.SystemPromptExtra = v
 	}
 	dst.SkillsAllow = append([]string(nil), src.SkillsAllow...)
+	if len(src.PacksAllow) > 0 {
+		dst.PacksAllow = append([]string(nil), src.PacksAllow...)
+	} else if len(src.DefaultPacks) > 0 {
+		dst.PacksAllow = append([]string(nil), src.DefaultPacks...)
+	}
 	dst.SkillsDeny = append([]string(nil), src.SkillsDeny...)
 	dst.MCPServers = append([]string(nil), src.MCPServers...)
 	dst.MCPToolsDeny = append([]string(nil), src.MCPToolsDeny...)
@@ -246,5 +246,24 @@ func applySettingsReplace(dst *Settings, src Settings) {
 	if src.MemoryEnabled != nil {
 		v := *src.MemoryEnabled
 		dst.MemoryEnabled = &v
+	}
+	if v := strings.TrimSpace(src.Avatar); v != "" {
+		dst.Avatar = v
+	}
+	if v := strings.TrimSpace(src.ThemeColor); v != "" {
+		dst.ThemeColor = v
+	}
+	if v := strings.TrimSpace(src.TemplateDisplayName); v != "" {
+		dst.TemplateDisplayName = v
+	}
+	dst.BuiltinToolsAllow = append([]string(nil), src.BuiltinToolsAllow...)
+	dst.BuiltinToolsDeny = append([]string(nil), src.BuiltinToolsDeny...)
+	if v := strings.TrimSpace(src.StreamPacing); v != "" {
+		dst.StreamPacing = v
+	}
+	dst.CouncilEnabled = src.CouncilEnabled
+	dst.CouncilActors = append([]string(nil), src.CouncilActors...)
+	if v := strings.TrimSpace(src.FollowUpActor); v != "" {
+		dst.FollowUpActor = v
 	}
 }

@@ -61,8 +61,10 @@ func buildProvider(id string, pc taijicfg.ProviderConfig, cfg *taijicfg.Config) 
 		return newOpenAIProvider(id, pc)
 	case "anthropic":
 		return newAnthropicProvider(id, pc)
+	case "dummy":
+		return newDummyProvider(id, pc)
 	default:
-		return nil, fmt.Errorf("unknown provider type %q (supported: wuji, openai, anthropic)", pc.Type)
+		return nil, fmt.Errorf("unknown provider type %q (supported: wuji, openai, anthropic, dummy)", pc.Type)
 	}
 }
 

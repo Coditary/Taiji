@@ -57,7 +57,7 @@ func MemoryKindsSearchPaths(cfg *Config) []string {
 	}
 
 	if cfg != nil && cfg.Root != "" {
-		add(filepath.Join(cfg.Root, dirName, memoryKindsFile))
+		add(filepath.Join(RuntimeDirForRoot(cfg.Root, cfg.StorageLocal), memoryKindsFile))
 		if path := strings.TrimSpace(cfg.ResolvedMemory().KindsFile); path != "" {
 			add(expandHome(path))
 		}

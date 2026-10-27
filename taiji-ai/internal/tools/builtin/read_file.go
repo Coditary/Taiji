@@ -3,7 +3,6 @@ package builtin
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -42,7 +41,7 @@ func (ReadFile) Run(_ context.Context, args map[string]any) (string, error) {
 	if path == "" {
 		return "", fmt.Errorf("path is required")
 	}
-	data, err := os.ReadFile(path)
+	data, err := readFileBytes(path)
 	if err != nil {
 		return "", err
 	}

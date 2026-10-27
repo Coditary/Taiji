@@ -21,6 +21,7 @@ func TestShouldAutoIndexPath(t *testing.T) {
 		{".taiji/raggo/chromem.db", false},
 		{"image.png", false},
 		{"Makefile", false},
+		{".config/taiji/packs/demo/node.md", true},
 	}
 	for _, tc := range tests {
 		if got := rag.ShouldAutoIndexPath(tc.path); got != tc.want {

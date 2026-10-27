@@ -149,13 +149,9 @@ func MemorySynonymsPath(cfg *Config) string {
 	return filepath.Join(globalDir, memorySynonymsFile)
 }
 
-// ProjectMemoryDir returns .taiji/memory under the project root.
+// ProjectMemoryDir returns the project memory directory (managed or local runtime).
 func ProjectMemoryDir(root string) string {
-	root = filepath.Clean(root)
-	if root == "" || root == "." {
-		return filepath.Join(dirName, memorySubdir)
-	}
-	return filepath.Join(root, dirName, memorySubdir)
+	return filepath.Join(RuntimeDir(root), memorySubdir)
 }
 
 func ensureMemoryDirs(cfg *Config) {

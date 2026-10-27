@@ -21,6 +21,7 @@ UiInputMode ui_input_mode();
 void ui_paint_vim_focus_accent(tuinator::PaintContext& ctx, UiFocusPane pane, int height);
 
 bool ui_key_ctrl_char(const tuinator::KeyPress& key, char ch, bool allow_shift = false);
+bool ui_key_alt_digit(const tuinator::KeyPress& key, int digit);
 bool ui_key_plain_char(const tuinator::KeyPress& key, char ch);
 
 std::string ui_footer_shortcuts_for_state(bool vim_modal, UiInputMode mode);

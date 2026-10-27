@@ -58,7 +58,10 @@
     "skill": "Competencias",
     "decision": "Decisión",
     "question": "Pregunta",
-    "generating_response": "Generando respuesta..."
+    "generating_response": "Generando respuesta...",
+    "trace": {
+      "explored_prefix": "Explored "
+    }
   },
   "status": {
     "starting": "Iniciando...",
@@ -90,7 +93,8 @@
     "wait_before_branch": "...",
     "branch_failed": "...",
     "branch_failed_prefix": "...",
-    "branched": "..."
+    "branched": "...",
+    "response_ready_in_session": "Respuesta lista en {name}"
   },
   "metrics": {
     "tok_per_sec": "Etiqueta de interfaz de usuario: {value} tok/s"

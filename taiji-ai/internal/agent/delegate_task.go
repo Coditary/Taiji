@@ -14,7 +14,7 @@ import (
 const delegateTaskToolName = "delegate_task"
 
 var defaultDelegateToolsAllow = []string{
-	"list_dir", "read_file", "file_outline", "glob_search", "grep", "rag_search", "web_fetch", "git_inspect",
+	"list_dir", "read_file", "file_outline", "glob_search", "workspace_find", "grep", "rag_search", "web_fetch", "git_inspect",
 }
 
 const defaultSubAgentSystemPrompt = `You are a focused research sub-agent for Taiji.
@@ -75,7 +75,7 @@ func (t DelegateTask) Run(ctx context.Context, args map[string]any) (string, err
 		return "", fmt.Errorf("prompt is required")
 	}
 	allow := parseToolsAllow(args)
-	subReg := filterToolRegistry(t.cfg.MainTools, allow)
+	subReg := tools.FilterRegistry(t.cfg.MainTools, allow)
 
 	parentSession := builtin.ToolSessionIDFrom(ctx)
 	release := delegateSlots.acquire(parentSession)
@@ -130,19 +130,3 @@ func parseToolsAllow(args map[string]any) []string {
 	}
 }
 
-func filterToolRegistry(main *tools.Registry, allow []string) *tools.Registry {
-	sub := tools.NewRegistry()
-	if main == nil {
-		return sub
-	}
-	for _, name := range allow {
-		name = strings.TrimSpace(name)
-		if name == "" || name == delegateTaskToolName {
-			continue
-		}
-		if tool, ok := main.Get(name); ok {
-			sub.Register(tool)
-		}
-	}
-	return sub
-}

@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(TAIJI_TUI_FETCH_TUINATOR "Fetch Tuinator from GitHub when no local tree is set" ON)
+option(TAIJI_TUI_BUILD_TESTS "Build taiji-tui component tests and JSON test-agent" OFF)
 set(TAIJI_TUI_TUINATOR_DIR "" CACHE PATH "Local Tuinator source tree (overrides fetch)")
 if(TAIJI_TUI_TUINATOR_DIR STREQUAL "" AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../Coditary/core/Tuinator/CMakeLists.txt")
     set(TAIJI_TUI_TUINATOR_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../Coditary/core/Tuinator")
@@ -34,6 +35,20 @@ add_custom_command(
 
 add_custom_target(taiji_fuzzy_build DEPENDS "${TAIJI_FUZZY_ARCHIVE}")
 
+set(TAIJI_TOOLS_CRATE_DIR "${TAIJI_AI_DIR}/taiji-tools")
+set(TAIJI_TOOLS_BIN "${TAIJI_TOOLS_CRATE_DIR}/target/release/taiji-tools")
+
+add_custom_command(
+    OUTPUT "${TAIJI_TOOLS_BIN}"
+    COMMAND ${CMAKE_COMMAND} -E env "CARGO_TARGET_DIR=${TAIJI_TOOLS_CRATE_DIR}/target"
+            ${CARGO_EXECUTABLE} build --release --manifest-path "${TAIJI_TOOLS_CRATE_DIR}/Cargo.toml"
+    WORKING_DIRECTORY "${TAIJI_TOOLS_CRATE_DIR}"
+    COMMENT "Building taiji-tools (ignore, tree-sitter, git2, tantivy)"
+    VERBATIM
+)
+
+add_custom_target(taiji_tools_build DEPENDS "${TAIJI_TOOLS_BIN}")
+
 add_library(taiji_fuzzy STATIC IMPORTED GLOBAL)
 add_dependencies(taiji_fuzzy taiji_fuzzy_build)
 set_target_properties(taiji_fuzzy PROPERTIES
@@ -52,8 +67,11 @@ add_custom_target(
             python3 "${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_locales.py"
             "${CMAKE_CURRENT_SOURCE_DIR}/locales"
             --require-complete
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONUTF8=1
+            python3 "${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_locale_usage.py"
+            "${CMAKE_CURRENT_SOURCE_DIR}/locales"
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-    COMMENT "Verify UI locale key coverage (100% per language)"
+    COMMENT "Verify UI locale catalogs and ui_tr/ui_shell key usage in src"
     VERBATIM
 )
 
@@ -108,6 +126,10 @@ set_target_properties(taiji_embed PROPERTIES
     IMPORTED_LOCATION "${TAIJI_EMBED_ARCHIVE}"
     INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_BINARY_DIR}"
 )
+
+if(TAIJI_TUI_BUILD_TESTS)
+    set(TUINATOR_ENABLE_TEST_IDS ON CACHE BOOL "Store widget test IDs for AppDriver/JSON agent" FORCE)
+endif()
 
 if(TAIJI_TUI_TUINATOR_DIR AND EXISTS "${TAIJI_TUI_TUINATOR_DIR}/CMakeLists.txt")
     message(STATUS "taiji-tui: using local Tuinator at ${TAIJI_TUI_TUINATOR_DIR}")
@@ -177,8 +199,7 @@ add_custom_command(
 )
 add_custom_target(taiji_tui_themes_embed DEPENDS "${TAIJI_UI_THEMES_EMBED_CPP}")
 
-add_executable(taiji-tui
-    src/main.cpp
+set(TAIJI_TUI_SOURCES
     src/chat_app.cpp
     src/chat_message.cpp
     src/chat_message_chrome.cpp
@@ -193,9 +214,13 @@ add_executable(taiji-tui
     src/turn_metrics_note.cpp
     src/user_turn_actions_note.cpp
     src/activity_log.cpp
+    src/activity_trace.cpp
+    src/activity_diff_layout.cpp
     src/thinking_indicator.cpp
     src/chat_input.cpp
     src/composer_attachments.cpp
+    src/composer_image_clipboard.cpp
+    src/composer_image_modal.cpp
     src/composer_palette.cpp
     src/composer_workspace.cpp
     src/message_composer.cpp
@@ -207,18 +232,23 @@ add_executable(taiji-tui
     "${TAIJI_UI_LOCALES_EMBED_CPP}"
     src/ui_keybindings.cpp
     src/ui_navigation.cpp
+    src/composer_fuzzy_picker.cpp
     src/composer_theme_picker.cpp
+    src/composer_actor_picker.cpp
     src/ui_themes_bundled_lookup.cpp
     "${TAIJI_UI_THEMES_EMBED_CPP}"
     src/ui_message_time.cpp
     src/ui_anim.cpp
     src/context_panel.cpp
+    src/graph_panel.cpp
     src/sidebar_kv_row.cpp
     src/mcp_server_list.cpp
+    src/session_todo_panel.cpp
     src/chat_session_header.cpp
     src/chat_empty_state.cpp
     src/taiji_block_logo.cpp
     src/ui_panel_box.cpp
+    src/ui_chat_spacing.cpp
     src/ui_chat_column.cpp
     src/chat_middle_pane.cpp
     src/sidebar_footer.cpp
@@ -232,7 +262,18 @@ add_executable(taiji-tui
     src/speech_mic_button.cpp
 )
 
-add_dependencies(taiji-tui taiji_embed_build taiji_fuzzy_build taiji_tui_themes taiji_tui_themes_embed taiji_tui_locales_check taiji_tui_locales_embed)
+add_executable(taiji-tui src/main.cpp ${TAIJI_TUI_SOURCES})
+
+add_dependencies(taiji-tui taiji_embed_build taiji_fuzzy_build taiji_tools_build taiji_tui_themes taiji_tui_themes_embed taiji_tui_locales_check taiji_tui_locales_embed)
+
+add_custom_command(
+    TARGET taiji-tui POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${TAIJI_TOOLS_BIN}"
+            "$<TARGET_FILE_DIR:taiji-tui>/taiji-tools"
+    COMMENT "Copy taiji-tools next to taiji-tui"
+    VERBATIM
+)
 target_include_directories(taiji-tui PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
     "${CMAKE_CURRENT_BINARY_DIR}"
@@ -247,4 +288,87 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(taiji-tui PRIVATE pthread dl m resolv)
 elseif(APPLE)
     target_link_libraries(taiji-tui PRIVATE pthread resolv)
+endif()
+
+if(TAIJI_TUI_BUILD_TESTS)
+    enable_testing()
+
+    set(TAIJI_LOCALE_KEYS_USED_HPP "${CMAKE_CURRENT_BINARY_DIR}/locale_keys_used.gen.hpp")
+    add_custom_command(
+        OUTPUT "${TAIJI_LOCALE_KEYS_USED_HPP}"
+        COMMAND ${CMAKE_COMMAND} -E env PYTHONUTF8=1
+                python3 "${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_locale_keys_used.py"
+                "${CMAKE_CURRENT_SOURCE_DIR}/src"
+                "${TAIJI_LOCALE_KEYS_USED_HPP}"
+        DEPENDS
+            "${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_locale_keys_used.py"
+            "${CMAKE_CURRENT_SOURCE_DIR}/scripts/locale_usage.py"
+            ${TAIJI_TUI_SOURCES}
+        COMMENT "Generate locale key list from ui_tr/ui_shell references"
+        VERBATIM
+    )
+    add_custom_target(taiji_tui_locale_keys_gen DEPENDS "${TAIJI_LOCALE_KEYS_USED_HPP}")
+
+    set(TAIJI_TUI_TEST_SOURCES
+        tests/main_test_runner.cpp
+        tests/components/test_message_composer.cpp
+        tests/components/test_theme_picker_esc.cpp
+        tests/components/test_theme_picker_prompt_stable.cpp
+        tests/components/test_session_sidebar.cpp
+        tests/components/test_session_sidebar_hover_background.cpp
+        tests/components/test_activity_log_failed_tool_background.cpp
+        tests/components/test_status_footer.cpp
+        tests/integration/test_sidebar_column.cpp
+        tests/integration/test_theme_picker_ctrl_t_prompt_layout.cpp
+        tests/integration/test_theme_picker_chat_app.cpp
+        tests/i18n/test_locale_catalog.cpp
+        tests/i18n/test_locale_render.cpp
+    )
+
+    add_executable(taiji-tui-ui-tests ${TAIJI_TUI_TEST_SOURCES} ${TAIJI_TUI_SOURCES})
+    add_dependencies(taiji-tui-ui-tests taiji_tui_locale_keys_gen)
+    add_dependencies(taiji-tui-ui-tests taiji_embed_build taiji_fuzzy_build taiji_tui_themes taiji_tui_themes_embed taiji_tui_locales_check taiji_tui_locales_embed)
+    target_include_directories(taiji-tui-ui-tests PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests"
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${TAIJI_FUZZY_CRATE_DIR}/include"
+    )
+    target_compile_definitions(taiji-tui-ui-tests PRIVATE
+        TAIJI_UI_THEMES_DIR="${TAIJI_UI_THEMES_BUILD_DIR}"
+        TUINATOR_ENABLE_TEST_IDS=1
+    )
+    target_link_libraries(taiji-tui-ui-tests PRIVATE tuinator::tuinator taiji_embed taiji_fuzzy)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(taiji-tui-ui-tests PRIVATE pthread dl m resolv)
+    elseif(APPLE)
+        target_link_libraries(taiji-tui-ui-tests PRIVATE pthread resolv)
+    endif()
+    add_test(NAME taiji-tui-ui-tests COMMAND taiji-tui-ui-tests)
+    add_test(
+        NAME taiji-tui-locale-usage
+        COMMAND ${CMAKE_COMMAND} -E env PYTHONUTF8=1
+                python3 "${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_locale_usage.py"
+                "${CMAKE_CURRENT_SOURCE_DIR}/locales"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    )
+
+    add_executable(taiji-tui-test-agent tests/agent/main.cpp ${TAIJI_TUI_SOURCES})
+    add_dependencies(taiji-tui-test-agent taiji_embed_build taiji_fuzzy_build taiji_tui_themes taiji_tui_themes_embed taiji_tui_locales_check taiji_tui_locales_embed)
+    target_include_directories(taiji-tui-test-agent PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests"
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${TAIJI_FUZZY_CRATE_DIR}/include"
+    )
+    target_compile_definitions(taiji-tui-test-agent PRIVATE
+        TAIJI_UI_THEMES_DIR="${TAIJI_UI_THEMES_BUILD_DIR}"
+        TUINATOR_ENABLE_TEST_IDS=1
+    )
+    target_link_libraries(taiji-tui-test-agent PRIVATE tuinator::tuinator taiji_embed taiji_fuzzy)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(taiji-tui-test-agent PRIVATE pthread dl m resolv)
+    elseif(APPLE)
+        target_link_libraries(taiji-tui-test-agent PRIVATE pthread resolv)
+    endif()
 endif()

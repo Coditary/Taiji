@@ -58,7 +58,10 @@
     "skill": "Навык",
     "decision": "Решение",
     "question": "Вопрос",
-    "generating_response": "Обрабатывается запрос..."
+    "generating_response": "Обрабатывается запрос...",
+    "trace": {
+      "explored_prefix": "Explored "
+    }
   },
   "metrics": {
     "tok_per_sec": "{value} тк/с"
@@ -93,6 +96,7 @@
     "wait_before_branch": "...",
     "branch_failed": "...",
     "branch_failed_prefix": "...",
-    "branched": "..."
+    "branched": "...",
+    "response_ready_in_session": "Ответ готов в {name}"
   }
 }
